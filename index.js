@@ -17,6 +17,14 @@ const swaggerSpecs = require('./swagger.js');
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // Routes
+const authRoutes = require('./routes/auth.routes');
+const serviceRoutes = require('./routes/services.routes');
+const bookingRoutes = require('./routes/bookings.routes');
+
+app.use('/api/auth', authRoutes);
+app.use('/api/services', serviceRoutes);
+app.use('/api/bookings', bookingRoutes);
+
 app.get('/', (req, res) => {
   res.send('Akfeek API is running');
 });
