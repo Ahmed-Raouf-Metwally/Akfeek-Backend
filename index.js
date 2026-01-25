@@ -1,43 +1,74 @@
-const express = require('express');
-const cors = require('cors');
-const { PrismaClient } = require('@prisma/client');
+const app = require('./src/app');
+const prisma = require('./src/utils/database/prisma');
+const { initializeSocket } = require('./src/socket');
+const logger = require('./src/utils/logger/logger');
 require('dotenv').config();
 
-const prisma = new PrismaClient();
-const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Test database connection
+async function testDatabaseConnection() {
+  try {
+    await prisma.$connect();
+    logger.info('Database connected successfully');
+    return true;
+  } catch (error) {
+    logger.error('Database connection failed:', error);
+    return false;
+  }
+}
 
-// Swagger Docs
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./swagger.js');
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+// Start server
+async function bootstrap() {
+  const dbConnected = await testDatabaseConnection();
+  
+  if (!dbConnected) {
+    logger.error('Failed to connect to database. Exiting...');
+    process.exit(1);
+  }
 
-// Routes
-const authRoutes = require('./routes/auth.routes');
-const serviceRoutes = require('./routes/services.routes');
-const bookingRoutes = require('./routes/bookings.routes');
-
-app.use('/api/auth', authRoutes);
-app.use('/api/services', serviceRoutes);
-app.use('/api/bookings', bookingRoutes);
-
-app.get('/', (req, res) => {
-  res.send('Akfeek API is running');
-});
-
-// Start Server
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-// Graceful Shutdown
-process.on('SIGTERM', async () => {
-  await prisma.$disconnect();
-  server.close(() => {
-    console.log('Server closed');
+  const server = app.listen(PORT, () => {
+    logger.info(`🚀 Server running on port ${PORT}`);
+    logger.info(`📚 Swagger UI: http://localhost:${PORT}/api-docs`);
   });
+
+  // Initialize Socket.io
+  initializeSocket(server);
+  logger.info('✅ Socket.io initialized');
+
+  // Graceful shutdown
+  const gracefulShutdown = async (signal) => {
+    logger.info(`${signal} received. Starting graceful shutdown...`);
+    
+    server.close(async () => {
+      logger.info('HTTP server closed');
+      
+      await prisma.$disconnect();
+      logger.info('Database disconnected');
+      
+      process.exit(0);
+    });
+
+    // Force shutdown after 10 seconds
+    setTimeout(() => {
+      logger.error('Forcing shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+}
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  process.exit(1);
 });
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+bootstrap();
