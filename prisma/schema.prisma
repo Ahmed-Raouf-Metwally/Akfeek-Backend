@@ -1,49 +1,1023 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// AutoService Super App - Comprehensive Prisma Schema
+// Supports 4 Service Models: Direct Booking, E-Commerce, Indrive/Broadcast, Ekfik Lifecycle
+// ================================================================================================
 
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+    provider = "mysql"
+    url      = env("DATABASE_URL")
+}
+
+// ================================================================================================
+// USER & PROFILE MANAGEMENT
+// ================================================================================================
+
+enum UserRole {
+    CUSTOMER
+    TECHNICIAN
+    SUPPLIER
+    ADMIN
+}
+
+enum UserStatus {
+    ACTIVE
+    INACTIVE
+    SUSPENDED
+    PENDING_VERIFICATION
+}
+
+enum Language {
+    EN // English
+    AR // Arabic
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  name      String?
-  phone     String?
-  role      String    @default("USER") // USER, ADMIN, PROVIDER
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  bookings  Booking[]
+    id                String     @id @default(uuid())
+    email             String     @unique
+    phone             String?    @unique
+    passwordHash      String
+    role              UserRole
+    status            UserStatus @default(PENDING_VERIFICATION)
+    emailVerified     Boolean    @default(false)
+    phoneVerified     Boolean    @default(false)
+    preferredLanguage Language   @default(AR) // Default to Arabic
+    createdAt         DateTime   @default(now())
+    updatedAt         DateTime   @updatedAt
+
+    // Relations
+    profile   Profile?
+    vehicles  UserVehicle[] // Customer's vehicles
+    addresses Address[]
+
+    // Bookings
+    bookingsAsCustomer   Booking[] @relation("CustomerBookings")
+    bookingsAsTechnician Booking[] @relation("TechnicianBookings")
+
+    // Broadcasts & Offers
+    jobBroadcasts JobBroadcast[]
+    jobOffers     JobOffer[]
+
+    // Inspections & Supply
+    inspectionReports InspectionReport[]
+    supplyRequests    SupplyRequest[]    @relation("TechnicianSupplyRequests")
+    supplierRequests  SupplyRequest[]    @relation("SupplierSupplyRequests")
+
+    // Financials
+    invoices     Invoice[]
+    wallet       Wallet?
+    transactions Transaction[]
+    payments     Payment[]
+
+    // Notifications & Ratings
+    notifications   Notification[]
+    ratingsGiven    Rating[]       @relation("RaterRatings")
+    ratingsReceived Rating[]       @relation("RateeRatings")
+
+    @@index([email])
+    @@index([phone])
+    @@index([role, status])
+}
+
+model Profile {
+    id     String @id @default(uuid())
+    userId String @unique
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    firstName String
+    lastName  String
+    avatar    String?
+    bio       String? @db.Text
+    bioAr     String? @db.Text // Arabic bio
+
+    // Technician-specific
+    licenseNumber   String?
+    yearsExperience Int?
+    specializations Json? // Array of service types
+    serviceRadius   Float? // km radius for emergency services
+    isAvailable     Boolean @default(true)
+
+    // Supplier-specific
+    businessName      String?
+    businessNameAr    String? // Arabic business name
+    businessLicense   String?
+    warehouseLocation String?
+
+    // Location (for real-time tracking)
+    currentLat         Float?
+    currentLng         Float?
+    lastLocationUpdate DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([userId])
+}
+
+model Address {
+    id     String @id @default(uuid())
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    label      String // "Home", "Work", etc.
+    labelAr    String? // Arabic label
+    street     String
+    streetAr   String? // Arabic street name
+    city       String
+    cityAr     String? // Arabic city name
+    state      String?
+    stateAr    String? // Arabic state name
+    postalCode String?
+    country    String  @default("SA")
+
+    latitude  Float
+    longitude Float
+
+    isDefault Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    bookings      Booking[]
+    jobBroadcasts JobBroadcast[]
+
+    @@index([userId])
+}
+
+// ================================================================================================
+// VEHICLE MANAGEMENT
+// ================================================================================================
+
+enum VehicleSize {
+    SMALL // Sedan, Hatchback
+    MEDIUM // SUV, Crossover
+    LARGE // Truck, Van
+    EXTRA_LARGE // Bus, Commercial
+}
+
+model VehicleMaster {
+    id       String      @id @default(uuid())
+    make     String // Toyota, BMW, etc.
+    model    String // Camry, X5, etc.
+    year     Int
+    size     VehicleSize
+    imageUrl String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    userVehicles       UserVehicle[]
+    compatibleProducts ProductCompatibility[]
+
+    @@unique([make, model, year])
+    @@index([make, model])
+}
+
+model UserVehicle {
+    id     String @id @default(uuid())
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    vehicleMasterId String
+    vehicleMaster   VehicleMaster @relation(fields: [vehicleMasterId], references: [id])
+
+    plateNumber    String  @unique
+    color          String?
+    vin            String? @unique
+    currentMileage Int?
+
+    isDefault Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    bookings Booking[]
+
+    @@index([userId])
+    @@index([vehicleMasterId])
+}
+
+// ================================================================================================
+// SERVICE CATALOG DOMAIN
+// ================================================================================================
+
+enum ServiceType {
+    FIXED // Direct Booking: Car Wash, Polishing
+    CATALOG // E-Commerce: Oil Change, Filter Replacement
+    EMERGENCY // Indrive/Broadcast: Roadside, Mobile Workshop
+    INSPECTION // Ekfik Lifecycle: Valet & Inspection
+}
+
+enum ServiceCategory {
+    CLEANING
+    MAINTENANCE
+    REPAIR
+    EMERGENCY
+    INSPECTION
+    CUSTOMIZATION
 }
 
 model Service {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  price       Float
-  duration    Int // in minutes
-  imageUrl    String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  bookings    Booking[]
+    id            String  @id @default(uuid())
+    name          String
+    nameAr        String?
+    description   String? @db.Text
+    descriptionAr String? @db.Text
+
+    type     ServiceType
+    category ServiceCategory
+
+    imageUrl String?
+    icon     String?
+
+    isActive          Boolean @default(true)
+    requiresVehicle   Boolean @default(true)
+    estimatedDuration Int? // minutes
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    pricing         ServicePricing[]
+    bookingServices BookingService[]
+    addOns          ServiceAddOn[]   @relation("ServiceAddOns")
+    parentAddOns    ServiceAddOn[]   @relation("ParentService")
+
+    @@index([type, isActive])
+    @@index([category])
+}
+
+model ServicePricing {
+    id        String  @id @default(uuid())
+    serviceId String
+    service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+    vehicleSize     VehicleSize
+    basePrice       Decimal     @db.Decimal(10, 2)
+    discountedPrice Decimal?    @db.Decimal(10, 2)
+
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([serviceId, vehicleSize])
+    @@index([serviceId])
+}
+
+model ServiceAddOn {
+    id        String  @id @default(uuid())
+    serviceId String
+    service   Service @relation("ParentService", fields: [serviceId], references: [id], onDelete: Cascade)
+
+    addOnId String
+    addOn   Service @relation("ServiceAddOns", fields: [addOnId], references: [id])
+
+    additionalPrice Decimal  @db.Decimal(10, 2)
+    createdAt       DateTime @default(now())
+
+    @@unique([serviceId, addOnId])
+    @@index([serviceId])
+}
+
+// ================================================================================================
+// PRODUCT CATALOG (E-Commerce Model)
+// ================================================================================================
+
+enum ProductCategory {
+    OIL
+    FILTER
+    BRAKE_PAD
+    BATTERY
+    TIRE
+    FLUID
+    ACCESSORY
+}
+
+model Product {
+    id          String  @id @default(uuid())
+    sku         String  @unique
+    name        String
+    nameAr      String?
+    description String? @db.Text
+
+    category ProductCategory
+    brand    String
+    imageUrl String?
+
+    price         Decimal @db.Decimal(10, 2)
+    stockQuantity Int     @default(0)
+
+    isActive   Boolean @default(true)
+    isFeatured Boolean @default(false)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    compatibility   ProductCompatibility[]
+    bookingProducts BookingProduct[]
+
+    @@index([category, isActive])
+    @@index([sku])
+}
+
+model ProductCompatibility {
+    id        String  @id @default(uuid())
+    productId String
+    product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+    vehicleMasterId String
+    vehicleMaster   VehicleMaster @relation(fields: [vehicleMasterId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+
+    @@unique([productId, vehicleMasterId])
+    @@index([productId])
+    @@index([vehicleMasterId])
+}
+
+// ================================================================================================
+// SUPPLIER PARTS MARKETPLACE
+// ================================================================================================
+
+model SupplierPart {
+    id         String @id @default(uuid())
+    supplierId String
+
+    sku         String
+    name        String
+    nameAr      String?
+    description String? @db.Text
+
+    category String
+    brand    String?
+    imageUrl String?
+
+    unitPrice     Decimal @db.Decimal(10, 2)
+    stockQuantity Int     @default(0)
+    minimumOrder  Int     @default(1)
+
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    supplyRequestItems SupplyRequestItem[]
+
+    @@unique([supplierId, sku])
+    @@index([supplierId, isActive])
+}
+
+// ================================================================================================
+// BOOKING CORE (Polymorphic - Supports All 4 Service Models)
+// ================================================================================================
+
+enum BookingStatus {
+    // Universal States
+    PENDING // Initial state
+    CONFIRMED // Accepted by system/technician
+
+    // Indrive Model States
+    BROADCASTING // Looking for technicians
+    OFFERS_RECEIVED // Technicians have bid
+    TECHNICIAN_ASSIGNED // Customer selected a technician
+
+    // Ekfik Model States
+    PICKUP_SCHEDULED // Valet pickup scheduled
+    IN_TRANSIT_PICKUP // Technician picking up vehicle
+    INSPECTING // Vehicle being inspected
+    QUOTE_PENDING // Waiting for customer approval
+    QUOTE_APPROVED // Customer approved repairs
+    QUOTE_REJECTED // Customer rejected - return vehicle
+
+    // Execution States
+    IN_PROGRESS // Work started
+    PARTS_NEEDED // Technician requested parts
+    PARTS_ORDERED // Parts requested from supplier
+    PARTS_DELIVERED // Parts received
+
+    // Completion States
+    COMPLETED // Service finished
+    READY_FOR_DELIVERY // Vehicle ready for return (Ekfik)
+    IN_TRANSIT_DELIVERY // Returning vehicle
+    DELIVERED // Vehicle returned to customer
+
+    // Terminal States
+    CANCELLED // Cancelled by customer/admin
+    REJECTED // Rejected by technician
+    NO_SHOW // Customer didn't show up
 }
 
 model Booking {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  serviceId String
-  service   Service  @relation(fields: [serviceId], references: [id])
-  status    String   @default("PENDING") // PENDING, CONFIRMED, COMPLETED, CANCELLED
-  date      DateTime
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id            String @id @default(uuid())
+    bookingNumber String @unique // AUTO-GEN: BKG-20260123-001
+
+    // Relationships
+    customerId String
+    customer   User   @relation("CustomerBookings", fields: [customerId], references: [id])
+
+    technicianId String?
+    technician   User?   @relation("TechnicianBookings", fields: [technicianId], references: [id])
+
+    vehicleId String
+    vehicle   UserVehicle @relation(fields: [vehicleId], references: [id])
+
+    addressId String?
+    address   Address? @relation(fields: [addressId], references: [id])
+
+    // Scheduling
+    scheduledDate DateTime?
+    scheduledTime String? // "09:00" - Store as string for flexibility
+    completedAt   DateTime?
+
+    // Location (for Emergency/Indrive model)
+    pickupLat     Float?
+    pickupLng     Float?
+    pickupAddress String?
+
+    // Pricing
+    subtotal    Decimal @default(0) @db.Decimal(10, 2)
+    laborFee    Decimal @default(0) @db.Decimal(10, 2)
+    deliveryFee Decimal @default(0) @db.Decimal(10, 2)
+    partsTotal  Decimal @default(0) @db.Decimal(10, 2)
+    discount    Decimal @default(0) @db.Decimal(10, 2)
+    tax         Decimal @default(0) @db.Decimal(10, 2)
+    totalPrice  Decimal @default(0) @db.Decimal(10, 2)
+
+    // Distance calculation (for delivery fee)
+    distanceKm        Float?
+    estimatedDuration Int? // minutes
+
+    // Status & Metadata
+    status        BookingStatus @default(PENDING)
+    notes         String?       @db.Text
+    internalNotes String?       @db.Text // Admin/Technician only
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    services         BookingService[]
+    products         BookingProduct[]
+    statusHistory    BookingStatusHistory[]
+    jobBroadcast     JobBroadcast?
+    inspectionReport InspectionReport?
+    supplyRequests   SupplyRequest[]
+    invoice          Invoice?
+    rating           Rating?
+    notifications    Notification[]
+
+    @@index([customerId])
+    @@index([technicianId])
+    @@index([status])
+    @@index([scheduledDate])
+    @@index([createdAt])
+}
+
+model BookingService {
+    id        String  @id @default(uuid())
+    bookingId String
+    booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+    serviceId String
+    service   Service @relation(fields: [serviceId], references: [id])
+
+    quantity   Int     @default(1)
+    unitPrice  Decimal @db.Decimal(10, 2)
+    totalPrice Decimal @db.Decimal(10, 2)
+
+    createdAt DateTime @default(now())
+
+    @@index([bookingId])
+    @@index([serviceId])
+}
+
+model BookingProduct {
+    id        String  @id @default(uuid())
+    bookingId String
+    booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+    productId String
+    product   Product @relation(fields: [productId], references: [id])
+
+    quantity   Int     @default(1)
+    unitPrice  Decimal @db.Decimal(10, 2)
+    totalPrice Decimal @db.Decimal(10, 2)
+
+    createdAt DateTime @default(now())
+
+    @@index([bookingId])
+    @@index([productId])
+}
+
+model BookingStatusHistory {
+    id        String  @id @default(uuid())
+    bookingId String
+    booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+    fromStatus BookingStatus?
+    toStatus   BookingStatus
+
+    changedBy String? // userId
+    reason    String? @db.Text
+    metadata  Json? // Additional context
+
+    timestamp DateTime @default(now())
+
+    @@index([bookingId])
+    @@index([timestamp])
+}
+
+// ================================================================================================
+// INDRIVE/BROADCAST MODULE (Emergency Services)
+// ================================================================================================
+
+enum BroadcastStatus {
+    BROADCASTING
+    OFFERS_RECEIVED
+    TECHNICIAN_SELECTED
+    CANCELLED
+    EXPIRED
+}
+
+model JobBroadcast {
+    id        String  @id @default(uuid())
+    bookingId String  @unique
+    booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+    customerId String
+    customer   User   @relation(fields: [customerId], references: [id])
+
+    // Location
+    addressId       String?
+    address         Address? @relation(fields: [addressId], references: [id])
+    latitude        Float
+    longitude       Float
+    locationAddress String
+
+    // Broadcast Settings
+    radiusKm       Float    @default(10) // Search radius
+    broadcastUntil DateTime // Expiry time
+
+    // Problem Description
+    description     String   @db.Text
+    urgency         String? // LOW, MEDIUM, HIGH
+    estimatedBudget Decimal? @db.Decimal(10, 2)
+
+    status BroadcastStatus @default(BROADCASTING)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    offers JobOffer[]
+
+    @@index([customerId])
+    @@index([status])
+    @@index([latitude, longitude])
+}
+
+model JobOffer {
+    id          String       @id @default(uuid())
+    broadcastId String
+    broadcast   JobBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+
+    technicianId String
+    technician   User   @relation(fields: [technicianId], references: [id])
+
+    // Offer Details
+    bidAmount        Decimal @db.Decimal(10, 2)
+    estimatedArrival Int // minutes
+    message          String? @db.Text
+
+    // Technician Location (snapshot at time of offer)
+    technicianLat Float
+    technicianLng Float
+    distanceKm    Float
+
+    isSelected Boolean  @default(false)
+    createdAt  DateTime @default(now())
+
+    @@index([broadcastId])
+    @@index([technicianId])
+    @@index([isSelected])
+}
+
+// ================================================================================================
+// INSPECTION & SUPPLY CHAIN MODULE (Ekfik Lifecycle)
+// ================================================================================================
+
+enum InspectionStatus {
+    PENDING
+    IN_PROGRESS
+    COMPLETED
+    APPROVED
+    REJECTED
+}
+
+model InspectionReport {
+    id        String  @id @default(uuid())
+    bookingId String  @unique
+    booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+    technicianId String
+    technician   User   @relation(fields: [technicianId], references: [id])
+
+    // Inspection Details
+    mileage          Int
+    inspectionDate   DateTime @default(now())
+    overallCondition String? // GOOD, FAIR, POOR
+
+    notes  String? @db.Text
+    images Json? // Array of image URLs
+    videos Json? // Array of video URLs
+
+    // Quote
+    estimatedCost     Decimal @db.Decimal(10, 2)
+    estimatedDuration Int? // hours
+
+    status InspectionStatus @default(PENDING)
+
+    customerResponse String? // APPROVED, REJECTED
+    customerComment  String?   @db.Text
+    respondedAt      DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    items InspectionItem[]
+
+    @@index([bookingId])
+    @@index([technicianId])
+    @@index([status])
+}
+
+model InspectionItem {
+    id       String           @id @default(uuid())
+    reportId String
+    report   InspectionReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+    category String // "Engine", "Brakes", "Suspension"
+    issue    String
+    issueAr  String?
+    severity String // LOW, MEDIUM, HIGH, CRITICAL
+
+    recommendedAction String  @db.Text
+    estimatedCost     Decimal @db.Decimal(10, 2)
+
+    requiresPart Boolean @default(false)
+    partName     String?
+    partSku      String?
+
+    priority Int @default(1) // Execution order
+
+    createdAt DateTime @default(now())
+
+    @@index([reportId])
+}
+
+// ================================================================================================
+// SUPPLY REQUEST MODULE (Technician → Supplier)
+// ================================================================================================
+
+enum SupplyRequestStatus {
+    PENDING
+    ACCEPTED
+    IN_PREPARATION
+    READY_FOR_PICKUP
+    IN_DELIVERY
+    DELIVERED
+    CANCELLED
+    REJECTED
+}
+
+model SupplyRequest {
+    id            String @id @default(uuid())
+    requestNumber String @unique // AUTO-GEN: SR-20260123-001
+
+    technicianId String
+    technician   User   @relation("TechnicianSupplyRequests", fields: [technicianId], references: [id])
+
+    supplierId String
+    supplier   User   @relation("SupplierSupplyRequests", fields: [supplierId], references: [id])
+
+    bookingId String? // Optional: Linked to specific booking
+    booking   Booking? @relation(fields: [bookingId], references: [id])
+
+    // Delivery Details
+    deliveryAddress String
+    deliveryLat     Float?
+    deliveryLng     Float?
+
+    // Pricing
+    subtotal    Decimal @default(0) @db.Decimal(10, 2)
+    deliveryFee Decimal @default(0) @db.Decimal(10, 2)
+    markup      Decimal @default(0) @db.Decimal(10, 2) // Added to customer invoice
+    totalCost   Decimal @default(0) @db.Decimal(10, 2)
+
+    status SupplyRequestStatus @default(PENDING)
+    notes  String?             @db.Text
+
+    requestedAt DateTime  @default(now())
+    acceptedAt  DateTime?
+    deliveredAt DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    items       SupplyRequestItem[]
+    transaction Transaction?
+
+    @@index([technicianId])
+    @@index([supplierId])
+    @@index([bookingId])
+    @@index([status])
+}
+
+model SupplyRequestItem {
+    id        String        @id @default(uuid())
+    requestId String
+    request   SupplyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+    partId String
+    part   SupplierPart @relation(fields: [partId], references: [id])
+
+    quantity   Int
+    unitPrice  Decimal @db.Decimal(10, 2)
+    totalPrice Decimal @db.Decimal(10, 2)
+
+    createdAt DateTime @default(now())
+
+    @@index([requestId])
+    @@index([partId])
+}
+
+// ================================================================================================
+// FINANCIAL DOMAIN
+// ================================================================================================
+
+enum InvoiceStatus {
+    DRAFT
+    PENDING
+    PAID
+    PARTIALLY_PAID
+    OVERDUE
+    CANCELLED
+}
+
+model Invoice {
+    id            String @id @default(uuid())
+    invoiceNumber String @unique // AUTO-GEN: INV-20260123-001
+
+    bookingId String  @unique
+    booking   Booking @relation(fields: [bookingId], references: [id])
+
+    customerId String
+    customer   User   @relation(fields: [customerId], references: [id])
+
+    // Amounts
+    subtotal    Decimal @db.Decimal(10, 2)
+    tax         Decimal @default(0) @db.Decimal(10, 2)
+    discount    Decimal @default(0) @db.Decimal(10, 2)
+    totalAmount Decimal @db.Decimal(10, 2)
+    paidAmount  Decimal @default(0) @db.Decimal(10, 2)
+
+    status InvoiceStatus @default(DRAFT)
+
+    issuedAt DateTime  @default(now())
+    dueDate  DateTime?
+    paidAt   DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    lineItems InvoiceLineItem[]
+    payments  Payment[]
+
+    @@index([customerId])
+    @@index([status])
+    @@index([issuedAt])
+}
+
+model InvoiceLineItem {
+    id        String  @id @default(uuid())
+    invoiceId String
+    invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+    description   String
+    descriptionAr String?
+    itemType      String // SERVICE, PRODUCT, LABOR, DELIVERY, PART
+
+    quantity   Int     @default(1)
+    unitPrice  Decimal @db.Decimal(10, 2)
+    totalPrice Decimal @db.Decimal(10, 2)
+
+    createdAt DateTime @default(now())
+
+    @@index([invoiceId])
+}
+
+enum PaymentMethod {
+    CASH
+    CARD
+    WALLET
+    BANK_TRANSFER
+    APPLE_PAY
+    MADA
+}
+
+enum PaymentStatus {
+    PENDING
+    PROCESSING
+    COMPLETED
+    FAILED
+    REFUNDED
+}
+
+model Payment {
+    id            String @id @default(uuid())
+    paymentNumber String @unique // AUTO-GEN: PAY-20260123-001
+
+    invoiceId String
+    invoice   Invoice @relation(fields: [invoiceId], references: [id])
+
+    customerId String
+    customer   User   @relation(fields: [customerId], references: [id])
+
+    amount Decimal       @db.Decimal(10, 2)
+    method PaymentMethod
+    status PaymentStatus @default(PENDING)
+
+    // Payment Gateway Details
+    gatewayReference String? @unique
+    gatewayResponse  Json?
+
+    processedAt DateTime?
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+
+    @@index([invoiceId])
+    @@index([customerId])
+    @@index([status])
+}
+
+model Wallet {
+    id     String @id @default(uuid())
+    userId String @unique
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    balance        Decimal @default(0) @db.Decimal(10, 2)
+    pendingBalance Decimal @default(0) @db.Decimal(10, 2) // Locked for pending transactions
+
+    currency String @default("SAR")
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    transactions Transaction[]
+
+    @@index([userId])
+}
+
+enum TransactionType {
+    EARNING // Technician/Supplier income
+    WITHDRAWAL // Cash out
+    REFUND // Money returned
+    COMMISSION // Platform fee deduction
+    SUPPLY_PAYMENT // Payment for supply request
+    ADJUSTMENT // Admin adjustment
+}
+
+enum TransactionStatus {
+    PENDING
+    COMPLETED
+    FAILED
+    CANCELLED
+}
+
+model Transaction {
+    id                String @id @default(uuid())
+    transactionNumber String @unique // AUTO-GEN: TXN-20260123-001
+
+    walletId String
+    wallet   Wallet @relation(fields: [walletId], references: [id])
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id])
+
+    type          TransactionType
+    amount        Decimal         @db.Decimal(10, 2)
+    balanceBefore Decimal         @db.Decimal(10, 2)
+    balanceAfter  Decimal         @db.Decimal(10, 2)
+
+    description String
+    status      TransactionStatus @default(PENDING)
+
+    // Related Entities
+    supplyRequestId String?        @unique
+    supplyRequest   SupplyRequest? @relation(fields: [supplyRequestId], references: [id])
+
+    metadata Json? // Additional context
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([walletId])
+    @@index([userId])
+    @@index([type])
+    @@index([createdAt])
+}
+
+// ================================================================================================
+// RATING & REVIEW SYSTEM
+// ================================================================================================
+
+model Rating {
+    id        String  @id @default(uuid())
+    bookingId String  @unique
+    booking   Booking @relation(fields: [bookingId], references: [id])
+
+    raterId String // Who gave the rating
+    rater   User   @relation("RaterRatings", fields: [raterId], references: [id])
+
+    rateeId String // Who received the rating
+    ratee   User   @relation("RateeRatings", fields: [rateeId], references: [id])
+
+    score  Int // 1-5 stars
+    review String? @db.Text
+
+    // Detailed Ratings (optional)
+    punctuality     Int? // 1-5
+    professionalism Int? // 1-5
+    quality         Int? // 1-5
+    communication   Int? // 1-5
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([bookingId])
+    @@index([raterId])
+    @@index([rateeId])
+}
+
+// ================================================================================================
+// NOTIFICATION SYSTEM
+// ================================================================================================
+
+enum NotificationType {
+    BOOKING_CREATED
+    BOOKING_CONFIRMED
+    BOOKING_CANCELLED
+
+    BROADCAST_NEW
+    OFFER_RECEIVED
+    OFFER_ACCEPTED
+
+    INSPECTION_SUBMITTED
+    QUOTE_APPROVED
+    QUOTE_REJECTED
+
+    SUPPLY_REQUEST_NEW
+    SUPPLY_REQUEST_ACCEPTED
+    SUPPLY_DELIVERED
+
+    PAYMENT_RECEIVED
+    PAYMENT_FAILED
+
+    STATUS_UPDATE
+    MESSAGE
+    SYSTEM
+}
+
+model Notification {
+    id     String @id @default(uuid())
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    type      NotificationType
+    title     String
+    titleAr   String?
+    message   String           @db.Text
+    messageAr String?          @db.Text
+
+    // Related Entity
+    bookingId String?
+    booking   Booking? @relation(fields: [bookingId], references: [id])
+
+    metadata Json? // Additional data
+
+    isRead Boolean   @default(false)
+    readAt DateTime?
+
+    createdAt DateTime @default(now())
+
+    @@index([userId, isRead])
+    @@index([createdAt])
 }
