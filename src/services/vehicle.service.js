@@ -18,12 +18,20 @@ class VehicleService {
         userId
       },
       include: {
-        vehicleMaster: {
+        vehicleModel: {
           select: {
-            make: true,
-            model: true,
+            id: true,
+            name: true,
+            nameAr: true,
             year: true,
-            size: true
+            size: true,
+            brand: {
+              select: {
+                id: true,
+                name: true,
+                nameAr: true
+              }
+            }
           }
         }
       },
@@ -46,12 +54,20 @@ class VehicleService {
         userId
       },
       include: {
-        vehicleMaster: {
+        vehicleModel: {
           select: {
-            make: true,
-            model: true,
+            id: true,
+            name: true,
+            nameAr: true,
             year: true,
-            size: true
+            size: true,
+            brand: {
+              select: {
+                id: true,
+                name: true,
+                nameAr: true
+              }
+            }
           }
         }
       }
@@ -71,20 +87,20 @@ class VehicleService {
    * @returns {Object} Created vehicle
    */
   async addVehicle(userId, vehicleData) {
-    const { vehicleMasterId, plateNumber, color, isDefault = false } = vehicleData;
+    const { vehicleModelId, plateNumber, color, isDefault = false } = vehicleData;
 
     // Validate required fields
-    if (!vehicleMasterId || !plateNumber) {
-      throw new AppError('Vehicle master ID and plate number are required', 400, 'VALIDATION_ERROR');
+    if (!vehicleModelId || !plateNumber) {
+      throw new AppError('Vehicle model ID and plate number are required', 400, 'VALIDATION_ERROR');
     }
 
-    // Check if master vehicle exists
-    const master = await prisma.vehicleMaster.findUnique({
-      where: { id: vehicleMasterId }
+    // Check if vehicle model exists
+    const model = await prisma.vehicleModel.findUnique({
+      where: { id: vehicleModelId }
     });
 
-    if (!master) {
-      throw new AppError('Invalid vehicle master ID', 400, 'VALIDATION_ERROR');
+    if (!model) {
+      throw new AppError('Invalid vehicle model ID', 400, 'VALIDATION_ERROR');
     }
 
     // Check for duplicate plate number
@@ -113,18 +129,26 @@ class VehicleService {
     const vehicle = await prisma.userVehicle.create({
       data: {
         userId,
-        vehicleMasterId,
+        vehicleModelId,
         plateNumber,
         color,
         isDefault
       },
       include: {
-        vehicleMaster: {
+        vehicleModel: {
           select: {
-            make: true,
-            model: true,
+            id: true,
+            name: true,
+            nameAr: true,
             year: true,
-            size: true
+            size: true,
+            brand: {
+              select: {
+                id: true,
+                name: true,
+                nameAr: true
+              }
+            }
           }
         }
       }
@@ -182,12 +206,20 @@ class VehicleService {
         ...(isDefault !== undefined && { isDefault })
       },
       include: {
-        vehicleMaster: {
+        vehicleModel: {
           select: {
-            make: true,
-            model: true,
+            id: true,
+            name: true,
+            nameAr: true,
             year: true,
-            size: true
+            size: true,
+            brand: {
+              select: {
+                id: true,
+                name: true,
+                nameAr: true
+              }
+            }
           }
         }
       }
@@ -238,7 +270,11 @@ class VehicleService {
       where: { id: vehicleId },
       data: { isDefault: true },
       include: {
-        vehicleMaster: true
+        vehicleModel: {
+          include: {
+            brand: true
+          }
+        }
       }
     });
 
@@ -248,7 +284,67 @@ class VehicleService {
   }
 
   /**
-   * Get vehicle masters (for selection)
+   * Get all vehicle brands
+   * @returns {Array} List of vehicle brands
+   */
+  async getVehicleBrands() {
+    const brands = await prisma.vehicleBrand.findMany({
+      where: {
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        nameAr: true,
+        logo: true
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+
+    return brands;
+  }
+
+  /**
+   * Get vehicle models for a specific brand
+   * @param {string} brandId - Brand ID
+   * @param {Object} filters - Optional filters (year, size)
+   * @returns {Array} List of vehicle models
+   */
+  async getVehicleModels(brandId, filters = {}) {
+    const { year, size } = filters;
+
+    const where = {
+      brandId,
+      isActive: true,
+      ...(year && { year: parseInt(year) }),
+      ...(size && { size })
+    };
+
+    const models = await prisma.vehicleModel.findMany({
+      where,
+      include: {
+        brand: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            logo: true
+          }
+        }
+      },
+      orderBy: [
+        { year: 'desc' },
+        { name: 'asc' }
+      ]
+    });
+
+    return models;
+  }
+
+  /**
+   * Get vehicle masters (DEPRECATED - use getVehicleBrands/getVehicleModels instead)
    * @param {Object} filters - Filters (make, model, year, category)
    * @returns {Array} Vehicle masters list
    */
