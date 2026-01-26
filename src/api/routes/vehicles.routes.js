@@ -8,44 +8,56 @@ router.use(authMiddleware);
 
 /**
  * @swagger
- * /vehicles/masters:
+ * /vehicles/brands:
  *   get:
- *     summary: Get vehicle masters catalog
+ *     summary: Get vehicle brands catalog
  *     description: |
- *       Get available vehicle makes/models for selection
+ *       Get available vehicle brands (Toyota, BMW, Mercedes, etc.)
  *       
- *       الحصول على كتالوج المركبات المتاحة
+ *       الحصول على العلامات التجارية للمركبات المتاحة
+ *     tags: [Vehicles]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Vehicle brands list
+ */
+router.get('/brands', vehicleController.getVehicleBrands);
+
+/**
+ * @swagger
+ * /vehicles/brands/{brandId}/models:
+ *   get:
+ *     summary: Get vehicle models for a brand
+ *     description: |
+ *       Get all available models for a specific brand
+ *       
+ *       الحصول على موديلات مركبة محددة
  *     tags: [Vehicles]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: make
+ *       - in: path
+ *         name: brandId
+ *         required: true
  *         schema:
  *           type: string
- *         description: Filter by make (Toyota, BMW, etc.)
+ *         description: Brand ID
  *       - in: query
- *         name: model
- *         schema:
- *           type: string
- *       - in: query
- *         name: yearFrom
+ *         name: year
  *         schema:
  *           type: integer
+ *         description: Filter by year
  *       - in: query
- *         name: yearTo
- *         schema:
- *           type: integer
- *       - in: query
- *         name: category
+ *         name: size
  *         schema:
  *           type: string
- *           enum: [SEDAN, SUV, TRUCK, SPORTS, LUXURY]
+ *           enum: [SMALL, MEDIUM, LARGE, EXTRA_LARGE]
  *     responses:
  *       200:
- *         description: Vehicle masters list
+ *         description: Vehicle models list
  */
-router.get('/masters', vehicleController.getVehicleMasters);
+router.get('/brands/:brandId/models', vehicleController.getVehicleModels);
 
 /**
  * @swagger
@@ -84,12 +96,12 @@ router.get('/', vehicleController.getMyVehicles);
  *           schema:
  *             type: object
  *             required:
- *               - vehicleMasterId
+ *               - vehicleModelId
  *               - plateNumber
  *             properties:
- *               vehicleMasterId:
+ *               vehicleModelId:
  *                 type: string
- *                 description: Vehicle master ID from catalog
+ *                 description: Vehicle model ID from catalog
  *               plateNumber:
  *                 type: string
  *                 example: ABC 1234
