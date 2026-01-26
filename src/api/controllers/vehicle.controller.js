@@ -115,7 +115,44 @@ class VehicleController {
   }
 
   /**
-   * Get vehicle masters catalog
+   * Get vehicle brands catalog
+   * GET /api/vehicles/brands
+   */
+  async getVehicleBrands(req, res, next) {
+    try {
+      const brands = await vehicleService.getVehicleBrands();
+
+      res.json({
+        success: true,
+        data: brands
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get vehicle models for a specific brand
+   * GET /api/vehicles/brands/:brandId/models
+   */
+  async getVehicleModels(req, res, next) {
+    try {
+      const { brandId } = req.params;
+      const { year, size } = req.query;
+
+      const models = await vehicleService.getVehicleModels(brandId, { year, size });
+
+      res.json({
+        success: true,
+        data: models
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get vehicle masters catalog (DEPRECATED - use getVehicleBrands instead)
    * GET /api/vehicles/masters
    */
   async getVehicleMasters(req, res, next) {
