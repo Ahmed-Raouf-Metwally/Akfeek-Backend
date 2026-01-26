@@ -24,7 +24,7 @@ class VehicleService {
             name: true,
             nameAr: true,
             year: true,
-            size: true,
+            type: true,
             brand: {
               select: {
                 id: true,
@@ -313,13 +313,13 @@ class VehicleService {
    * @returns {Array} List of vehicle models
    */
   async getVehicleModels(brandId, filters = {}) {
-    const { year, size } = filters;
+    const { year, type } = filters;
 
     const where = {
       brandId,
       isActive: true,
       ...(year && { year: parseInt(year) }),
-      ...(size && { size })
+      ...(type && { type })
     };
 
     const models = await prisma.vehicleModel.findMany({

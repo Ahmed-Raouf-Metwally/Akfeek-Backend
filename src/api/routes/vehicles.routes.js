@@ -49,10 +49,11 @@ router.get('/brands', vehicleController.getVehicleBrands);
  *           type: integer
  *         description: Filter by year
  *       - in: query
- *         name: size
+ *         name: type
  *         schema:
  *           type: string
- *           enum: [SMALL, MEDIUM, LARGE, EXTRA_LARGE]
+ *           enum: [SEDAN, HATCHBACK, COUPE, SMALL_SUV, LARGE_SEDAN, SUV, CROSSOVER, TRUCK, VAN, BUS]
+ *         description: Filter by vehicle type
  *     responses:
  *       200:
  *         description: Vehicle models list

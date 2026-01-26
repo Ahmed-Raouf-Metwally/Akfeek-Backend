@@ -150,11 +150,17 @@ model Address {
 // VEHICLE MANAGEMENT
 // ================================================================================================
 
-enum VehicleSize {
-    SMALL // Sedan, Hatchback
-    MEDIUM // SUV, Crossover
-    LARGE // Truck, Van
-    EXTRA_LARGE // Bus, Commercial
+enum VehicleType {
+    SEDAN // سيدان - Standard sedan cars
+    HATCHBACK // هاتشباك - Hatchback cars
+    COUPE // كوبيه - Coupe cars
+    SMALL_SUV // دفع رباعي صغير - Compact SUV
+    LARGE_SEDAN // سيدان كبيرة - Full-size sedan
+    SUV // دفع رباعي - Sport Utility Vehicle
+    CROSSOVER // كروس أوفر - Crossover SUV
+    TRUCK // شاحنة/بيك أب - Pickup truck
+    VAN // فان - Van
+    BUS // باص - Bus
 }
 
 // New: Separate brand and model tables for better data management
@@ -182,7 +188,7 @@ model VehicleModel {
     name     String // Camry, X5, C-Class
     nameAr   String? // كامري
     year     Int // 2023, 2024
-    size     VehicleSize
+    type     VehicleType
     imageUrl String?
 
     isActive Boolean @default(true)
@@ -286,7 +292,7 @@ model ServicePricing {
     serviceId String
     service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-    vehicleSize     VehicleSize
+    vehicleType     VehicleType
     basePrice       Decimal     @db.Decimal(10, 2)
     discountedPrice Decimal?    @db.Decimal(10, 2)
 
@@ -294,7 +300,7 @@ model ServicePricing {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@unique([serviceId, vehicleSize])
+    @@unique([serviceId, vehicleType])
     @@index([serviceId])
 }
 
