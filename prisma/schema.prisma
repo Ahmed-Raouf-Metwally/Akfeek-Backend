@@ -157,6 +157,49 @@ enum VehicleSize {
     EXTRA_LARGE // Bus, Commercial
 }
 
+// New: Separate brand and model tables for better data management
+model VehicleBrand {
+    id       String  @id @default(uuid())
+    name     String  @unique // Toyota, BMW, Mercedes-Benz
+    nameAr   String? // تويوتا, بي ام دبليو
+    logo     String? // Brand logo URL
+    isActive Boolean @default(true)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    models VehicleModel[]
+
+    @@index([name])
+}
+
+model VehicleModel {
+    id      String       @id @default(uuid())
+    brandId String
+    brand   VehicleBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+    name     String      // Camry, X5, C-Class
+    nameAr   String? // كامري
+    year     Int // 2023, 2024
+    size     VehicleSize
+    imageUrl String?
+
+    isActive Boolean @default(true)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    userVehicles       UserVehicle[]
+    compatibleProducts ProductCompatibility[]
+
+    @@unique([brandId, name, year])
+    @@index([brandId])
+    @@index([name])
+}
+
+// Deprecated: Keep for backward compatibility, will be removed in future
 model VehicleMaster {
     id       String      @id @default(uuid())
     make     String // Toyota, BMW, etc.
@@ -168,9 +211,9 @@ model VehicleMaster {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    // Relations
-    userVehicles       UserVehicle[]
-    compatibleProducts ProductCompatibility[]
+    // Relations - Deprecated, use VehicleModel instead
+    userVehicles       UserVehicle[] @relation("DeprecatedVehicleMaster")
+    compatibleProducts ProductCompatibility[] @relation("DeprecatedVehicleMaster")
 
     @@unique([make, model, year])
     @@index([make, model])
@@ -181,13 +224,25 @@ model UserVehicle {
     userId String
     user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    vehicleMasterId String
-    vehicleMaster   VehicleMaster @relation(fields: [vehicleMasterId], references: [id])
+    // Old system (deprecated, will be removed)
+    vehicleMasterId String?
+    vehicleMaster   VehicleMaster?         @relation("DeprecatedVehicleMaster", fields: [vehicleMasterId], references: [id])
 
-    plateNumber    String  @unique
-    color          String?
-    vin            String? @unique
-    currentMileage Int?
+    // New system (preferred)
+    vehicleModelId  String?
+    vehicleModel    VehicleModel?          @relation(fields: [vehicleModelId], references: [id])
+
+    // Basic Information
+    ownerName      String? // الأسم - Owner name
+    plateNumber    String  @unique // رقم اللوحة
+    color          String? // اللون
+    vin            String? @unique // رقم الهيكل - Chassis number
+    currentMileage Int? // عداد الكيلومترات
+
+    // Engine Information
+    fuelType           String? // نوع الوقود - Petrol/Diesel/Electric/Hybrid
+    engineCapacity     String? // سعة المحرك - e.g., "2.0L", "3.5L"
+    engineSerialNumber String? // الرقم التسلسلي للمحرك
 
     isDefault Boolean  @default(false)
     createdAt DateTime @default(now())
@@ -198,6 +253,7 @@ model UserVehicle {
 
     @@index([userId])
     @@index([vehicleMasterId])
+    @@index([vehicleModelId])
 }
 
 // ================================================================================================
@@ -329,14 +385,21 @@ model ProductCompatibility {
     productId String
     product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-    vehicleMasterId String
-    vehicleMaster   VehicleMaster @relation(fields: [vehicleMasterId], references: [id], onDelete: Cascade)
+    // Old system (deprecated)
+    vehicleMasterId String?
+    vehicleMaster   VehicleMaster? @relation("DeprecatedVehicleMaster", fields: [vehicleMasterId], references: [id], onDelete: Cascade)
+
+    // New system (preferred)
+    vehicleModelId String?
+    vehicleModel   VehicleModel? @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
 
     createdAt DateTime @default(now())
 
     @@unique([productId, vehicleMasterId])
+    @@unique([productId, vehicleModelId])
     @@index([productId])
     @@index([vehicleMasterId])
+    @@index([vehicleModelId])
 }
 
 // ================================================================================================

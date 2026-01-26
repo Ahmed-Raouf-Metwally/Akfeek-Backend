@@ -263,6 +263,14 @@ Authorization: Bearer <your_jwt_token>
         }
       },
       {
+        name: 'Vehicle Brands',
+        description: 'Vehicle brand management (Toyota, BMW, etc.) - إدارة ماركات المركبات'
+      },
+      {
+        name: 'Vehicle Models',
+        description: 'Vehicle model management (Camry, X5, etc.) - إدارة موديلات المركبات'
+      },
+      {
         name: 'Users',
         description: 'User profile management - إدارة الملف الشخصي'
       },

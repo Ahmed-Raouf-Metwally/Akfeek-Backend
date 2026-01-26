@@ -3,6 +3,8 @@ const router = express.Router();
 
 // Import all route modules
 const authRoutes = require('./auth.routes');
+const brandRoutes = require('./brands.routes');
+const modelRoutes = require('./models.routes');
 const userRoutes = require('./users.routes');
 const vehicleRoutes = require('./vehicles.routes');
 const serviceRoutes = require('./services.routes');
@@ -20,6 +22,8 @@ const addressRoutes = require('./addresses.routes');
 
 // Public routes (no authentication required)
 router.use('/auth', authRoutes);
+router.use('/brands', brandRoutes);
+router.use('/models', modelRoutes);
 
 // Protected routes (authentication required)
 // These will have auth middleware applied in individual route files
