@@ -179,7 +179,7 @@ model VehicleModel {
     brandId String
     brand   VehicleBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
-    name     String      // Camry, X5, C-Class
+    name     String // Camry, X5, C-Class
     nameAr   String? // كامري
     year     Int // 2023, 2024
     size     VehicleSize
@@ -199,38 +199,14 @@ model VehicleModel {
     @@index([name])
 }
 
-// Deprecated: Keep for backward compatibility, will be removed in future
-model VehicleMaster {
-    id       String      @id @default(uuid())
-    make     String // Toyota, BMW, etc.
-    model    String // Camry, X5, etc.
-    year     Int
-    size     VehicleSize
-    imageUrl String?
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    // Relations - Deprecated, use VehicleModel instead
-    userVehicles       UserVehicle[] @relation("DeprecatedVehicleMaster")
-    compatibleProducts ProductCompatibility[] @relation("DeprecatedVehicleMaster")
-
-    @@unique([make, model, year])
-    @@index([make, model])
-}
-
 model UserVehicle {
     id     String @id @default(uuid())
     userId String
     user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    // Old system (deprecated, will be removed)
-    vehicleMasterId String?
-    vehicleMaster   VehicleMaster?         @relation("DeprecatedVehicleMaster", fields: [vehicleMasterId], references: [id])
-
-    // New system (preferred)
-    vehicleModelId  String?
-    vehicleModel    VehicleModel?          @relation(fields: [vehicleModelId], references: [id])
+    // Vehicle Model Reference
+    vehicleModelId String
+    vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id])
 
     // Basic Information
     ownerName      String? // الأسم - Owner name
@@ -252,7 +228,6 @@ model UserVehicle {
     bookings Booking[]
 
     @@index([userId])
-    @@index([vehicleMasterId])
     @@index([vehicleModelId])
 }
 
@@ -385,20 +360,14 @@ model ProductCompatibility {
     productId String
     product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-    // Old system (deprecated)
-    vehicleMasterId String?
-    vehicleMaster   VehicleMaster? @relation("DeprecatedVehicleMaster", fields: [vehicleMasterId], references: [id], onDelete: Cascade)
-
-    // New system (preferred)
-    vehicleModelId String?
-    vehicleModel   VehicleModel? @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
+    // Vehicle Model Reference
+    vehicleModelId String
+    vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
 
     createdAt DateTime @default(now())
 
-    @@unique([productId, vehicleMasterId])
     @@unique([productId, vehicleModelId])
     @@index([productId])
-    @@index([vehicleMasterId])
     @@index([vehicleModelId])
 }
 
