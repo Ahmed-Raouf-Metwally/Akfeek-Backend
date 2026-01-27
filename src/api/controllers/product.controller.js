@@ -1,4 +1,5 @@
 const prisma = require('../../utils/database/prisma');
+const { AppError } = require('../middlewares/error.middleware');
 
 /**
  * Get all products (Admin). Paginated list.
@@ -33,6 +34,7 @@ async function getAllProducts(req, res, next) {
           stockQuantity: true,
           isActive: true,
           isFeatured: true,
+          imageUrl: true,
           createdAt: true,
         },
       }),
@@ -67,9 +69,9 @@ async function getProductById(req, res, next) {
       where: { id },
     });
     if (!product) {
-      return res.status(404).json({ success: false, error: 'Product not found' });
+      throw new AppError('Product not found', 404, 'NOT_FOUND');
     }
-    res.json({ success: true, data: product });
+    res.json({ success: true, message: '', data: product });
   } catch (error) {
     next(error);
   }

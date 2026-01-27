@@ -58,7 +58,7 @@ class AuthController {
         success: true,
         message: 'OTP sent successfully',
         messageAr: 'تم إرسال رمز التحقق بنجاح',
-        ...result
+        data: result || {},
       });
     } catch (error) {
       next(error);

@@ -17,7 +17,6 @@ class TowingController {
                 data: result
             });
         } catch (error) {
-            console.error('Towing request error:', error);
             next(error);
         }
     }

@@ -1,4 +1,5 @@
 const prisma = require('../../utils/database/prisma');
+const { AppError } = require('../middlewares/error.middleware');
 
 /**
  * Get all invoices (Admin). Paginated list with customer/booking summary.
@@ -97,9 +98,9 @@ async function getInvoiceById(req, res, next) {
       },
     });
     if (!invoice) {
-      return res.status(404).json({ success: false, error: 'Invoice not found' });
+      throw new AppError('Invoice not found', 404, 'NOT_FOUND');
     }
-    res.json({ success: true, data: invoice });
+    res.json({ success: true, message: '', data: invoice });
   } catch (error) {
     next(error);
   }

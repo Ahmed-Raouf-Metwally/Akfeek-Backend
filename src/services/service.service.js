@@ -19,13 +19,12 @@ class ServiceCatalogService {
       ...(category && { category }),
       ...(type && { type }),
       ...(isActive !== undefined && { isActive: isActive === 'true' }),
-      ...(search && {
-        OR: [
-          { name: { contains: search } },
-          { description: { contains: search } }
-        ]
-      })
     };
+
+    const searchTerm = typeof search === 'string' ? search.trim() : '';
+    if (searchTerm) {
+      where.OR = [{ name: { contains: searchTerm } }];
+    }
 
     const services = await prisma.service.findMany({
       where,

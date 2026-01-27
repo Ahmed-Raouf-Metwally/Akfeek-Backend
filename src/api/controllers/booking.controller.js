@@ -1,4 +1,5 @@
 const prisma = require('../../utils/database/prisma');
+const { AppError } = require('../middlewares/error.middleware');
 
 /**
  * Get all bookings (Admin). Paginated list with customer/vehicle summary.
@@ -108,9 +109,9 @@ async function getBookingById(req, res, next) {
       },
     });
     if (!booking) {
-      return res.status(404).json({ success: false, error: 'Booking not found' });
+      throw new AppError('Booking not found', 404, 'NOT_FOUND');
     }
-    res.json({ success: true, data: booking });
+    res.json({ success: true, message: '', data: booking });
   } catch (error) {
     next(error);
   }

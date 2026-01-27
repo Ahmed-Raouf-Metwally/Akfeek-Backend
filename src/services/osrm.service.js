@@ -1,4 +1,5 @@
 const axios = require('axios');
+const logger = require('../utils/logger/logger');
 
 /**
  * OSRM Routing Service
@@ -44,7 +45,7 @@ class OSRMService {
                 success: true
             };
         } catch (error) {
-            console.error('OSRM routing error:', error.message);
+            logger.warn('OSRM routing error', { message: error?.message });
             return {
                 success: false,
                 error: error.message
@@ -70,7 +71,7 @@ class OSRMService {
         }
 
         // Fallback to Haversine formula
-        console.log('OSRM failed, using Haversine fallback');
+        logger.info('OSRM failed, using Haversine fallback');
         const distance = this.calculateHaversineDistance(techLat, techLng, pickupLat, pickupLng);
 
         // Estimate duration based on average speed

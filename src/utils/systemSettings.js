@@ -1,4 +1,5 @@
 const prisma = require('./database/prisma');
+const logger = require('./logger/logger');
 
 /**
  * Get system setting value by key
@@ -28,7 +29,7 @@ async function getSystemSetting(key, defaultValue = null) {
                 return setting.value;
         }
     } catch (error) {
-        console.error(`Error fetching system setting ${key}:`, error);
+        logger.error('Error fetching system setting', { key, error: error?.message });
         return defaultValue;
     }
 }
