@@ -1,8 +1,9 @@
+require('dotenv').config();
+
 const app = require('./src/app');
 const prisma = require('./src/utils/database/prisma');
 const { initializeSocket } = require('./src/socket');
 const logger = require('./src/utils/logger/logger');
-require('dotenv').config();
 
 const PORT = process.env.PORT || 5000;
 

@@ -32,12 +32,12 @@ class ServiceCatalogService {
       include: {
         pricing: {
           select: {
-            vehicleSize: true,
+            vehicleType: true,
             basePrice: true,
             discountedPrice: true
           }
         },
-        addOns: {
+        parentAddOns: {
           include: {
             addOn: {
               select: {
@@ -65,7 +65,7 @@ class ServiceCatalogService {
       where: { id },
       include: {
         pricing: true,
-        addOns: {
+        parentAddOns: {
           include: {
             addOn: true
           }
@@ -89,6 +89,7 @@ class ServiceCatalogService {
     const { 
       name, nameAr, description, descriptionAr, 
       type, category, estimatedDuration, 
+      imageUrl, icon, isActive, requiresVehicle,
       pricing 
     } = data;
 
@@ -101,10 +102,14 @@ class ServiceCatalogService {
         descriptionAr,
         type,
         category,
-        estimatedDuration: parseInt(estimatedDuration),
+        estimatedDuration: estimatedDuration != null ? parseInt(estimatedDuration) : null,
+        ...(imageUrl !== undefined && imageUrl !== '' && { imageUrl }),
+        ...(icon !== undefined && icon !== '' && { icon }),
+        ...(isActive !== undefined && { isActive: !!isActive }),
+        ...(requiresVehicle !== undefined && { requiresVehicle: !!requiresVehicle }),
         pricing: {
           create: pricing ? pricing.map(p => ({
-            vehicleSize: p.vehicleSize,
+            vehicleType: p.vehicleType || p.vehicleSize,
             basePrice: parseFloat(p.basePrice),
             discountedPrice: p.discountedPrice ? parseFloat(p.discountedPrice) : null
           })) : []
@@ -151,7 +156,7 @@ class ServiceCatalogService {
       await prisma.servicePricing.createMany({
         data: pricing.map(p => ({
           serviceId: id,
-          vehicleSize: p.vehicleSize,
+          vehicleType: p.vehicleType || p.vehicleSize,
           basePrice: parseFloat(p.basePrice),
           discountedPrice: p.discountedPrice ? parseFloat(p.discountedPrice) : null
         }))

@@ -74,18 +74,36 @@ CREATE TABLE `Address` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `VehicleMaster` (
+CREATE TABLE `VehicleBrand` (
     `id` VARCHAR(191) NOT NULL,
-    `make` VARCHAR(191) NOT NULL,
-    `model` VARCHAR(191) NOT NULL,
-    `year` INTEGER NOT NULL,
-    `size` ENUM('SMALL', 'MEDIUM', 'LARGE', 'EXTRA_LARGE') NOT NULL,
-    `imageUrl` VARCHAR(191) NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `nameAr` VARCHAR(191) NULL,
+    `logo` VARCHAR(191) NULL,
+    `isActive` BOOLEAN NOT NULL DEFAULT true,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    INDEX `VehicleMaster_make_model_idx`(`make`, `model`),
-    UNIQUE INDEX `VehicleMaster_make_model_year_key`(`make`, `model`, `year`),
+    UNIQUE INDEX `VehicleBrand_name_key`(`name`),
+    INDEX `VehicleBrand_name_idx`(`name`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `VehicleModel` (
+    `id` VARCHAR(191) NOT NULL,
+    `brandId` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `nameAr` VARCHAR(191) NULL,
+    `year` INTEGER NOT NULL,
+    `type` ENUM('SEDAN', 'HATCHBACK', 'COUPE', 'SMALL_SUV', 'LARGE_SEDAN', 'SUV', 'CROSSOVER', 'TRUCK', 'VAN', 'BUS') NOT NULL,
+    `imageUrl` VARCHAR(191) NULL,
+    `isActive` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `VehicleModel_brandId_idx`(`brandId`),
+    INDEX `VehicleModel_name_idx`(`name`),
+    UNIQUE INDEX `VehicleModel_brandId_name_year_key`(`brandId`, `name`, `year`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -93,11 +111,15 @@ CREATE TABLE `VehicleMaster` (
 CREATE TABLE `UserVehicle` (
     `id` VARCHAR(191) NOT NULL,
     `userId` VARCHAR(191) NOT NULL,
-    `vehicleMasterId` VARCHAR(191) NOT NULL,
+    `vehicleModelId` VARCHAR(191) NOT NULL,
+    `ownerName` VARCHAR(191) NULL,
     `plateNumber` VARCHAR(191) NOT NULL,
     `color` VARCHAR(191) NULL,
     `vin` VARCHAR(191) NULL,
     `currentMileage` INTEGER NULL,
+    `fuelType` VARCHAR(191) NULL,
+    `engineCapacity` VARCHAR(191) NULL,
+    `engineSerialNumber` VARCHAR(191) NULL,
     `isDefault` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -105,7 +127,7 @@ CREATE TABLE `UserVehicle` (
     UNIQUE INDEX `UserVehicle_plateNumber_key`(`plateNumber`),
     UNIQUE INDEX `UserVehicle_vin_key`(`vin`),
     INDEX `UserVehicle_userId_idx`(`userId`),
-    INDEX `UserVehicle_vehicleMasterId_idx`(`vehicleMasterId`),
+    INDEX `UserVehicle_vehicleModelId_idx`(`vehicleModelId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -135,7 +157,7 @@ CREATE TABLE `Service` (
 CREATE TABLE `ServicePricing` (
     `id` VARCHAR(191) NOT NULL,
     `serviceId` VARCHAR(191) NOT NULL,
-    `vehicleSize` ENUM('SMALL', 'MEDIUM', 'LARGE', 'EXTRA_LARGE') NOT NULL,
+    `vehicleType` ENUM('SEDAN', 'HATCHBACK', 'COUPE', 'SMALL_SUV', 'LARGE_SEDAN', 'SUV', 'CROSSOVER', 'TRUCK', 'VAN', 'BUS') NOT NULL,
     `basePrice` DECIMAL(10, 2) NOT NULL,
     `discountedPrice` DECIMAL(10, 2) NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
@@ -143,7 +165,7 @@ CREATE TABLE `ServicePricing` (
     `updatedAt` DATETIME(3) NOT NULL,
 
     INDEX `ServicePricing_serviceId_idx`(`serviceId`),
-    UNIQUE INDEX `ServicePricing_serviceId_vehicleSize_key`(`serviceId`, `vehicleSize`),
+    UNIQUE INDEX `ServicePricing_serviceId_vehicleType_key`(`serviceId`, `vehicleType`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -187,12 +209,12 @@ CREATE TABLE `Product` (
 CREATE TABLE `ProductCompatibility` (
     `id` VARCHAR(191) NOT NULL,
     `productId` VARCHAR(191) NOT NULL,
-    `vehicleMasterId` VARCHAR(191) NOT NULL,
+    `vehicleModelId` VARCHAR(191) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `ProductCompatibility_productId_idx`(`productId`),
-    INDEX `ProductCompatibility_vehicleMasterId_idx`(`vehicleMasterId`),
-    UNIQUE INDEX `ProductCompatibility_productId_vehicleMasterId_key`(`productId`, `vehicleMasterId`),
+    INDEX `ProductCompatibility_vehicleModelId_idx`(`vehicleModelId`),
+    UNIQUE INDEX `ProductCompatibility_productId_vehicleModelId_key`(`productId`, `vehicleModelId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -595,10 +617,13 @@ ALTER TABLE `Profile` ADD CONSTRAINT `Profile_userId_fkey` FOREIGN KEY (`userId`
 ALTER TABLE `Address` ADD CONSTRAINT `Address_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `VehicleModel` ADD CONSTRAINT `VehicleModel_brandId_fkey` FOREIGN KEY (`brandId`) REFERENCES `VehicleBrand`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `UserVehicle` ADD CONSTRAINT `UserVehicle_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `UserVehicle` ADD CONSTRAINT `UserVehicle_vehicleMasterId_fkey` FOREIGN KEY (`vehicleMasterId`) REFERENCES `VehicleMaster`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `UserVehicle` ADD CONSTRAINT `UserVehicle_vehicleModelId_fkey` FOREIGN KEY (`vehicleModelId`) REFERENCES `VehicleModel`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `ServicePricing` ADD CONSTRAINT `ServicePricing_serviceId_fkey` FOREIGN KEY (`serviceId`) REFERENCES `Service`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -613,7 +638,7 @@ ALTER TABLE `ServiceAddOn` ADD CONSTRAINT `ServiceAddOn_addOnId_fkey` FOREIGN KE
 ALTER TABLE `ProductCompatibility` ADD CONSTRAINT `ProductCompatibility_productId_fkey` FOREIGN KEY (`productId`) REFERENCES `Product`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `ProductCompatibility` ADD CONSTRAINT `ProductCompatibility_vehicleMasterId_fkey` FOREIGN KEY (`vehicleMasterId`) REFERENCES `VehicleMaster`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `ProductCompatibility` ADD CONSTRAINT `ProductCompatibility_vehicleModelId_fkey` FOREIGN KEY (`vehicleModelId`) REFERENCES `VehicleModel`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Booking` ADD CONSTRAINT `Booking_customerId_fkey` FOREIGN KEY (`customerId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
