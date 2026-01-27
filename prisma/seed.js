@@ -328,10 +328,109 @@ async function main() {
 
   console.log(`✅ Created ${pricingCount} pricing entries\n`);
 
+  // ============================================
+  // 4. System Settings (العمولات والضرائب والأسعار)
+  // ============================================
+  console.log('⚙️ Seeding System Settings (commissions, tax, pricing)...');
+
+  const systemSettingsRows = [
+    // العمولات والنسب
+    {
+      key: 'PLATFORM_COMMISSION_PERCENT',
+      value: '10',
+      type: 'NUMBER',
+      category: 'COMMISSION',
+      description: 'Platform commission percentage applied to bookings',
+      descriptionAr: 'نسبة عمولة المنصة على الحجوزات %',
+      isEditable: true,
+    },
+    {
+      key: 'TECHNICIAN_COMMISSION_PERCENT',
+      value: '85',
+      type: 'NUMBER',
+      category: 'COMMISSION',
+      description: 'Technician share (remainder after platform commission) %',
+      descriptionAr: 'نسبة الفني من الحجز (باقي بعد عمولة المنصة) %',
+      isEditable: true,
+    },
+    // الضرائب
+    {
+      key: 'VAT_PERCENT',
+      value: '15',
+      type: 'NUMBER',
+      category: 'TAX',
+      description: 'VAT / Tax percentage applied to services',
+      descriptionAr: 'نسبة ضريبة القيمة المضافة على الخدمات %',
+      isEditable: true,
+    },
+    {
+      key: 'TAX_INCLUDED_IN_PRICE',
+      value: 'false',
+      type: 'BOOLEAN',
+      category: 'TAX',
+      description: 'If true, displayed prices include tax',
+      descriptionAr: 'إذا true فإن الأسعار المعروضة تشمل الضريبة',
+      isEditable: true,
+    },
+    // أسعار الخدمات والنسب العامة
+    {
+      key: 'SERVICE_DEFAULT_MARKUP_PERCENT',
+      value: '0',
+      type: 'NUMBER',
+      category: 'PRICING',
+      description: 'Default markup % on base service prices',
+      descriptionAr: 'نسبة الزيادة الافتراضية على أسعار الخدمات الأساسية %',
+      isEditable: true,
+    },
+    {
+      key: 'MIN_BOOKING_AMOUNT_SAR',
+      value: '0',
+      type: 'NUMBER',
+      category: 'PRICING',
+      description: 'Minimum booking amount in SAR',
+      descriptionAr: 'الحد الأدنى لمبلغ الحجز بالريال',
+      isEditable: true,
+    },
+    {
+      key: 'CURRENCY_DISPLAY',
+      value: 'SAR',
+      type: 'STRING',
+      category: 'PRICING',
+      description: 'Currency code for display (e.g. SAR, USD)',
+      descriptionAr: 'رمز العملة للعرض (مثلاً SAR, USD)',
+      isEditable: true,
+    },
+  ];
+
+  for (const row of systemSettingsRows) {
+    await prisma.systemSettings.upsert({
+      where: { key: row.key },
+      update: {
+        value: row.value,
+        type: row.type,
+        category: row.category,
+        description: row.description,
+        descriptionAr: row.descriptionAr,
+        isEditable: row.isEditable,
+      },
+      create: {
+        key: row.key,
+        value: row.value,
+        type: row.type,
+        category: row.category,
+        description: row.description,
+        descriptionAr: row.descriptionAr,
+        isEditable: row.isEditable,
+      },
+    });
+  }
+  console.log(`✅ System settings: ${systemSettingsRows.length} keys (COMMISSION, TAX, PRICING)\n`);
+
   console.log('✅ Database seeding completed successfully! 🎉\n');
   
   // Summary
   const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+  const settingsCount = await prisma.systemSettings.count();
   const summary = await Promise.all([
     prisma.vehicleBrand.count(),
     prisma.vehicleModel.count(),
@@ -345,6 +444,7 @@ async function main() {
   console.log(`   - Vehicle Models: ${summary[1]}`);
   console.log(`   - Services: ${summary[2]}`);
   console.log(`   - Service Pricing: ${summary[3]}`);
+  console.log(`   - System Settings: ${settingsCount}`);
 }
 
 main()
