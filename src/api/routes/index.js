@@ -19,6 +19,9 @@ const walletRoutes = require('./wallets.routes');
 const ratingRoutes = require('./ratings.routes');
 const notificationRoutes = require('./notifications.routes');
 const addressRoutes = require('./addresses.routes');
+const adminSettingsRoutes = require('./admin/settings.routes');
+const towingRoutes = require('./towing.routes');
+const technicianTowingRoutes = require('./technicianTowing.routes');
 
 // Public routes (no authentication required)
 router.use('/auth', authRoutes);
@@ -41,5 +44,12 @@ router.use('/wallets', walletRoutes);
 router.use('/ratings', ratingRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/addresses', addressRoutes);
+
+// Towing service routes
+router.use('/bookings/towing', towingRoutes);
+router.use('/technician/towing', technicianTowingRoutes);
+
+// Admin routes
+router.use('/admin/settings', adminSettingsRoutes);
 
 module.exports = router;

@@ -1066,3 +1066,25 @@ model Notification {
     @@index([userId, isRead])
     @@index([createdAt])
 }
+
+// ================================================================================================
+// SYSTEM CONFIGURATION
+// ================================================================================================
+
+model SystemSettings {
+    id    String @id @default(uuid())
+    key   String @unique // e.g., "TOWING_SEARCH_RADIUS"
+    value String // JSON or plain value
+    type  String // "NUMBER", "JSON", "BOOLEAN", "STRING"
+
+    description   String? // English description
+    descriptionAr String? // Arabic description
+
+    category   String  @default("GENERAL") // "TOWING", "GENERAL", "PRICING", "NOTIFICATION"
+    isEditable Boolean @default(true) // Allow admin to edit
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([category])
+}
