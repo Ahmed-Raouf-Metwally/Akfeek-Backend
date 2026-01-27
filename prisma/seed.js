@@ -1,16 +1,45 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting database seeding...\n');
 
   // ============================================
-  // 1. Vehicle Masters (كتالوج المركبات)
+  // 0. Admin user & roles (إدارة الصلاحيات)
   // ============================================
-  console.log('📦 Seeding Vehicle Masters...');
-  
-  const vehicleMasters = [
-    // Toyota
+  console.log('👤 Seeding Admin user...');
+  const adminPassword = 'Admin123!';
+  const adminHash = await bcrypt.hash(adminPassword, 10);
+  await prisma.user.upsert({
+    where: { email: 'admin@akfeek.com' },
+    update: {},
+    create: {
+      email: 'admin@akfeek.com',
+      passwordHash: adminHash,
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      profile: {
+        create: { firstName: 'Admin', lastName: 'User' }
+      }
+    }
+  });
+  console.log('✅ Admin user: admin@akfeek.com / Admin123!\n');
+
+  // ============================================
+  // 1. Vehicle Brands & Models (كتالوج المركبات)
+  // ============================================
+  console.log('📦 Seeding Vehicle Brands & Models...');
+
+  // Map legacy size to Prisma VehicleType enum
+  const sizeToVehicleType = {
+    SMALL: 'SEDAN',
+    MEDIUM: 'CROSSOVER',
+    LARGE: 'SUV',
+    EXTRA_LARGE: 'TRUCK'
+  };
+
+  const vehicleData = [
     { make: 'Toyota', model: 'Camry', year: 2023, size: 'MEDIUM' },
     { make: 'Toyota', model: 'Camry', year: 2022, size: 'MEDIUM' },
     { make: 'Toyota', model: 'Corolla', year: 2023, size: 'SMALL' },
@@ -18,74 +47,73 @@ async function main() {
     { make: 'Toyota', model: 'Land Cruiser', year: 2023, size: 'LARGE' },
     { make: 'Toyota', model: 'Hilux', year: 2023, size: 'LARGE' },
     { make: 'Toyota', model: 'RAV4', year: 2023, size: 'MEDIUM' },
-    
-    // Honda
     { make: 'Honda', model: 'Accord', year: 2023, size: 'MEDIUM' },
     { make: 'Honda', model: 'Civic', year: 2023, size: 'SMALL' },
     { make: 'Honda', model: 'CR-V', year: 2023, size: 'MEDIUM' },
     { make: 'Honda', model: 'Pilot', year: 2023, size: 'LARGE' },
-    
-    // BMW
     { make: 'BMW', model: 'X5', year: 2023, size: 'LARGE' },
     { make: 'BMW', model: 'X3', year: 2023, size: 'MEDIUM' },
     { make: 'BMW', model: '3 Series', year: 2023, size: 'MEDIUM' },
     { make: 'BMW', model: '5 Series', year: 2023, size: 'MEDIUM' },
     { make: 'BMW', model: '7 Series', year: 2023, size: 'LARGE' },
-    
-    // Mercedes-Benz
     { make: 'Mercedes-Benz', model: 'C-Class', year: 2023, size: 'MEDIUM' },
     { make: 'Mercedes-Benz', model: 'E-Class', year: 2023, size: 'MEDIUM' },
     { make: 'Mercedes-Benz', model: 'S-Class', year: 2023, size: 'LARGE' },
     { make: 'Mercedes-Benz', model: 'GLE', year: 2023, size: 'LARGE' },
     { make: 'Mercedes-Benz', model: 'GLC', year: 2023, size: 'MEDIUM' },
-    
-    // Nissan
     { make: 'Nissan', model: 'Altima', year: 2023, size: 'MEDIUM' },
     { make: 'Nissan', model: 'Maxima', year: 2023, size: 'MEDIUM' },
     { make: 'Nissan', model: 'Patrol', year: 2023, size: 'LARGE' },
     { make: 'Nissan', model: 'X-Trail', year: 2023, size: 'MEDIUM' },
-    
-    // Hyundai
     { make: 'Hyundai', model: 'Elantra', year: 2023, size: 'SMALL' },
     { make: 'Hyundai', model: 'Sonata', year: 2023, size: 'MEDIUM' },
     { make: 'Hyundai', model: 'Tucson', year: 2023, size: 'MEDIUM' },
     { make: 'Hyundai', model: 'Santa Fe', year: 2023, size: 'LARGE' },
-    
-    // Kia
     { make: 'Kia', model: 'Optima', year: 2023, size: 'MEDIUM' },
     { make: 'Kia', model: 'Sportage', year: 2023, size: 'MEDIUM' },
     { make: 'Kia', model: 'Sorento', year: 2023, size: 'LARGE' },
-    
-    // Ford
     { make: 'Ford', model: 'Explorer', year: 2023, size: 'LARGE' },
     { make: 'Ford', model: 'Expedition', year: 2023, size: 'LARGE' },
     { make: 'Ford', model: 'Edge', year: 2023, size: 'MEDIUM' },
-    
-    // Chevrolet
     { make: 'Chevrolet', model: 'Tahoe', year: 2023, size: 'LARGE' },
     { make: 'Chevrolet', model: 'Suburban', year: 2023, size: 'EXTRA_LARGE' },
     { make: 'Chevrolet', model: 'Traverse', year: 2023, size: 'LARGE' },
-    
-    // GMC
     { make: 'GMC', model: 'Yukon', year: 2023, size: 'LARGE' },
     { make: 'GMC', model: 'Acadia', year: 2023, size: 'MEDIUM' },
   ];
 
-  for (const vehicle of vehicleMasters) {
-    await prisma.vehicleMaster.upsert({
+  const brandNames = [...new Set(vehicleData.map((v) => v.make))];
+  const brandIdByName = {};
+
+  for (const name of brandNames) {
+    const brand = await prisma.vehicleBrand.upsert({
+      where: { name },
+      update: {},
+      create: { name }
+    });
+    brandIdByName[name] = brand.id;
+  }
+
+  for (const v of vehicleData) {
+    await prisma.vehicleModel.upsert({
       where: {
-        make_model_year: {
-          make: vehicle.make,
-          model: vehicle.model,
-          year: vehicle.year
+        brandId_name_year: {
+          brandId: brandIdByName[v.make],
+          name: v.model,
+          year: v.year
         }
       },
       update: {},
-      create: vehicle
+      create: {
+        brandId: brandIdByName[v.make],
+        name: v.model,
+        year: v.year,
+        type: sizeToVehicleType[v.size] || 'SEDAN'
+      }
     });
   }
-  
-  console.log(`✅ Created ${vehicleMasters.length} vehicle masters\n`);
+
+  console.log(`✅ Created ${brandNames.length} brands, ${vehicleData.length} vehicle models\n`);
 
   // ============================================
   // 2. Services (الخدمات)
@@ -239,65 +267,84 @@ async function main() {
     }
   ];
 
+  let servicesCreated = 0;
   for (const service of services) {
-    await prisma.service.create({
-      data: service
+    const existing = await prisma.service.findFirst({
+      where: { name: service.name, category: service.category }
     });
+    if (!existing) {
+      await prisma.service.create({ data: service });
+      servicesCreated++;
+    }
   }
-  
-  console.log(`✅ Created ${services.length} services\n`);
+  console.log(`✅ Services: ${servicesCreated} new, ${services.length} total in seed\n`);
 
   // ============================================
-  // 3. Service Pricing (الأسعار)
+  // 3. Service Pricing (الأسعار) — by VehicleType
   // ============================================
   console.log('💰 Setting up service pricing...');
-  
+
+  const vehicleTypes = ['SEDAN', 'SMALL_SUV', 'SUV', 'TRUCK'];
+  const basePricesByType = {
+    SEDAN: 50,
+    SMALL_SUV: 75,
+    SUV: 100,
+    TRUCK: 150
+  };
+
   const createdServices = await prisma.service.findMany();
   let pricingCount = 0;
-  
+
   for (const service of createdServices) {
-    const basePrices = {
-      SMALL: 50,
-      MEDIUM: 75,
-      LARGE: 100,
-      EXTRA_LARGE: 150
-    };
-    
-    // Adjust prices based on service type
     let multiplier = 1;
     if (service.category === 'REPAIR') multiplier = 3;
     else if (service.category === 'MAINTENANCE') multiplier = 1.5;
     else if (service.category === 'EMERGENCY') multiplier = 2;
     else if (service.category === 'INSPECTION') multiplier = 2.5;
-    
-    for (const size of ['SMALL', 'MEDIUM', 'LARGE', 'EXTRA_LARGE']) {
-      await prisma.servicePricing.create({
-        data: {
+
+    for (const vehicleType of vehicleTypes) {
+      const base = (basePricesByType[vehicleType] ?? 75) * multiplier;
+      await prisma.servicePricing.upsert({
+        where: {
+          serviceId_vehicleType: {
+            serviceId: service.id,
+            vehicleType
+          }
+        },
+        update: {
+          basePrice: base,
+          discountedPrice: base * 0.9
+        },
+        create: {
           serviceId: service.id,
-          vehicleSize: size,
-          basePrice: basePrices[size] * multiplier,
-          discountedPrice: basePrices[size] * multiplier * 0.9 // 10% discount
+          vehicleType,
+          basePrice: base,
+          discountedPrice: base * 0.9
         }
       });
       pricingCount++;
     }
   }
-  
+
   console.log(`✅ Created ${pricingCount} pricing entries\n`);
 
   console.log('✅ Database seeding completed successfully! 🎉\n');
   
   // Summary
+  const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
   const summary = await Promise.all([
-    prisma.vehicleMaster.count(),
+    prisma.vehicleBrand.count(),
+    prisma.vehicleModel.count(),
     prisma.service.count(),
     prisma.servicePricing.count()
   ]);
-  
+
   console.log('📊 Summary:');
-  console.log(`   - Vehicle Masters: ${summary[0]}`);
-  console.log(`   - Services: ${summary[1]}`);
-  console.log(`   - Service Pricing: ${summary[2]}`);
+  console.log(`   - Admin users: ${adminCount}`);
+  console.log(`   - Vehicle Brands: ${summary[0]}`);
+  console.log(`   - Vehicle Models: ${summary[1]}`);
+  console.log(`   - Services: ${summary[2]}`);
+  console.log(`   - Service Pricing: ${summary[3]}`);
 }
 
 main()
