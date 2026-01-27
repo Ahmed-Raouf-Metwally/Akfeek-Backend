@@ -483,6 +483,10 @@ model Booking {
     pickupLng     Float?
     pickupAddress String?
 
+    destinationLat     Float?
+    destinationLng     Float?
+    destinationAddress String?
+
     // Pricing
     subtotal    Decimal @default(0) @db.Decimal(10, 2)
     laborFee    Decimal @default(0) @db.Decimal(10, 2)
@@ -497,6 +501,7 @@ model Booking {
     estimatedDuration Int? // minutes
 
     // Status & Metadata
+    metadata      Json? // Additional data (vehicle condition, pricing, etc.)
     status        BookingStatus @default(PENDING)
     notes         String?       @db.Text
     internalNotes String?       @db.Text // Admin/Technician only

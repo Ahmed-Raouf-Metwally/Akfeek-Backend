@@ -6,7 +6,7 @@ const roleMiddleware = require('../middlewares/role.middleware');
 
 /**
  * @swagger
- * /brands:
+ * /api/brands:
  *   get:
  *     summary: Get all vehicle brands
  *     description: Retrieve a list of all vehicle brands (Toyota, BMW, etc.) with optional filters - احصل على قائمة بجميع ماركات المركبات
@@ -73,7 +73,7 @@ router.get('/', brandController.getAllBrands);
 
 /**
  * @swagger
- * /brands/{id}:
+ * /api/brands/{id}:
  *   get:
  *     summary: Get brand by ID
  *     description: Retrieve a specific brand with all its models - احصل على ماركة محددة مع جميع موديلاتها
@@ -115,7 +115,7 @@ router.use(authMiddleware);
 
 /**
  * @swagger
- * /brands:
+ * /api/brands:
  *   post:
  *     summary: Create new brand (Admin only)
  *     description: Create a new vehicle brand - إنشاء ماركة مركبة جديدة
@@ -179,7 +179,7 @@ router.post('/',
 
 /**
  * @swagger
- * /brands/{id}:
+ * /api/brands/{id}:
  *   patch:
  *     summary: Update brand (Admin only)
  *     description: Update an existing brand - تحديث ماركة موجودة
@@ -224,7 +224,7 @@ router.patch('/:id',
 
 /**
  * @swagger
- * /brands/{id}:
+ * /api/brands/{id}:
  *   delete:
  *     summary: Delete brand (Admin only)
  *     description: Delete a brand (soft delete by default) - حذف ماركة (حفظ افتراضي)

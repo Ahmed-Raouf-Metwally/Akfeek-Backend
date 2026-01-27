@@ -6,7 +6,7 @@ const roleMiddleware = require('../middlewares/role.middleware');
 
 /**
  * @swagger
- * /models:
+ * /api/models:
  *   get:
  *     summary: Get all vehicle models
  *     description: Retrieve vehicle models with optional filters - احصل على موديلات المركبات مع فلاتر اختيارية
@@ -100,7 +100,7 @@ router.get('/', modelController.getAllModels);
 
 /**
  * @swagger
- * /models/{id}:
+ * /api/models/{id}:
  *   get:
  *     summary: Get model by ID
  *     description: Retrieve a specific vehicle model - احصل على موديل محدد
@@ -125,7 +125,7 @@ router.use(authMiddleware);
 
 /**
  * @swagger
- * /models:
+ * /api/models:
  *   post:
  *     summary: Create new model (Admin only)
  *     description: Create a new vehicle model - إنشاء موديل مركبة جديد
@@ -185,7 +185,7 @@ router.post('/',
 
 /**
  * @swagger
- * /models/{id}:
+ * /api/models/{id}:
  *   patch:
  *     summary: Update model (Admin only)
  *     description: Update an existing model - تحديث موديل موجود
@@ -236,7 +236,7 @@ router.patch('/:id',
 
 /**
  * @swagger
- * /models/{id}:
+ * /api/models/{id}:
  *   delete:
  *     summary: Delete model (Admin only)
  *     description: Delete a model (soft delete by default) - حذف موديل (حفظ افتراضي)

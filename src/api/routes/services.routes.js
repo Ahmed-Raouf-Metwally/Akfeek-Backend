@@ -10,7 +10,7 @@ router.use(authMiddleware);
 
 /**
  * @swagger
- * /services:
+ * /api/services:
  *   get:
  *     summary: Get all services
  *     description: Retrieve a list of all available services with filtering
@@ -40,7 +40,7 @@ router.get('/', serviceController.getAllServices);
 
 /**
  * @swagger
- * /services/{id}:
+ * /api/services/{id}:
  *   get:
  *     summary: Get service details
  *     tags: [Services]
@@ -63,7 +63,7 @@ router.get('/:id', serviceController.getServiceById);
 // Admin routes
 /**
  * @swagger
- * /services:
+ * /api/services:
  *   post:
  *     summary: Create new service (Admin)
  *     tags: [Services]
@@ -106,7 +106,7 @@ router.post('/', requireRole('ADMIN'), serviceController.createService);
 
 /**
  * @swagger
- * /services/{id}:
+ * /api/services/{id}:
  *   put:
  *     summary: Update service (Admin)
  *     tags: [Services]
@@ -136,7 +136,7 @@ router.put('/:id', requireRole('ADMIN'), serviceController.updateService);
 
 /**
  * @swagger
- * /services/{id}:
+ * /api/services/{id}:
  *   delete:
  *     summary: Delete/Deactivate service (Admin)
  *     tags: [Services]

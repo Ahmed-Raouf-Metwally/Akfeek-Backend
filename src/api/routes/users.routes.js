@@ -9,7 +9,7 @@ router.use(authMiddleware);
 
 /**
  * @swagger
- * /users/profile:
+ * /api/users/profile:
  *   get:
  *     summary: Get current user profile
  *     description: |
@@ -29,7 +29,7 @@ router.get('/profile', userController.getProfile);
 
 /**
  * @swagger
- * /users/profile:
+ * /api/users/profile:
  *   put:
  *     summary: Update user profile
  *     description: |
@@ -71,7 +71,7 @@ router.put('/profile', userController.updateProfile);
 
 /**
  * @swagger
- * /users/technician-profile:
+ * /api/users/technician-profile:
  *   put:
  *     summary: Update technician profile
  *     description: |
@@ -107,7 +107,7 @@ router.put('/technician-profile', userController.updateTechnicianProfile);
 
 /**
  * @swagger
- * /users/supplier-profile:
+ * /api/users/supplier-profile:
  *   put:
  *     summary: Update supplier profile
  *     description: |
@@ -137,7 +137,7 @@ router.put('/supplier-profile', userController.updateSupplierProfile);
 
 /**
  * @swagger
- * /users/language:
+ * /api/users/language:
  *   put:
  *     summary: Update language preference
  *     description: |
@@ -169,7 +169,7 @@ router.put('/language', userController.updateLanguage);
 // Admin-only routes
 /**
  * @swagger
- * /users:
+ * /api/users:
  *   get:
  *     summary: Get all users (Admin only)
  *     description: |
@@ -205,7 +205,7 @@ router.get('/', requireRole('ADMIN'), userController.getAllUsers);
 
 /**
  * @swagger
- * /users/{id}:
+ * /api/users/{id}:
  *   get:
  *     summary: Get user by ID (Admin only)
  *     tags: [Users]
@@ -227,7 +227,7 @@ router.get('/:id', requireRole('ADMIN'), userController.getUserById);
 
 /**
  * @swagger
- * /users/{id}/status:
+ * /api/users/{id}/status:
  *   patch:
  *     summary: Update user status (Admin only)
  *     tags: [Users]
@@ -259,7 +259,7 @@ router.patch('/:id/status', requireRole('ADMIN'), userController.updateUserStatu
 
 /**
  * @swagger
- * /users/{id}:
+ * /api/users/{id}:
  *   delete:
  *     summary: Delete user (Admin only)
  *     tags: [Users]

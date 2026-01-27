@@ -8,7 +8,7 @@ router.use(authMiddleware);
 
 /**
  * @swagger
- * /vehicles/brands:
+ * /api/vehicles/brands:
  *   get:
  *     summary: Get vehicle brands catalog
  *     description: |
@@ -26,7 +26,7 @@ router.get('/brands', vehicleController.getVehicleBrands);
 
 /**
  * @swagger
- * /vehicles/brands/{brandId}/models:
+ * /api/vehicles/brands/{brandId}/models:
  *   get:
  *     summary: Get vehicle models for a brand
  *     description: |
@@ -62,7 +62,7 @@ router.get('/brands/:brandId/models', vehicleController.getVehicleModels);
 
 /**
  * @swagger
- * /vehicles:
+ * /api/vehicles:
  *   get:
  *     summary: Get my vehicles
  *     description: |
@@ -80,7 +80,7 @@ router.get('/', vehicleController.getMyVehicles);
 
 /**
  * @swagger
- * /vehicles:
+ * /api/vehicles:
  *   post:
  *     summary: Add new vehicle
  *     description: |
@@ -139,7 +139,7 @@ router.post('/', vehicleController.addVehicle);
 
 /**
  * @swagger
- * /vehicles/{id}:
+ * /api/vehicles/{id}:
  *   get:
  *     summary: Get vehicle by ID
  *     tags: [Vehicles]
@@ -161,7 +161,7 @@ router.get('/:id', vehicleController.getVehicleById);
 
 /**
  * @swagger
- * /vehicles/{id}:
+ * /api/vehicles/{id}:
  *   put:
  *     summary: Update vehicle
  *     description: |
@@ -198,7 +198,7 @@ router.put('/:id', vehicleController.updateVehicle);
 
 /**
  * @swagger
- * /vehicles/{id}:
+ * /api/vehicles/{id}:
  *   delete:
  *     summary: Delete vehicle
  *     description: |
@@ -222,7 +222,7 @@ router.delete('/:id', vehicleController.deleteVehicle);
 
 /**
  * @swagger
- * /vehicles/{id}/primary:
+ * /api/vehicles/{id}/primary:
  *   patch:
  *     summary: Set as primary vehicle
  *     description: |

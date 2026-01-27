@@ -518,7 +518,7 @@ async function main() {
         else if (service.category === 'INSPECTION') multiplier = 2.5;
 
         for (const vehicleType of vehicleTypes) {
-            const base = (basePricesByType[vehicleType] ? 75) * multiplier;
+            const base = (basePricesByType[vehicleType] || 75) * multiplier;
             await prisma.servicePricing.upsert({
                 where: {
                     serviceId_vehicleType: {
@@ -635,7 +635,6 @@ async function main() {
                         lastName: `Towing`,
                         currentLat: locations[i - 1].lat,
                         currentLng: locations[i - 1].lng,
-                        city: locations[i - 1].city,
                         isAvailable: true
                     }
                 }

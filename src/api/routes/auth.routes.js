@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
-const { optionalAuth } = require('../middlewares/auth.middleware');
+const {
+    optionalAuth
+} = require('../middlewares/auth.middleware');
 
 /**
  * @swagger
- * /auth/register:
+ * /api/auth/register:
  *   post:
  *     summary: Register new user
  *     description: |
@@ -108,7 +110,7 @@ router.post('/register', authController.register);
 
 /**
  * @swagger
- * /auth/login:
+ * /api/auth/login:
  *   post:
  *     summary: User login
  *     description: |
@@ -164,7 +166,7 @@ router.post('/login', authController.login);
 
 /**
  * @swagger
- * /auth/send-otp:
+ * /api/auth/send-otp:
  *   post:
  *     summary: Send OTP to phone
  *     description: |
@@ -196,7 +198,7 @@ router.post('/send-otp', authController.sendOTP);
 
 /**
  * @swagger
- * /auth/verify-otp:
+ * /api/auth/verify-otp:
  *   post:
  *     summary: Verify OTP
  *     description: |
@@ -234,7 +236,7 @@ router.post('/verify-otp', authController.verifyOTP);
 
 /**
  * @swagger
- * /auth/me:
+ * /api/auth/me:
  *   get:
  *     summary: Get current user
  *     description: |

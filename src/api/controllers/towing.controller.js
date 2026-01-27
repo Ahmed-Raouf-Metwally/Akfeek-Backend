@@ -17,6 +17,7 @@ class TowingController {
                 data: result
             });
         } catch (error) {
+            console.error('Towing request error:', error);
             next(error);
         }
     }
@@ -27,7 +28,9 @@ class TowingController {
      */
     async getOffers(req, res, next) {
         try {
-            const { broadcastId } = req.params;
+            const {
+                broadcastId
+            } = req.params;
             const customerId = req.user.id;
 
             const result = await towingService.getOffers(broadcastId, customerId);
@@ -47,7 +50,10 @@ class TowingController {
      */
     async acceptOffer(req, res, next) {
         try {
-            const { broadcastId, offerId } = req.params;
+            const {
+                broadcastId,
+                offerId
+            } = req.params;
             const customerId = req.user.id;
 
             const result = await towingService.acceptOffer(broadcastId, offerId, customerId);

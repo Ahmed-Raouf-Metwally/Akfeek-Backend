@@ -5,8 +5,12 @@ const {
     calculateTowingPrice,
     findNearbyTechnicians
 } = require('../utils/towing');
-const { getSystemSetting } = require('../utils/systemSettings');
-const { AppError } = require('../api/middlewares/error.middleware');
+const {
+    getSystemSetting
+} = require('../utils/systemSettings');
+const {
+    AppError
+} = require('../api/middlewares/error.middleware');
 const osrmService = require('./osrm.service');
 
 class TowingService {
@@ -66,14 +70,14 @@ class TowingService {
                 bookingNumber: await this.generateBookingNumber(),
                 customerId,
                 vehicleId,
-                status: 'PENDING_BROADCAST',
+                status: 'BROADCASTING',
                 pickupLat: pickupLocation.latitude,
                 pickupLng: pickupLocation.longitude,
                 pickupAddress: pickupLocation.address,
                 destinationLat: destinationLocation.latitude,
                 destinationLng: destinationLocation.longitude,
                 destinationAddress: destinationLocation.address,
-                estimatedPrice: pricing.finalPrice,
+                totalPrice: pricing.finalPrice,
                 notes,
                 urgency,
                 metadata: {
@@ -95,8 +99,12 @@ class TowingService {
 
         if (nearbyTechs.length === 0) {
             await prisma.booking.update({
-                where: { id: booking.id },
-                data: { status: 'NO_TECHNICIANS_AVAILABLE' }
+                where: {
+                    id: booking.id
+                },
+                data: {
+                    status: 'NO_TECHNICIANS_AVAILABLE'
+                }
             });
 
             throw new AppError(
@@ -137,8 +145,12 @@ class TowingService {
 
         // Update booking status
         await prisma.booking.update({
-            where: { id: booking.id },
-            data: { status: 'BROADCASTING' }
+            where: {
+                id: booking.id
+            },
+            data: {
+                status: 'BROADCASTING'
+            }
         });
 
         // TODO: Send notifications to nearby technicians via Socket.io
@@ -163,7 +175,9 @@ class TowingService {
      */
     async getOffers(broadcastId, customerId) {
         const broadcast = await prisma.jobBroadcast.findUnique({
-            where: { id: broadcastId },
+            where: {
+                id: broadcastId
+            },
             include: {
                 booking: {
                     select: {
@@ -259,7 +273,9 @@ class TowingService {
     async acceptOffer(broadcastId, offerId, customerId) {
         // Get broadcast with booking
         const broadcast = await prisma.jobBroadcast.findUnique({
-            where: { id: broadcastId },
+            where: {
+                id: broadcastId
+            },
             include: {
                 booking: true
             }
@@ -304,28 +320,42 @@ class TowingService {
         const result = await prisma.$transaction(async (tx) => {
             // Accept the offer
             await tx.jobOffer.update({
-                where: { id: offerId },
-                data: { status: 'ACCEPTED' }
+                where: {
+                    id: offerId
+                },
+                data: {
+                    status: 'ACCEPTED'
+                }
             });
 
             // Reject all other offers
             await tx.jobOffer.updateMany({
                 where: {
                     broadcastId,
-                    id: { not: offerId }
+                    id: {
+                        not: offerId
+                    }
                 },
-                data: { status: 'REJECTED' }
+                data: {
+                    status: 'REJECTED'
+                }
             });
 
             // Update broadcast status
             await tx.jobBroadcast.update({
-                where: { id: broadcastId },
-                data: { status: 'COMPLETED' }
+                where: {
+                    id: broadcastId
+                },
+                data: {
+                    status: 'COMPLETED'
+                }
             });
 
             // Update booking with technician and price
             const updatedBooking = await tx.booking.update({
-                where: { id: broadcast.booking.id },
+                where: {
+                    id: broadcast.booking.id
+                },
                 data: {
                     technicianId: offer.technicianId,
                     status: 'TECHNICIAN_ASSIGNED',
