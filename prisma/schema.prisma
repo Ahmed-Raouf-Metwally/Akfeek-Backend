@@ -215,8 +215,15 @@ model UserVehicle {
     vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id])
 
     // Basic Information
-    ownerName      String? // الأسم - Owner name
-    plateNumber    String  @unique // رقم اللوحة
+    ownerName String? // الأسم - Owner name
+
+    // License Plate Information (Saudi Format)
+    plateLettersAr String? // الأحرف العربية - Arabic letters (e.g., "ع س س")
+    plateLettersEn String? // الأحرف الإنجليزية - English letters (e.g., "SEJ")
+    plateDigits    String // الأرقام - Digits (e.g., "7415")
+    plateRegion    String? // رمز المنطقة - Region code (e.g., "K", "أ")
+    plateNumber    String  @unique // رقم اللوحة الكامل - Full plate for display/search
+
     color          String? // اللون
     vin            String? @unique // رقم الهيكل - Chassis number
     currentMileage Int? // عداد الكيلومترات

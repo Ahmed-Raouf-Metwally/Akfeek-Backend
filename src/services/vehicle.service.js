@@ -87,11 +87,33 @@ class VehicleService {
    * @returns {Object} Created vehicle
    */
   async addVehicle(userId, vehicleData) {
-    const { vehicleModelId, plateNumber, color, isDefault = false } = vehicleData;
+    const {
+      vehicleModelId,
+      plateLettersAr,
+      plateLettersEn,
+      plateDigits,
+      plateRegion,
+      plateNumber,
+      color,
+      isDefault = false
+    } = vehicleData;
 
     // Validate required fields
-    if (!vehicleModelId || !plateNumber) {
-      throw new AppError('Vehicle model ID and plate number are required', 400, 'VALIDATION_ERROR');
+    if (!vehicleModelId) {
+      throw new AppError('Vehicle model ID is required', 400, 'VALIDATION_ERROR');
+    }
+
+    // Validate plate data: either structured fields or full plateNumber
+    if (!plateDigits && !plateNumber) {
+      throw new AppError('Plate number or plate digits are required', 400, 'VALIDATION_ERROR');
+    }
+
+    // Auto-generate full plateNumber from components if not provided
+    let fullPlateNumber = plateNumber;
+    if (!fullPlateNumber && plateDigits) {
+      const letters = plateLettersAr || plateLettersEn || '';
+      const region = plateRegion ? ` ${plateRegion}` : '';
+      fullPlateNumber = `${letters} ${plateDigits}${region}`.trim();
     }
 
     // Check if vehicle model exists
@@ -106,7 +128,7 @@ class VehicleService {
     // Check for duplicate plate number
     const existing = await prisma.userVehicle.findFirst({
       where: {
-        plateNumber
+        plateNumber: fullPlateNumber
       }
     });
 
@@ -125,12 +147,16 @@ class VehicleService {
       });
     }
 
-    // Create vehicle
+    // Create vehicle with structured plate data
     const vehicle = await prisma.userVehicle.create({
       data: {
         userId,
         vehicleModelId,
-        plateNumber,
+        plateLettersAr,
+        plateLettersEn,
+        plateDigits: plateDigits || fullPlateNumber, // Fallback to full if only plateNumber provided
+        plateRegion,
+        plateNumber: fullPlateNumber,
         color,
         isDefault
       },

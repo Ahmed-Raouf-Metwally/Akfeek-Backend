@@ -98,17 +98,33 @@ router.get('/', vehicleController.getMyVehicles);
  *             type: object
  *             required:
  *               - vehicleModelId
- *               - plateNumber
  *             properties:
  *               vehicleModelId:
  *                 type: string
  *                 description: Vehicle model ID from catalog
+ *               plateLettersAr:
+ *                 type: string
+ *                 example: "ع س س"
+ *                 description: Arabic letters on plate (optional)
+ *               plateLettersEn:
+ *                 type: string
+ *                 example: "SEJ"
+ *                 description: English letters on plate (optional)
+ *               plateDigits:
+ *                 type: string
+ *                 example: "7415"
+ *                 description: Plate number digits (required if plateNumber not provided)
+ *               plateRegion:
+ *                 type: string
+ *                 example: "K"
+ *                 description: Region code (optional)
  *               plateNumber:
  *                 type: string
- *                 example: ABC 1234
+ *                 example: "ع س س 7415"
+ *                 description: Full plate number (alternative to structured fields)
  *               color:
  *                 type: string
- *                 example: White
+ *                 example: "White"
  *               isDefault:
  *                 type: boolean
  *                 default: false
