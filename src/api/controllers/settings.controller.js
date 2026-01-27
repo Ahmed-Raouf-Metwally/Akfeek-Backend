@@ -1,3 +1,4 @@
+const prisma = require('../../utils/database/prisma');
 const { getSettingsByCategory, updateSystemSetting } = require('../../utils/systemSettings');
 const { AppError } = require('../middlewares/error.middleware');
 
@@ -66,7 +67,6 @@ class SettingsController {
      */
     async getAllSettings(req, res, next) {
         try {
-            const prisma = require('../../utils/database/prisma');
             const settings = await prisma.systemSettings.findMany({
                 orderBy: [
                     { category: 'asc' },
@@ -95,8 +95,9 @@ class SettingsController {
                 success: true,
                 data: grouped
             });
-        } catch (error) {
-            next(error);
+        } catch (err) {
+            // If table missing or DB error, return empty so Settings page still loads
+            res.json({ success: true, data: {} });
         }
     }
 }

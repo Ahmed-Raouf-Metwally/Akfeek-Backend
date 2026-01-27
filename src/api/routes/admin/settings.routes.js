@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const settingsController = require('../../controllers/settings.controller');
 const authMiddleware = require('../../middlewares/auth.middleware');
+const requireRole = require('../../middlewares/role.middleware');
 
 /**
  * @swagger
@@ -33,7 +34,7 @@ const authMiddleware = require('../../middlewares/auth.middleware');
  *                   additionalProperties:
  *                     type: array
  */
-router.get('/', authMiddleware, settingsController.getAllSettings);
+router.get('/', authMiddleware, requireRole('ADMIN'), settingsController.getAllSettings);
 
 /**
  * @swagger
@@ -74,7 +75,7 @@ router.get('/', authMiddleware, settingsController.getAllSettings);
  *                       isEditable:
  *                         type: boolean
  */
-router.get('/towing', authMiddleware, settingsController.getTowingSettings);
+router.get('/towing', authMiddleware, requireRole('ADMIN'), settingsController.getTowingSettings);
 
 /**
  * @swagger
@@ -129,6 +130,6 @@ router.get('/towing', authMiddleware, settingsController.getTowingSettings);
  *                       type: string
  *                       format: date-time
  */
-router.put('/:key', authMiddleware, settingsController.updateSetting);
+router.put('/:key', authMiddleware, requireRole('ADMIN'), settingsController.updateSetting);
 
 module.exports = router;
