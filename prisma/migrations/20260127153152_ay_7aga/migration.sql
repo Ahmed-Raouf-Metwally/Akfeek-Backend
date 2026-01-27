@@ -113,6 +113,10 @@ CREATE TABLE `UserVehicle` (
     `userId` VARCHAR(191) NOT NULL,
     `vehicleModelId` VARCHAR(191) NOT NULL,
     `ownerName` VARCHAR(191) NULL,
+    `plateLettersAr` VARCHAR(191) NULL,
+    `plateLettersEn` VARCHAR(191) NULL,
+    `plateDigits` VARCHAR(191) NOT NULL,
+    `plateRegion` VARCHAR(191) NULL,
     `plateNumber` VARCHAR(191) NOT NULL,
     `color` VARCHAR(191) NULL,
     `vin` VARCHAR(191) NULL,
@@ -607,6 +611,24 @@ CREATE TABLE `Notification` (
 
     INDEX `Notification_userId_isRead_idx`(`userId`, `isRead`),
     INDEX `Notification_createdAt_idx`(`createdAt`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `SystemSettings` (
+    `id` VARCHAR(191) NOT NULL,
+    `key` VARCHAR(191) NOT NULL,
+    `value` VARCHAR(191) NOT NULL,
+    `type` VARCHAR(191) NOT NULL,
+    `description` VARCHAR(191) NULL,
+    `descriptionAr` VARCHAR(191) NULL,
+    `category` VARCHAR(191) NOT NULL DEFAULT 'GENERAL',
+    `isEditable` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `SystemSettings_key_key`(`key`),
+    INDEX `SystemSettings_category_idx`(`category`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
