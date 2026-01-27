@@ -572,11 +572,16 @@ async function main() {
         // Create 2 vehicles per customer
         for (let v = 1; v <= 2; v++) {
             const firstModel = await prisma.vehicleModel.findFirst();
-            const vehicle = await prisma.userVehicle.create({
-                data: {
+            const plateNum = `TEST${i}${v}`;
+            const vehicle = await prisma.userVehicle.upsert({
+                where: {
+                    plateNumber: plateNum
+                },
+                update: {},
+                create: {
                     userId: customer.id,
                     vehicleModelId: firstModel.id,
-                    plateNumber: `TEST${i}${v}`,
+                    plateNumber: plateNum,
                     plateDigits: `${i}${i}${i}${i}`,
                     plateLettersEn: 'ABC',
                     plateLettersAr: 'أ ب ج',
@@ -656,17 +661,33 @@ async function main() {
     // 4. Ensure customer profiles (for dashboard display)
     // ============================================
     console.log('👤 Ensuring customer profiles...');
-    const customerNames = [
-        { first: 'Ahmed', last: 'Ali' },
-        { first: 'Sara', last: 'Mohammed' },
-        { first: 'Omar', last: 'Hassan' }
+    const customerNames = [{
+            first: 'Ahmed',
+            last: 'Ali'
+        },
+        {
+            first: 'Sara',
+            last: 'Mohammed'
+        },
+        {
+            first: 'Omar',
+            last: 'Hassan'
+        }
     ];
     for (let i = 0; i < testCustomers.length; i++) {
         const cust = testCustomers[i];
-        const names = customerNames[i] || { first: 'Customer', last: String(i + 1) };
+        const names = customerNames[i] || {
+            first: 'Customer',
+            last: String(i + 1)
+        };
         await prisma.profile.upsert({
-            where: { userId: cust.id },
-            update: { firstName: names.first, lastName: names.last },
+            where: {
+                userId: cust.id
+            },
+            update: {
+                firstName: names.first,
+                lastName: names.last
+            },
             create: {
                 userId: cust.id,
                 firstName: names.first,
@@ -680,28 +701,168 @@ async function main() {
     // 5. Products (كتالوج المنتجات)
     // ============================================
     console.log('📦 Seeding Products...');
-    const productRows = [
-        { sku: 'OIL-001', name: 'Castrol Edge 5W-30', nameAr: 'كاسترول إيدج 5W-30', category: 'OIL', brand: 'Castrol', price: 89.99, stock: 120, featured: true },
-        { sku: 'OIL-002', name: 'Mobil 1 Full Synthetic', nameAr: 'موبيل 1 اصطناعي كامل', category: 'OIL', brand: 'Mobil', price: 75.50, stock: 85, featured: true },
-        { sku: 'OIL-003', name: 'Shell Helix HX7', nameAr: 'شل هيليكس HX7', category: 'OIL', brand: 'Shell', price: 62.00, stock: 200, featured: false },
-        { sku: 'FLT-001', name: 'Oil Filter OE', nameAr: 'فلتر زيت أصلي', category: 'FILTER', brand: 'Bosch', price: 24.99, stock: 150, featured: false },
-        { sku: 'FLT-002', name: 'Air Filter Cabin', nameAr: 'فلتر هواء الكابينة', category: 'FILTER', brand: 'Mann', price: 18.50, stock: 90, featured: false },
-        { sku: 'BRK-001', name: 'Brake Pads Front Set', nameAr: 'فحمات فرامل أمامية', category: 'BRAKE_PAD', brand: 'Brembo', price: 145.00, stock: 40, featured: true },
-        { sku: 'BRK-002', name: 'Brake Pads Rear', nameAr: 'فحمات فرامل خلفية', category: 'BRAKE_PAD', brand: 'Brembo', price: 98.00, stock: 45, featured: false },
-        { sku: 'BAT-001', name: 'Varta Dynamic 12V 60Ah', nameAr: 'فارتا ديناميك 12 فولت 60 أمبير', category: 'BATTERY', brand: 'Varta', price: 220.00, stock: 30, featured: true },
-        { sku: 'BAT-002', name: 'Bosch S4 005', nameAr: 'بوش S4 005', category: 'BATTERY', brand: 'Bosch', price: 195.00, stock: 25, featured: false },
-        { sku: 'TIR-001', name: 'Michelin Pilot Sport 4', nameAr: 'ميشلان بايلوت سبورت 4', category: 'TIRE', brand: 'Michelin', price: 185.00, stock: 60, featured: true },
-        { sku: 'TIR-002', name: 'Bridgestone Turanza', nameAr: 'بريدجستون تورانزا', category: 'TIRE', brand: 'Bridgestone', price: 165.00, stock: 50, featured: false },
-        { sku: 'FLU-001', name: 'Coolant Concentrate', nameAr: 'سائل تبريد مركز', category: 'FLUID', brand: 'Prestone', price: 28.99, stock: 80, featured: false },
-        { sku: 'FLU-002', name: 'Brake Fluid DOT 4', nameAr: 'سائل فرامل DOT 4', category: 'FLUID', brand: 'Castrol', price: 15.50, stock: 100, featured: false },
-        { sku: 'ACC-001', name: 'Car Cover Universal', nameAr: 'غطاء سيارة عام', category: 'ACCESSORY', brand: 'Generic', price: 45.00, stock: 70, featured: false },
-        { sku: 'ACC-002', name: 'Dash Cam 1080p', nameAr: 'كاميرا داش 1080', category: 'ACCESSORY', brand: 'AutoGuard', price: 89.99, stock: 35, featured: true }
+    const productRows = [{
+            sku: 'OIL-001',
+            name: 'Castrol Edge 5W-30',
+            nameAr: 'كاسترول إيدج 5W-30',
+            category: 'OIL',
+            brand: 'Castrol',
+            price: 89.99,
+            stock: 120,
+            featured: true
+        },
+        {
+            sku: 'OIL-002',
+            name: 'Mobil 1 Full Synthetic',
+            nameAr: 'موبيل 1 اصطناعي كامل',
+            category: 'OIL',
+            brand: 'Mobil',
+            price: 75.50,
+            stock: 85,
+            featured: true
+        },
+        {
+            sku: 'OIL-003',
+            name: 'Shell Helix HX7',
+            nameAr: 'شل هيليكس HX7',
+            category: 'OIL',
+            brand: 'Shell',
+            price: 62.00,
+            stock: 200,
+            featured: false
+        },
+        {
+            sku: 'FLT-001',
+            name: 'Oil Filter OE',
+            nameAr: 'فلتر زيت أصلي',
+            category: 'FILTER',
+            brand: 'Bosch',
+            price: 24.99,
+            stock: 150,
+            featured: false
+        },
+        {
+            sku: 'FLT-002',
+            name: 'Air Filter Cabin',
+            nameAr: 'فلتر هواء الكابينة',
+            category: 'FILTER',
+            brand: 'Mann',
+            price: 18.50,
+            stock: 90,
+            featured: false
+        },
+        {
+            sku: 'BRK-001',
+            name: 'Brake Pads Front Set',
+            nameAr: 'فحمات فرامل أمامية',
+            category: 'BRAKE_PAD',
+            brand: 'Brembo',
+            price: 145.00,
+            stock: 40,
+            featured: true
+        },
+        {
+            sku: 'BRK-002',
+            name: 'Brake Pads Rear',
+            nameAr: 'فحمات فرامل خلفية',
+            category: 'BRAKE_PAD',
+            brand: 'Brembo',
+            price: 98.00,
+            stock: 45,
+            featured: false
+        },
+        {
+            sku: 'BAT-001',
+            name: 'Varta Dynamic 12V 60Ah',
+            nameAr: 'فارتا ديناميك 12 فولت 60 أمبير',
+            category: 'BATTERY',
+            brand: 'Varta',
+            price: 220.00,
+            stock: 30,
+            featured: true
+        },
+        {
+            sku: 'BAT-002',
+            name: 'Bosch S4 005',
+            nameAr: 'بوش S4 005',
+            category: 'BATTERY',
+            brand: 'Bosch',
+            price: 195.00,
+            stock: 25,
+            featured: false
+        },
+        {
+            sku: 'TIR-001',
+            name: 'Michelin Pilot Sport 4',
+            nameAr: 'ميشلان بايلوت سبورت 4',
+            category: 'TIRE',
+            brand: 'Michelin',
+            price: 185.00,
+            stock: 60,
+            featured: true
+        },
+        {
+            sku: 'TIR-002',
+            name: 'Bridgestone Turanza',
+            nameAr: 'بريدجستون تورانزا',
+            category: 'TIRE',
+            brand: 'Bridgestone',
+            price: 165.00,
+            stock: 50,
+            featured: false
+        },
+        {
+            sku: 'FLU-001',
+            name: 'Coolant Concentrate',
+            nameAr: 'سائل تبريد مركز',
+            category: 'FLUID',
+            brand: 'Prestone',
+            price: 28.99,
+            stock: 80,
+            featured: false
+        },
+        {
+            sku: 'FLU-002',
+            name: 'Brake Fluid DOT 4',
+            nameAr: 'سائل فرامل DOT 4',
+            category: 'FLUID',
+            brand: 'Castrol',
+            price: 15.50,
+            stock: 100,
+            featured: false
+        },
+        {
+            sku: 'ACC-001',
+            name: 'Car Cover Universal',
+            nameAr: 'غطاء سيارة عام',
+            category: 'ACCESSORY',
+            brand: 'Generic',
+            price: 45.00,
+            stock: 70,
+            featured: false
+        },
+        {
+            sku: 'ACC-002',
+            name: 'Dash Cam 1080p',
+            nameAr: 'كاميرا داش 1080',
+            category: 'ACCESSORY',
+            brand: 'AutoGuard',
+            price: 89.99,
+            stock: 35,
+            featured: true
+        }
     ];
 
     for (const row of productRows) {
         await prisma.product.upsert({
-            where: { sku: row.sku },
-            update: { stockQuantity: row.stock, price: row.price, isFeatured: row.featured },
+            where: {
+                sku: row.sku
+            },
+            update: {
+                stockQuantity: row.stock,
+                price: row.price,
+                isFeatured: row.featured
+            },
             create: {
                 sku: row.sku,
                 name: row.name,
@@ -736,7 +897,11 @@ async function main() {
             const status = statuses[(i + j) % statuses.length];
             const totalPrice = 120 + (i + 1) * 25 + j * 15;
             const bookingNumber = `BKG-SEED-${String(bookingCount + 1).padStart(3, '0')}`;
-            const existing = await prisma.booking.findUnique({ where: { bookingNumber } });
+            const existing = await prisma.booking.findUnique({
+                where: {
+                    bookingNumber
+                }
+            });
             if (existing) continue;
             await prisma.booking.create({
                 data: {
@@ -764,9 +929,15 @@ async function main() {
     // ============================================
     console.log('🧾 Seeding Invoices...');
     const bookingsForInvoice = await prisma.booking.findMany({
-        where: { status: { in: ['COMPLETED', 'CONFIRMED', 'IN_PROGRESS'] } },
+        where: {
+            status: {
+                in: ['COMPLETED', 'CONFIRMED', 'IN_PROGRESS']
+            }
+        },
         take: 6,
-        orderBy: { createdAt: 'desc' }
+        orderBy: {
+            createdAt: 'desc'
+        }
     });
     const invStatuses = ['DRAFT', 'PENDING', 'PAID', 'PARTIALLY_PAID'];
     let invoicesCreated = 0;
@@ -774,7 +945,11 @@ async function main() {
         const b = bookingsForInvoice[idx];
         const invNum = idx + 1;
         const invNumber = `INV-SEED-${String(invNum).padStart(3, '0')}`;
-        const existingInv = await prisma.invoice.findUnique({ where: { bookingId: b.id } });
+        const existingInv = await prisma.invoice.findUnique({
+            where: {
+                bookingId: b.id
+            }
+        });
         if (existingInv) continue;
         const totalAmount = Number(b.totalPrice) || 150;
         const status = invStatuses[idx % invStatuses.length];
