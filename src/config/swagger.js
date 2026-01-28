@@ -56,11 +56,7 @@ Authorization: Bearer <your_jwt_token>
                 description: 'Development Server - بيئة التطوير'
             },
             {
-                url: 'https://api-staging.autoservice.com',
-                description: 'Staging Server - بيئة الاختبار'
-            },
-            {
-                url: 'https://api.autoservice.com',
+                url: 'https://akfeek-backend.developteam.site',
                 description: 'Production Server - بيئة الإنتاج'
             }
         ],

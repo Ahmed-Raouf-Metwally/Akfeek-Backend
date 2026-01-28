@@ -79,8 +79,8 @@ class TowingService {
                 destinationAddress: destinationLocation.address,
                 totalPrice: pricing.finalPrice,
                 notes,
-                urgency,
                 metadata: {
+                    urgency,
                     vehicleCondition,
                     estimatedBudget,
                     distance: tripDistance.distance,
@@ -121,25 +121,20 @@ class TowingService {
         const broadcast = await prisma.jobBroadcast.create({
             data: {
                 bookingId: booking.id,
-                serviceId: towingService.id,
-                pickupLat: pickupLocation.latitude,
-                pickupLng: pickupLocation.longitude,
-                pickupAddress: pickupLocation.address,
-                destinationLat: destinationLocation.latitude,
-                destinationLng: destinationLocation.longitude,
-                destinationAddress: destinationLocation.address,
-                radius: await getSystemSetting('TOWING_SEARCH_RADIUS', 10),
+                customerId,
+                latitude: pickupLocation.latitude,
+                longitude: pickupLocation.longitude,
+                locationAddress: pickupLocation.address,
+                radiusKm: await getSystemSetting('TOWING_SEARCH_RADIUS', 10),
+                broadcastUntil: expiresAt,
+                description: `Towing Request: ${vehicleCondition}` + (notes ? ` - ${notes}` : ''),
+                urgency,
+                estimatedBudget,
                 status: 'BROADCASTING',
-                expiresAt,
-                metadata: {
-                    vehicleInfo: vehicle,
-                    vehicleCondition,
-                    distance: tripDistance.distance,
-                    estimatedDuration: tripDistance.duration,
-                    estimatedPrice: pricing.finalPrice,
-                    urgency,
-                    routingMethod: tripDistance.method
-                }
+                // Metadata isn't in JobBroadcast schema based on error, so we rely on Booking metadata
+                // or if schema has it (which previous view didn't show clearly for metadata), 
+                // checking schema again... schema has NO metadata on JobBroadcast!
+                // We will skip metadata here as it's already on the booking.
             }
         });
 
@@ -160,8 +155,8 @@ class TowingService {
             bookingId: booking.id,
             broadcastId: broadcast.id,
             status: 'BROADCASTING',
-            estimatedDistance: tripDistance.distance,
-            estimatedDuration: tripDistance.duration,
+            estimatedDistanceKm: tripDistance.distance, // Road distance in kilometers
+            estimatedDurationMinutes: tripDistance.duration, // Duration in minutes
             estimatedPrice: pricing.finalPrice,
             pricing: pricing,
             routingMethod: tripDistance.method,

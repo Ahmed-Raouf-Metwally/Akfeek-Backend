@@ -44,8 +44,11 @@ class OSRMService {
                 duration: route.duration / 60, // Convert seconds to minutes
                 success: true
             };
+
         } catch (error) {
-            logger.warn('OSRM routing error', { message: error?.message });
+            logger.warn('OSRM routing error', {
+                message: error?.message
+            });
             return {
                 success: false,
                 error: error.message
@@ -123,10 +126,10 @@ class OSRMService {
         const hour = new Date().getHours();
 
         // Traffic patterns for Saudi Arabia
-        if (hour >= 7 && hour <= 9) return 1.5;   // Morning rush
+        if (hour >= 7 && hour <= 9) return 1.5; // Morning rush
         if (hour >= 12 && hour <= 14) return 1.3; // Lunch time
         if (hour >= 16 && hour <= 19) return 1.6; // Evening rush
-        if (hour >= 0 && hour <= 5) return 0.8;   // Late night (faster)
+        if (hour >= 0 && hour <= 5) return 0.8; // Late night (faster)
 
         return 1.0; // Normal traffic
     }
@@ -146,7 +149,12 @@ class OSRMService {
             };
         }
 
-        // Fallback to Haversine
+        // Strictly enforce road-based routing as requested
+        // If OSRM fails, throw error instead of falling back to Haversine
+        throw new Error(`Routing service unavailable: ${result.error || 'Unknown error'}`);
+
+        /* 
+        // Fallback disabled to ensure accurate road-based pricing
         const distance = this.calculateHaversineDistance(pickupLat, pickupLng, destLat, destLng);
         const avgSpeed = 40;
         const duration = Math.round((distance / avgSpeed) * 60);
@@ -156,6 +164,7 @@ class OSRMService {
             duration,
             method: 'Haversine'
         };
+        */
     }
 }
 

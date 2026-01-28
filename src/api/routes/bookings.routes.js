@@ -17,4 +17,9 @@ router.get('/', requireRole('ADMIN'), bookingController.getAllBookings);
  */
 router.get('/:id', requireRole('ADMIN'), bookingController.getBookingById);
 
+// Real-time tracking endpoints (for customers)
+const trackingController = require('../controllers/tracking.controller');
+router.get('/:bookingId/track', trackingController.getTrackingInfo);
+router.get('/:bookingId/location-history', trackingController.getLocationHistory);
+
 module.exports = router;

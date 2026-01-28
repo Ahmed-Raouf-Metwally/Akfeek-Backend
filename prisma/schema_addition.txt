@@ -1,0 +1,32 @@
+
+
+// ================================================================================================
+// REAL-TIME LOCATION TRACKING
+// ================================================================================================
+
+model TechnicianLocation {
+  id           String   @id @default(uuid())
+  technicianId String
+  technician   User     @relation("TechnicianLocations", fields: [technicianId], references: [id], onDelete: Cascade)
+  
+  // Current GPS location
+  latitude     Float
+  longitude    Float
+  heading      Float?   // Direction in degrees (0-360)
+  speed        Float?   // Speed in km/h
+  accuracy     Float?   // GPS accuracy in meters
+  
+  // Context - which booking is this technician working on
+  bookingId    String?
+  booking      Booking? @relation("TechnicianLocationTracking", fields: [bookingId], references: [id], onDelete: SetNull)
+  
+  // Status
+  status       String   @default("ONLINE") // OFFLINE, ONLINE, ON_JOB
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([technicianId])
+  @@index([bookingId])
+  @@index([createdAt])
+}

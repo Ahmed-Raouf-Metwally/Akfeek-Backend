@@ -650,7 +650,7 @@ async function main() {
 
     console.log(`✅ Created ${testCustomers.length} test customers with ${testVehicles.length} vehicles`);
     console.log(`✅ Created ${testTechnicians.length} test technicians (available for towing)`);
-    console.log('');
+    console.log('')
     console.log('📋 Test Accounts:');
     console.log('   Customers: customer1@test.com, customer2@test.com, customer3@test.com');
     console.log('   Technicians: technician1@test.com ... technician5@test.com');

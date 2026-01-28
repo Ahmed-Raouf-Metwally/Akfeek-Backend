@@ -49,6 +49,11 @@ router.use('/addresses', addressRoutes);
 router.use('/bookings/towing', towingRoutes);
 router.use('/technician/towing', technicianTowingRoutes);
 
+// Tracking routes (real-time location)
+const trackingRoutes = require('./tracking.routes');
+router.use('/technician/tracking', trackingRoutes);
+// Note: Customer tracking endpoints (/api/bookings/:id/track) are in bookings.routes.js
+
 // Admin routes
 router.use('/admin/settings', adminSettingsRoutes);
 
