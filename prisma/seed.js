@@ -532,7 +532,7 @@ async function main() {
   ];
   const times = ['09:00', '10:30', '14:00', '15:30', '11:00', '16:00'];
 
-  let bookingNum = 1;
+  let bookingNum = 1000;
   const createdBookings = [];
 
   for (let i = 0; i < allCustomers.length; i++) {
@@ -560,7 +560,7 @@ async function main() {
       const discount = j % 4 === 0 ? subtotal * 0.1 : 0;
       const totalPrice = subtotal + tax - discount;
 
-      const bookingNumber = `BKG-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(bookingNum + 1000).padStart(4, '0')}`;
+      const bookingNumber = `BKG-COMP-${String(bookingNum).padStart(5, '0')}`;
       bookingNum++;
 
       const existingBooking = await prisma.booking.findUnique({ where: { bookingNumber } });
@@ -648,12 +648,20 @@ async function main() {
   // 10. Job Broadcasts with Offers
   // ============================================
   console.log('📡 Seeding Job Broadcasts...');
-  const broadcastBookings = createdBookings.filter((b) => b.status === 'BROADCASTING' || b.status === 'OFFERS_RECEIVED' || b.status === 'TECHNICIAN_ASSIGNED');
+  // Get bookings that can have broadcasts (or create new ones with BROADCASTING status)
+  const allBookings = await prisma.booking.findMany({ take: 10, orderBy: { createdAt: 'desc' } });
+  const broadcastBookings = allBookings.filter((b) => ['BROADCASTING', 'OFFERS_RECEIVED', 'TECHNICIAN_ASSIGNED', 'PENDING'].includes(b.status));
   let broadcastCount = 0;
 
-  for (const booking of broadcastBookings.slice(0, 5)) {
+  for (let idx = 0; idx < Math.min(5, broadcastBookings.length); idx++) {
+    const booking = broadcastBookings[idx];
     const customer = allCustomers.find((c) => c.id === booking.customerId);
+    if (!customer) continue;
+
     const address = await prisma.address.findFirst({ where: { userId: customer.id, isDefault: true } });
+
+    const existingBroadcast = await prisma.jobBroadcast.findUnique({ where: { bookingId: booking.id } });
+    if (existingBroadcast) continue;
 
     const broadcastUntil = new Date(now);
     broadcastUntil.setHours(broadcastUntil.getHours() + 2);
@@ -669,9 +677,9 @@ async function main() {
         radiusKm: 10,
         broadcastUntil,
         description: 'Vehicle breakdown on highway. Need immediate assistance.',
-        urgency: ['LOW', 'MEDIUM', 'HIGH'][Math.floor(Math.random() * 3)],
+        urgency: ['LOW', 'MEDIUM', 'HIGH'][idx % 3],
         estimatedBudget: Number(booking.totalPrice) * 1.2,
-        status: booking.status === 'TECHNICIAN_ASSIGNED' ? 'TECHNICIAN_SELECTED' : booking.status === 'OFFERS_RECEIVED' ? 'OFFERS_RECEIVED' : 'BROADCASTING',
+        status: idx === 0 ? 'TECHNICIAN_SELECTED' : idx === 1 ? 'OFFERS_RECEIVED' : 'BROADCASTING',
       },
     });
     broadcastCount++;
@@ -708,12 +716,12 @@ async function main() {
   // 11. Inspection Reports with Items
   // ============================================
   console.log('🔍 Seeding Inspection Reports...');
-  // Create some bookings with inspection status first, or use existing bookings
-  const bookingsForInspection = createdBookings.slice(0, 4);
+  // Use existing bookings or created ones
+  const allBookingsForInspection = await prisma.booking.findMany({ take: 6, orderBy: { createdAt: 'desc' } });
   let inspectionCount = 0;
 
-  for (let idx = 0; idx < bookingsForInspection.length; idx++) {
-    const booking = bookingsForInspection[idx];
+  for (let idx = 0; idx < Math.min(4, allBookingsForInspection.length); idx++) {
+    const booking = allBookingsForInspection[idx];
     const vehicle = allVehicles.find((v) => v.id === booking.vehicleId);
     const technician = allTechnicians[idx % allTechnicians.length];
 
@@ -778,16 +786,17 @@ async function main() {
   console.log('📦 Seeding Supply Requests...');
   const supplyRequestStatuses = ['PENDING', 'ACCEPTED', 'IN_PREPARATION', 'READY_FOR_PICKUP', 'DELIVERED'];
   const allSupplierParts = await prisma.supplierPart.findMany();
+  const allBookingsForSupply = await prisma.booking.findMany({ take: 10, orderBy: { createdAt: 'desc' } });
   let supplyRequestCount = 0;
 
-  for (let i = 0; i < allTechnicians.length; i++) {
+  for (let i = 0; i < Math.min(allTechnicians.length, 5); i++) {
     const tech = allTechnicians[i];
     const supplier = allSuppliers[i % allSuppliers.length];
-    const booking = createdBookings[i % createdBookings.length];
+    const booking = allBookingsForSupply[i % allBookingsForSupply.length];
 
     if (allSupplierParts.length === 0) continue;
 
-    const requestNumber = `SR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(i + 1).padStart(3, '0')}`;
+    const requestNumber = `SR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(supplyRequestCount + 1000).padStart(4, '0')}`;
     const status = supplyRequestStatuses[i % supplyRequestStatuses.length];
     const part = allSupplierParts[i % allSupplierParts.length];
     const quantity = 2 + Math.floor(Math.random() * 3);
@@ -796,6 +805,12 @@ async function main() {
     const deliveryFee = 15;
     const markup = totalPrice * 0.1;
     const totalCost = totalPrice + deliveryFee + markup;
+
+    const existingSR = await prisma.supplyRequest.findUnique({ where: { requestNumber } });
+    if (existingSR) {
+      supplyRequestCount++;
+      continue;
+    }
 
     const supplyRequest = await prisma.supplyRequest.create({
       data: {
@@ -835,14 +850,18 @@ async function main() {
   // 13. Invoices with Line Items
   // ============================================
   console.log('🧾 Seeding Invoices with line items...');
-  const invoiceBookings = createdBookings.filter((b) => ['COMPLETED', 'CONFIRMED', 'IN_PROGRESS', 'DELIVERED'].includes(b.status));
+  const allBookingsForInvoice = await prisma.booking.findMany({
+    where: { status: { in: ['COMPLETED', 'CONFIRMED', 'IN_PROGRESS', 'DELIVERED'] } },
+    take: 15,
+    orderBy: { createdAt: 'desc' },
+  });
   const invoiceStatuses = ['DRAFT', 'PENDING', 'PAID', 'PARTIALLY_PAID'];
-  let invoiceNum = 1;
+  let invoiceNum = 2000;
   let invoiceCount = 0;
 
-  for (let idx = 0; idx < invoiceBookings.length; idx++) {
-    const booking = invoiceBookings[idx];
-    const invNumber = `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(invoiceNum).padStart(3, '0')}`;
+  for (let idx = 0; idx < allBookingsForInvoice.length; idx++) {
+    const booking = allBookingsForInvoice[idx];
+    const invNumber = `INV-COMP-${String(invoiceNum).padStart(5, '0')}`;
     invoiceNum++;
 
     const existingInv = await prisma.invoice.findUnique({ where: { bookingId: booking.id } });
@@ -929,12 +948,15 @@ async function main() {
   const allInvoices = await prisma.invoice.findMany({ where: { status: { in: ['PAID', 'PARTIALLY_PAID'] } } });
   const paymentMethods = ['CASH', 'CARD', 'WALLET', 'MADA'];
   const paymentStatuses = ['PENDING', 'PROCESSING', 'COMPLETED'];
-  let paymentNum = 1;
+  let paymentNum = 3000;
   let paymentCount = 0;
 
   for (const invoice of allInvoices) {
-    const paymentNumber = `PAY-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(paymentNum).padStart(3, '0')}`;
+    const paymentNumber = `PAY-COMP-${String(paymentNum).padStart(5, '0')}`;
     paymentNum++;
+
+    const existingPayment = await prisma.payment.findUnique({ where: { paymentNumber } });
+    if (existingPayment) continue;
 
     const method = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
     const status = invoice.status === 'PAID' ? 'COMPLETED' : paymentStatuses[Math.floor(Math.random() * paymentStatuses.length)];
@@ -967,8 +989,10 @@ async function main() {
     const balance = 500 + Math.floor(Math.random() * 2000);
     const pendingBalance = Math.floor(Math.random() * 500);
 
-    const wallet = await prisma.wallet.create({
-      data: {
+    const wallet = await prisma.wallet.upsert({
+      where: { userId: tech.id },
+      update: { balance, pendingBalance },
+      create: {
         userId: tech.id,
         balance,
         pendingBalance,
@@ -985,9 +1009,18 @@ async function main() {
       const balanceBefore = balance - (t * 100);
       const balanceAfter = balanceBefore + amount;
 
+      const txnNum = transactionCount + 4000;
+      const txnNumber = `TXN-COMP-${String(txnNum).padStart(6, '0')}`;
+      
+      const existingTxn = await prisma.transaction.findUnique({ where: { transactionNumber: txnNumber } });
+      if (existingTxn) {
+        transactionCount++;
+        continue;
+      }
+
       await prisma.transaction.create({
         data: {
-          transactionNumber: `TXN-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(transactionCount + 1).padStart(4, '0')}`,
+          transactionNumber: txnNumber,
           walletId: wallet.id,
           userId: tech.id,
           type,
@@ -1007,7 +1040,11 @@ async function main() {
   // 16. Ratings
   // ============================================
   console.log('⭐ Seeding Ratings...');
-  const completedBookings = createdBookings.filter((b) => ['COMPLETED', 'DELIVERED'].includes(b.status));
+  const completedBookings = await prisma.booking.findMany({
+    where: { status: { in: ['COMPLETED', 'DELIVERED'] } },
+    take: 10,
+    orderBy: { createdAt: 'desc' },
+  });
   let ratingCount = 0;
 
   for (const booking of completedBookings.slice(0, 8)) {
