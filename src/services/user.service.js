@@ -241,6 +241,12 @@ class UserService {
               lastName: true,
               avatar: true
             }
+          },
+          _count: {
+            select: {
+              vehicles: true,
+              addresses: true
+            }
           }
         },
         orderBy: { createdAt: 'desc' }

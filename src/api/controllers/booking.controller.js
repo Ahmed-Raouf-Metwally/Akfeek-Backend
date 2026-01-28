@@ -52,6 +52,13 @@ async function getAllBookings(req, res, next) {
               },
             },
           },
+          technician: {
+            select: {
+              id: true,
+              email: true,
+              profile: { select: { firstName: true, lastName: true } },
+            },
+          },
         },
       }),
       prisma.booking.count({ where }),
@@ -104,6 +111,80 @@ async function getBookingById(req, res, next) {
             id: true,
             email: true,
             profile: { select: { firstName: true, lastName: true } },
+          },
+        },
+        statusHistory: {
+          orderBy: { timestamp: 'desc' },
+          take: 20,
+        },
+        jobBroadcast: {
+          select: {
+            id: true,
+            status: true,
+            description: true,
+            urgency: true,
+            estimatedBudget: true,
+            createdAt: true,
+          },
+        },
+        inspectionReport: {
+          select: {
+            id: true,
+            status: true,
+            overallCondition: true,
+            estimatedCost: true,
+            customerResponse: true,
+            createdAt: true,
+          },
+        },
+        supplyRequests: {
+          select: {
+            id: true,
+            requestNumber: true,
+            status: true,
+            totalCost: true,
+            createdAt: true,
+          },
+          take: 10,
+        },
+        invoice: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            status: true,
+            totalAmount: true,
+            paidAmount: true,
+          },
+        },
+        rating: {
+          select: {
+            id: true,
+            score: true,
+            review: true,
+            createdAt: true,
+          },
+        },
+        services: {
+          include: {
+            service: {
+              select: {
+                id: true,
+                name: true,
+                nameAr: true,
+              },
+            },
+          },
+        },
+        products: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                nameAr: true,
+                sku: true,
+              },
+            },
           },
         },
       },
