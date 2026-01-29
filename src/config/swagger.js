@@ -327,6 +327,10 @@ Authorization: Bearer <your_jwt_token>
                 description: 'Technician towing endpoints - نقاط خدمة السحب للفنيين'
             },
             {
+                name: 'Car Wash Service',
+                description: 'Mobile car wash service with broadcast model - خدمة غسيل السيارات المتنقلة'
+            },
+            {
                 name: 'Admin Settings',
                 description: 'System settings management for administrators - إدارة إعدادات النظام للمسؤولين'
             }
