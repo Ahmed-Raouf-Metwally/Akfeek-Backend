@@ -46,8 +46,15 @@ router.use('/notifications', notificationRoutes);
 router.use('/addresses', addressRoutes);
 
 // Towing service routes
+// Towing service routes
 router.use('/bookings/towing', towingRoutes);
 router.use('/technician/towing', technicianTowingRoutes);
+
+// Car Wash service routes
+const carWashRoutes = require('./carwash.routes');
+const technicianCarWashRoutes = require('./technicianCarwash.routes');
+router.use('/bookings/carwash', carWashRoutes);
+router.use('/technician/carwash', technicianCarWashRoutes);
 
 // Tracking routes (real-time location)
 const trackingRoutes = require('./tracking.routes');

@@ -432,6 +432,8 @@ enum BookingStatus {
     BROADCASTING // Looking for technicians
     OFFERS_RECEIVED // Technicians have bid
     TECHNICIAN_ASSIGNED // Customer selected a technician
+    TECHNICIAN_EN_ROUTE // Technician is on the way
+    TECHNICIAN_ARRIVED // Technician arrived at pickup location
 
     // Ekfik Model States
     PICKUP_SCHEDULED // Valet pickup scheduled

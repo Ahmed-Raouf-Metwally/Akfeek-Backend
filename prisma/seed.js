@@ -15,19 +15,19 @@ const IMAGES = {
   ford: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=200&h=200&fit=crop',
   chevrolet: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=200&h=200&fit=crop',
   gmc: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=200&h=200&fit=crop',
-  
+
   // Vehicle Model Images
   sedan: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop',
   suv: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=300&fit=crop',
   truck: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
-  
+
   // Service Images
   carWash: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
   oilChange: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&h=300&fit=crop',
   brakeService: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&h=300&fit=crop',
   engineRepair: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&h=300&fit=crop',
   towing: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
-  
+
   // Product Images
   oil: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=300&h=300&fit=crop',
   filter: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=300&h=300&fit=crop',
@@ -68,6 +68,37 @@ async function main() {
     },
   });
   console.log('✅ Admin user: admin@akfeek.com / Admin123!\n');
+
+  // ============================================
+  // 0.1 Car Wash Technician
+  // ============================================
+  console.log('👤 Seeding Car Wash Technician...');
+  await prisma.user.upsert({
+    where: { email: 'washer@akfeek.com' },
+    update: {},
+    create: {
+      email: 'washer@akfeek.com',
+      passwordHash: hash,
+      role: 'TECHNICIAN',
+      status: 'ACTIVE',
+      emailVerified: true,
+      phone: '966599999998',
+      phoneVerified: true,
+      profile: {
+        create: {
+          firstName: 'Wash',
+          lastName: 'Pro',
+          avatar: 'https://images.unsplash.com/photo-1605218427368-35bded87bd4d?w=200&h=200&fit=crop',
+          bio: 'Expert in mobile car detailing',
+          specializations: ['Mobile Car Wash', 'CLEANING'],
+          isAvailable: true,
+          currentLat: 24.7136,
+          currentLng: 46.6753,
+        },
+      },
+    },
+  });
+  console.log('✅ Car Wash Technician: washer@akfeek.com / Admin123!\n');
 
   // ============================================
   // 1. Vehicle Brands with Logos
@@ -381,6 +412,8 @@ async function main() {
     { name: 'Battery Jump Start', nameAr: 'تشغيل البطارية', desc: 'Emergency battery jump start', descAr: 'تشغيل البطارية الطارئ', type: 'EMERGENCY', category: 'EMERGENCY', duration: 20, image: IMAGES.towing },
     { name: 'Ekfik Full Inspection', nameAr: 'فحص أكفيك الكامل', desc: 'Comprehensive vehicle inspection with valet service', descAr: 'فحص شامل للمركبة مع خدمة الڤاليه', type: 'INSPECTION', category: 'INSPECTION', duration: 180, image: IMAGES.brakeService },
     { name: 'Pre-Purchase Inspection', nameAr: 'فحص قبل الشراء', desc: 'Complete inspection before buying', descAr: 'فحص كامل قبل الشراء', type: 'INSPECTION', category: 'INSPECTION', duration: 120, image: IMAGES.brakeService },
+    // New Mobile Car Wash for Broadcast Flow
+    { name: 'Mobile Car Wash', nameAr: 'غسيل متنقل فوري', desc: 'Immediate mobile car wash at your location', descAr: 'غسيل سيارات متنقل فوري في موقعك', type: 'EMERGENCY', category: 'CLEANING', duration: 45, image: IMAGES.carWash },
   ];
 
   const serviceIdByName = {};
@@ -390,22 +423,22 @@ async function main() {
     });
     const service = existing
       ? await prisma.service.update({
-          where: { id: existing.id },
-          data: { imageUrl: svcData.image },
-        })
+        where: { id: existing.id },
+        data: { imageUrl: svcData.image },
+      })
       : await prisma.service.create({
-          data: {
-        name: svcData.name,
-        nameAr: svcData.nameAr,
-        description: svcData.desc,
-        descriptionAr: svcData.descAr,
-        type: svcData.type,
-        category: svcData.category,
-        estimatedDuration: svcData.duration,
-            imageUrl: svcData.image,
-            isActive: true,
-          },
-        });
+        data: {
+          name: svcData.name,
+          nameAr: svcData.nameAr,
+          description: svcData.desc,
+          descriptionAr: svcData.descAr,
+          type: svcData.type,
+          category: svcData.category,
+          estimatedDuration: svcData.duration,
+          imageUrl: svcData.image,
+          isActive: true,
+        },
+      });
     serviceIdByName[svcData.name] = service.id;
   }
   console.log(`✅ Created ${servicesData.length} services\n`);
@@ -1011,7 +1044,7 @@ async function main() {
 
       const txnNum = transactionCount + 4000;
       const txnNumber = `TXN-COMP-${String(txnNum).padStart(6, '0')}`;
-      
+
       const existingTxn = await prisma.transaction.findUnique({ where: { transactionNumber: txnNumber } });
       if (existingTxn) {
         transactionCount++;

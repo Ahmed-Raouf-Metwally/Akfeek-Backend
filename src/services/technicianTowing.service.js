@@ -42,7 +42,7 @@ class TechnicianTowingService {
         const broadcasts = await prisma.jobBroadcast.findMany({
             where: {
                 status: 'BROADCASTING',
-                expiresAt: {
+                broadcastUntil: {
                     gt: new Date()
                 }
             },
@@ -62,12 +62,20 @@ class TechnicianTowingService {
                         },
                         vehicle: {
                             select: {
-                                vehicleType: true,
-                                make: true,
-                                model: true,
-                                year: true,
+                                plateNumber: true,
                                 color: true,
-                                plateNumber: true
+                                vehicleModel: {
+                                    select: {
+                                        name: true,
+                                        year: true,
+                                        type: true,
+                                        brand: {
+                                            select: {
+                                                name: true
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -79,7 +87,7 @@ class TechnicianTowingService {
                     select: {
                         id: true,
                         bidAmount: true,
-                        status: true,
+                        isSelected: true,
                         createdAt: true
                     }
                 }
@@ -93,10 +101,10 @@ class TechnicianTowingService {
         const broadcastsWithETA = await Promise.all(
             broadcasts.map(async (broadcast) => {
                 const eta = await calculateETA(
-                    technician.profile.currentLat,
-                    technician.profile.currentLng,
-                    broadcast.pickupLat,
-                    broadcast.pickupLng
+                    technician.profile.currentLat || 0,
+                    technician.profile.currentLng || 0,
+                    broadcast.booking?.pickupLat || 0,
+                    broadcast.booking?.pickupLng || 0
                 );
 
                 const myOffer = broadcast.offers[0] || null;
@@ -104,26 +112,35 @@ class TechnicianTowingService {
                 return {
                     id: broadcast.id,
                     customer: {
-                        name: `${broadcast.booking.customer.profile.firstName} ${broadcast.booking.customer.profile.lastName}`,
-                        avatar: broadcast.booking.customer.profile.avatar
+                        name: broadcast.booking.customer.profile
+                            ? `${broadcast.booking.customer.profile.firstName} ${broadcast.booking.customer.profile.lastName}`
+                            : 'Unknown Customer',
+                        avatar: broadcast.booking.customer.profile?.avatar
                     },
-                    vehicle: broadcast.booking.vehicle,
+                    vehicle: {
+                        make: broadcast.booking.vehicle?.vehicleModel?.brand?.name || 'Unknown Make',
+                        model: broadcast.booking.vehicle?.vehicleModel?.name || 'Unknown Model',
+                        year: broadcast.booking.vehicle?.vehicleModel?.year || 'Unknown Year',
+                        color: broadcast.booking.vehicle?.color || 'Unknown Color',
+                        type: broadcast.booking.vehicle?.vehicleModel?.type || 'Unknown Type',
+                        plateNumber: broadcast.booking.vehicle?.plateNumber || 'Unknown Plate'
+                    },
                     pickupLocation: {
-                        latitude: broadcast.pickupLat,
-                        longitude: broadcast.pickupLng,
-                        address: broadcast.pickupAddress
+                        latitude: broadcast.booking?.pickupLat || 0,
+                        longitude: broadcast.booking?.pickupLng || 0,
+                        address: broadcast.booking?.pickupAddress || 'Unknown Location'
                     },
                     destinationLocation: {
-                        latitude: broadcast.destinationLat,
-                        longitude: broadcast.destinationLng,
-                        address: broadcast.destinationAddress
+                        latitude: broadcast.booking?.destinationLat || 0,
+                        longitude: broadcast.booking?.destinationLng || 0,
+                        address: broadcast.booking?.destinationAddress || 'Unknown Destination'
                     },
                     distance: eta.distance,
                     estimatedArrival: eta.etaMinutes,
-                    estimatedPrice: broadcast.metadata?.estimatedPrice || 0,
-                    urgency: broadcast.metadata?.urgency || 'NORMAL',
-                    vehicleCondition: broadcast.metadata?.vehicleCondition,
-                    expiresAt: broadcast.expiresAt,
+                    estimatedPrice: broadcast.booking?.metadata?.pricing?.finalPrice || broadcast.booking?.totalPrice || 0,
+                    urgency: broadcast.booking?.metadata?.urgency || 'NORMAL',
+                    vehicleCondition: broadcast.booking?.metadata?.vehicleCondition || 'Unknown Condition',
+                    expiresAt: broadcast.broadcastUntil,
                     myOffer,
                     createdAt: broadcast.createdAt
                 };
@@ -191,7 +208,7 @@ class TechnicianTowingService {
             throw new AppError('Broadcast is no longer active', 400, 'INVALID_STATUS');
         }
 
-        if (new Date() > new Date(broadcast.expiresAt)) {
+        if (new Date() > new Date(broadcast.broadcastUntil)) {
             throw new AppError('Broadcast has expired', 400, 'EXPIRED');
         }
 
@@ -207,6 +224,14 @@ class TechnicianTowingService {
             throw new AppError('You have already submitted an offer', 400, 'DUPLICATE_OFFER');
         }
 
+        // Calculate distance for the offer record
+        const eta = await calculateETA(
+            technician.profile.currentLat || 0,
+            technician.profile.currentLng || 0,
+            broadcast.booking.pickupLat || 0,
+            broadcast.booking.pickupLng || 0
+        );
+
         // Create offer
         const offer = await prisma.jobOffer.create({
             data: {
@@ -215,7 +240,10 @@ class TechnicianTowingService {
                 bidAmount,
                 message,
                 estimatedArrival,
-                status: 'PENDING'
+                // status: 'PENDING', // Removed: Not in schema
+                technicianLat: technician.profile.currentLat || 0,
+                technicianLng: technician.profile.currentLng || 0,
+                distanceKm: eta.distance || 0
             },
             include: {
                 technician: {
@@ -270,8 +298,7 @@ class TechnicianTowingService {
                             select: {
                                 firstName: true,
                                 lastName: true,
-                                avatar: true,
-                                phone: true
+                                avatar: true
                             }
                         }
                     }
@@ -279,7 +306,7 @@ class TechnicianTowingService {
                 vehicle: true
             },
             orderBy: {
-                acceptedAt: 'desc'
+                createdAt: 'desc'
             }
         });
 
@@ -288,11 +315,13 @@ class TechnicianTowingService {
                 id: job.id,
                 bookingNumber: job.bookingNumber,
                 status: job.status,
-                customer: {
-                    name: `${job.customer.profile.firstName} ${job.customer.profile.lastName}`,
+                customer: job.customer ? {
+                    name: job.customer.profile
+                        ? `${job.customer.profile.firstName} ${job.customer.profile.lastName}`
+                        : (job.customer.firstName || job.customer.email),
                     phone: job.customer.phone,
-                    avatar: job.customer.profile.avatar
-                },
+                    avatar: job.customer.profile?.avatar
+                } : { name: 'Unknown', phone: 'N/A', avatar: null },
                 vehicle: job.vehicle,
                 pickupLocation: {
                     latitude: job.pickupLat,
@@ -304,8 +333,8 @@ class TechnicianTowingService {
                     longitude: job.destinationLng,
                     address: job.destinationAddress
                 },
-                agreedPrice: job.agreedPrice,
-                acceptedAt: job.acceptedAt,
+                agreedPrice: job.totalPrice, // Use totalPrice or agreedPrice if exists
+                acceptedAt: job.createdAt, // Fallback to createdAt
                 scheduledDate: job.scheduledDate
             }))
         };

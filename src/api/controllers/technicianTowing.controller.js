@@ -59,7 +59,12 @@ class TechnicianTowingController {
                 data: result
             });
         } catch (error) {
-            next(error);
+            console.error('Error in getJobs:', error); // detailed logging
+            res.status(500).json({
+                success: false,
+                message: error.message,
+                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            });
         }
     }
 
