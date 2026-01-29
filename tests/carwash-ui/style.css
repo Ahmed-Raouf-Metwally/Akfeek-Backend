@@ -1,0 +1,40 @@
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#map {
+  height: 500px;
+  width: 100%;
+  border-bottom: 1px solid #ddd;
+  z-index: 1; /* Ensure map stays below modals if any */
+}
+
+.log-entry {
+  border-bottom: 1px solid #eee;
+  padding: 2px 0;
+}
+.log-entry.info {
+  color: #0d6efd;
+}
+.log-entry.success {
+  color: #198754;
+}
+.log-entry.warn {
+  color: #ffc107;
+}
+.log-entry.error {
+  color: #dc3545;
+}
+
+/* Booking Card Item */
+.booking-item {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.booking-item:hover {
+  background-color: #f8f9fa;
+}
+.booking-item.active {
+  border-left: 4px solid #0d6efd;
+  background-color: #f0f7ff;
+}

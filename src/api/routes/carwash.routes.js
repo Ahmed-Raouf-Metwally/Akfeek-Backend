@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const carWashController = require('../controllers/carwash.controller');
-const { protect, authorize } = require('../middlewares/auth.middleware');
+const authMiddleware = require('../middlewares/auth.middleware');
+const requireRole = require('../middlewares/role.middleware');
 
 // Protect all routes
-router.use(protect);
-router.use(authorize('CUSTOMER'));
+router.use(authMiddleware);
+router.use(requireRole(['CUSTOMER']));
 
 // Create car wash request
 router.post('/request', carWashController.requestWash);

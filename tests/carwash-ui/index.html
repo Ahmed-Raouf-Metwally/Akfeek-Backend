@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Akfeek Tracking Test Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css" />
+    <!-- Socket.io -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  </head>
+  <body class="bg-light">
+    <div class="container-fluid py-4">
+      <h2 class="text-center mb-4">🚿 Akfeek Car Wash Test Dashboard</h2>
+
+      <!-- Login Section -->
+      <div id="login-section" class="row justify-content-center">
+        <div class="col-md-4">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h4 class="card-title text-center mb-3">Login</h4>
+              <div class="mb-3">
+                <label class="form-label">Role</label>
+                <select id="login-role" class="form-select">
+                  <option value="customer">Customer (Ahmed)</option>
+                  <option value="technician">Car Wash Tech (Wash Pro)</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input
+                  type="email"
+                  id="login-email"
+                  class="form-control"
+                  value="ahmed.ali@example.com"
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input
+                  type="password"
+                  id="login-password"
+                  class="form-control"
+                  value="Admin123!"
+                />
+              </div>
+              <button onclick="login()" class="btn btn-primary w-100">
+                Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Section (Hidden by default) -->
+      <div id="dashboard-section" class="d-none">
+        <div
+          class="d-flex justify-content-between align-items-center mb-3 bg-white p-3 shadow-sm rounded"
+        >
+          <div>
+            <span class="fw-bold fs-5" id="user-name">User</span>
+            <span class="badge bg-secondary ms-2" id="user-role-badge"
+              >Role</span
+            >
+          </div>
+          <button onclick="logout()" class="btn btn-outline-danger btn-sm">
+            Logout
+          </button>
+        </div>
+
+        <div class="row">
+          <!-- Left Panel: Controls -->
+          <div class="col-md-4">
+            <!-- Customer Controls -->
+            <div id="customer-controls" class="d-none">
+              <div class="card mb-3 shadow-sm">
+                <div class="card-header bg-info text-white">
+                  Request Service
+                </div>
+                <div class="card-body">
+                  <p class="small text-muted">
+                    Request a mobile car wash at your location.
+                  </p>
+                  <div class="mb-2">
+                    <select id="wash-type" class="form-select form-select-sm">
+                      <option value="EXTERNAL">External Wash (45 SAR)</option>
+                      <option value="INTERNAL_EXTERNAL">
+                        Full Wash (80 SAR)
+                      </option>
+                      <option value="POLISHING">Polishing (150 SAR)</option>
+                    </select>
+                  </div>
+                  <button
+                    onclick="createBooking()"
+                    class="btn btn-success w-100"
+                    id="btn-create-booking"
+                  >
+                    🚿 Request Wash
+                  </button>
+                  <div
+                    id="booking-create-status"
+                    class="mt-2 text-success small"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="card shadow-sm">
+                <div class="card-header">Active Bookings</div>
+                <ul
+                  class="list-group list-group-flush"
+                  id="customer-bookings-list"
+                >
+                  <li class="list-group-item text-center text-muted">
+                    No active bookings
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Technician Controls -->
+            <div id="technician-controls" class="d-none">
+              <div class="card mb-3 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                  Technician Status
+                </div>
+                <div class="card-body">
+                  <div class="form-check form-switch mb-2">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      id="tech-status-toggle"
+                      onchange="toggleTechStatus()"
+                    />
+                    <label class="form-check-label" for="tech-status-toggle"
+                      >Go Online</label
+                    >
+                  </div>
+                  <div id="tech-connection-status" class="small text-muted">
+                    Disconnected
+                  </div>
+                </div>
+              </div>
+
+              <div class="card mb-3 shadow-sm">
+                <div class="card-header">Assigned Jobs</div>
+                <ul class="list-group list-group-flush" id="tech-jobs-list">
+                  <li class="list-group-item text-center text-muted">
+                    No jobs assigned
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Job Actions (Visible when job selected) -->
+              <div
+                id="tech-job-actions"
+                class="card shadow-sm border-primary d-none"
+              >
+                <div class="card-header bg-primary text-white">
+                  Active Job Control
+                </div>
+                <div class="card-body">
+                  <h6 id="active-job-id" class="small text-muted mb-2">
+                    ID: ...
+                  </h6>
+                  <div class="d-grid gap-2">
+                    <button
+                      id="btn-start-job"
+                      onclick="startJob()"
+                      class="btn btn-outline-primary"
+                    >
+                      🏎️ Start Job (En Route)
+                    </button>
+                    <button
+                      onclick="simulateMovement()"
+                      class="btn btn-warning"
+                    >
+                      📍 Simulate Movement
+                    </button>
+                    <button
+                      id="btn-arrive"
+                      onclick="arriveAtPickup()"
+                      class="btn btn-outline-info"
+                    >
+                      🏁 Arrive at Pickup
+                    </button>
+                    <button
+                      id="btn-start-towing"
+                      onclick="startTowing()"
+                      class="btn btn-outline-secondary"
+                    >
+                      🏗️ Start Towing
+                    </button>
+                    <button
+                      id="btn-complete-job"
+                      onclick="completeJob()"
+                      class="btn btn-success"
+                    >
+                      ✅ Complete Job
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Panel: Map & Logs -->
+          <div class="col-md-8">
+            <div class="card shadow-sm h-100">
+              <div class="card-header d-flex justify-content-between">
+                <span>Live Map</span>
+                <span id="eta-display" class="badge bg-dark">ETA: --</span>
+              </div>
+              <div class="card-body p-0 position-relative">
+                <div id="map" style="height: 500px; width: 100%"></div>
+                <div
+                  id="map-overlay"
+                  class="position-absolute top-0 start-0 m-2 p-2 bg-white rounded shadow-sm opacity-75 d-none"
+                >
+                  <small>Tracking Active</small>
+                </div>
+              </div>
+              <div
+                class="card-footer bg-light"
+                style="max-height: 150px; overflow-y: auto"
+              >
+                <small class="text-muted fw-bold">Event Log:</small>
+                <div id="event-log" class="small font-monospace"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+  </body>
+</html>
