@@ -694,16 +694,15 @@ model Booking {
     updatedAt DateTime @updatedAt
 
     // Relations
-    services            BookingService[]
-    products            BookingProduct[]
-    statusHistory       BookingStatusHistory[]
-    jobBroadcast        JobBroadcast?
-    inspectionReport    InspectionReport?
-    supplyRequests      SupplyRequest[]
-    invoice             Invoice?
-    rating              Rating?
-    notifications       Notification[]
-    technicianLocations TechnicianLocation[]   @relation("BookingTracking")
+    services         BookingService[]
+    products         BookingProduct[]
+    statusHistory    BookingStatusHistory[]
+    jobBroadcast     JobBroadcast?
+    inspectionReport InspectionReport?
+    supplyRequests   SupplyRequest[]
+    invoice          Invoice?
+    rating           Rating?
+    notifications    Notification[]
 
     @@index([customerId])
     @@index([technicianId])
