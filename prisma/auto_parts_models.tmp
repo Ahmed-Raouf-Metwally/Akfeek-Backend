@@ -1,0 +1,171 @@
+// ================================================================================================
+// AUTO PARTS MARKETPLACE - VENDOR MANAGEMENT & PARTS CATALOG
+// ================================================================================================
+
+enum VendorStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+model VendorProfile {
+  id              String       @id @default(uuid())
+  userId          String       @unique
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  businessName    String
+  businessNameAr  String?
+  description     String?      @db.Text
+  descriptionAr   String?      @db.Text
+  
+  // Registration Documents
+  commercialLicense String?
+  taxNumber         String?
+  
+  // Contact Information
+  contactPhone      String
+  contactEmail      String
+  
+  // Address
+  address           String?
+  city              String?
+  country           String       @default("SA")
+  
+  // Business Details
+  logo              String?
+  banner            String?
+  
+  // Verification & Status
+  status            VendorStatus @default(PENDING_APPROVAL)
+  isVerified        Boolean      @default(false)
+  verifiedAt        DateTime?
+  
+  // Ratings & Stats
+  averageRating     Float?       @default(0)
+  totalReviews      Int          @default(0)
+  totalSales        Int          @default(0)
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  // Relations
+  parts             AutoPart[]   @relation("VendorOwnedParts")
+  
+  @@index([userId])
+  @@index([status])
+  @@index([isVerified])
+}
+
+model AutoPartCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  nameAr      String?
+  description String?  @db.Text
+  descriptionAr String? @db.Text
+  icon        String?
+  imageUrl    String?
+  parentId    String?
+  parent      AutoPartCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    AutoPartCategory[] @relation("CategoryHierarchy")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  parts       AutoPart[]
+  
+  @@index([parentId])
+  @@index([isActive])
+}
+
+model AutoPart {
+  id              String   @id @default(uuid())
+  sku             String   @unique
+  name            String
+  nameAr          String?
+  description     String?  @db.Text
+  descriptionAr   String?  @db.Text
+  
+  // Ownership: NULL = Platform-owned, otherwise Vendor-owned
+  vendorId        String?
+  vendor          VendorProfile? @relation("VendorOwnedParts", fields: [vendorId], references: [id], onDelete: Cascade)
+  
+  // Added by (tracks who created the part, even if platform-owned)
+  createdByUserId String
+  createdByUser   User     @relation("VendorParts", fields: [createdByUserId], references: [id])
+  
+  categoryId      String
+  category        AutoPartCategory @relation(fields: [categoryId], references: [id])
+  
+  brand           String
+  partNumber      String?
+  oemNumber       String?
+  
+  price           Decimal  @db.Decimal(10, 2)
+  compareAtPrice  Decimal? @db.Decimal(10, 2)
+  cost            Decimal? @db.Decimal(10, 2)
+  
+  stockQuantity   Int      @default(0)
+  lowStockThreshold Int?   @default(10)
+  
+  weight          Float?
+  dimensions      Json?
+  
+  specifications  Json?
+  
+  isActive        Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  
+  // Admin approval for vendor parts
+  isApproved      Boolean  @default(true)
+  approvedAt      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  images          AutoPartImage[]
+  compatibility   AutoPartCompatibility[]
+  
+  @@index([categoryId])
+  @@index([vendorId])
+  @@index([createdByUserId])
+  @@index([brand])
+  @@index([sku])
+  @@index([isActive, isFeatured])
+  @@index([isApproved])
+}
+
+model AutoPartImage {
+  id        String   @id @default(uuid())
+  partId    String
+  part      AutoPart @relation(fields: [partId], references: [id], onDelete: Cascade)
+  
+  url       String
+  altText   String?
+  sortOrder Int      @default(0)
+  isPrimary Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  @@index([partId])
+  @@index([isPrimary])
+}
+
+model AutoPartCompatibility {
+  id             String       @id @default(uuid())
+  partId         String
+  part           AutoPart     @relation(fields: [partId], references: [id], onDelete: Cascade)
+  
+  vehicleModelId String
+  vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
+  
+  notes          String?      @db.Text
+  fitmentType    String?
+  
+  createdAt      DateTime     @default(now())
+  
+  @@unique([partId, vehicleModelId])
+  @@index([partId])
+  @@index([vehicleModelId])
+}

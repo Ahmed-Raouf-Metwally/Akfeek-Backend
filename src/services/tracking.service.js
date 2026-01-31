@@ -118,10 +118,12 @@ class TrackingService {
                         color: true,
                         vehicleModel: {
                             select: {
-                                name: true, // Fixed: Schema likely has 'name' not 'nameEn' based on previous files
+                                nameAr: true,
+                                nameEn: true,
                                 brand: {
                                     select: {
-                                        name: true
+                                        nameAr: true,
+                                        nameEn: true
                                     }
                                 }
                             }
@@ -175,29 +177,17 @@ class TrackingService {
             }
         }
 
-        // Get latest location for the specific booking
-        const latestLocation = await prisma.technicianLocation.findFirst({
-            where: {
-                technicianId: booking.technicianId,
-                bookingId: booking.id
-            },
-            orderBy: {
-                createdAt: 'desc' // Assuming 'createdAt' is the timestamp field
-            }
-        });
-
-        // Format response safely
         return {
             booking: {
                 id: booking.id,
                 bookingNumber: booking.bookingNumber,
                 status: booking.status,
-                pickup: {
+                pickupLocation: {
                     latitude: booking.pickupLat,
                     longitude: booking.pickupLng,
                     address: booking.pickupAddress
                 },
-                destination: {
+                destinationLocation: {
                     latitude: booking.destinationLat,
                     longitude: booking.destinationLng,
                     address: booking.destinationAddress
@@ -205,24 +195,19 @@ class TrackingService {
             },
             technician: {
                 id: booking.technician.id,
-                name: `${booking.technician.firstName} ${booking.technician.lastName}`,
+                firstName: booking.technician.firstName,
+                lastName: booking.technician.lastName,
                 avatar: booking.technician.avatar,
                 phone: booking.technician.phone,
-                rating: booking.technician.profile?.rating || 5.0,
-                location: latestLocation ? {
-                    latitude: latestLocation.latitude,
-                    longitude: latestLocation.longitude,
-                    heading: latestLocation.heading,
-                    speed: latestLocation.speed,
-                    updatedAt: latestLocation.createdAt // Assuming 'createdAt' is the timestamp field
+                rating: booking.technician.profile?.rating || null,
+                currentLocation: location ? {
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    heading: location.heading,
+                    speed: location.speed,
+                    lastUpdated: location.createdAt
                 } : null
             },
-            vehicle: booking.vehicle ? {
-                plateNumber: booking.vehicle.plateNumber,
-                color: booking.vehicle.color,
-                make: booking.vehicle.vehicleModel?.brand?.name || 'Unknown Make',
-                model: booking.vehicle.vehicleModel?.name || 'Unknown Model'
-            } : null,
             eta: eta
         };
     }

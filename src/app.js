@@ -1,5 +1,4 @@
 const express = require('express');
-const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -20,11 +19,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "http://localhost:3001", "ws://localhost:3001", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://cdn.socket.io"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://cdn.socket.io"],
-      scriptSrcAttr: ["'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:", "https://*.openstreetmap.org", "https://unpkg.com", "https://cdn-icons-png.flaticon.com"]
+      styleSrc: ["'self'", "'unsafe-inline'"], // For Swagger UI
+      scriptSrc: ["'self'", "'unsafe-inline'"], // For Swagger UI
+      imgSrc: ["'self'", "data:", "https:"]
     }
   }
 }));
@@ -35,7 +32,7 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-
+    
     if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -46,14 +43,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language']
 }));
-
-// Serve static files for uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-// Serve Tracking Test UI (Development Only)
-if (process.env.NODE_ENV === 'development') {
-  app.use('/test-tracking', express.static(path.join(__dirname, '../tests/tracking-ui')));
-}
 
 // HTTP request logging
 app.use(morgan('combined', { stream: logger.stream }));

@@ -1,0 +1,372 @@
+const prisma = require('../utils/database/prisma');
+const { AppError } = require('../api/middlewares/error.middleware');
+const logger = require('../utils/logger/logger');
+
+/**
+ * Vendor Management Service
+ * Handles CRUD operations for auto parts vendors
+ */
+class VendorService {
+  /**
+   * Get all vendors with optional filters
+   * @param {Object} filters - Filter options (status, search)
+   * @returns {Array} List of vendors
+   */
+  async getAllVendors(filters = {}) {
+    const { status, search, isVerified } = filters;
+
+    const where = {
+      ...(status && { status }),
+      ...(isVerified !== undefined && { isVerified: isVerified === 'true' }),
+    };
+
+    const searchTerm = typeof search === 'string' ? search.trim() : '';
+    if (searchTerm) {
+      where.OR = [
+        { businessName: { contains: searchTerm } },
+        { businessNameAr: { contains: searchTerm } },
+        { contactEmail: { contains: searchTerm } },
+      ];
+    }
+
+    const vendors = await prisma.vendorProfile.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+            status: true,
+          },
+        },
+        _count: {
+          select: {
+            parts: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return vendors;
+  }
+
+  /**
+   * Get vendor by ID
+   * @param {string} id - Vendor profile ID
+   * @returns {Object} Vendor details
+   */
+  async getVendorById(id) {
+    const vendor = await prisma.vendorProfile.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+            status: true,
+            role: true,
+          },
+        },
+        parts: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            sku: true,
+            name: true,
+            nameAr: true,
+            price: true,
+            stockQuantity: true,
+            isApproved: true,
+            isActive: true,
+          },
+        },
+        _count: {
+          select: {
+            parts: true,
+          },
+        },
+      },
+    });
+
+    if (!vendor) {
+      throw new AppError('Vendor not found', 404, 'VENDOR_NOT_FOUND');
+    }
+
+    return vendor;
+  }
+
+  /**
+   * Get vendor profile by user ID
+   * @param {string} userId - User ID
+   * @returns {Object} Vendor profile
+   */
+  async getVendorByUserId(userId) {
+    const vendor = await prisma.vendorProfile.findUnique({
+      where: { userId },
+      include: {
+        _count: {
+          select: {
+            parts: true,
+          },
+        },
+      },
+    });
+
+    if (!vendor) {
+      throw new AppError('Vendor profile not found', 404, 'VENDOR_NOT_FOUND');
+    }
+
+    return vendor;
+  }
+
+  /**
+   * Create new vendor profile
+   * @param {string} userId - User ID
+   * @param {Object} data - Vendor data
+   * @returns {Object} Created vendor
+   */
+  async createVendor(userId, data) {
+    const {
+      businessName,
+      businessNameAr,
+      description,
+      descriptionAr,
+      commercialLicense,
+      taxNumber,
+      contactPhone,
+      contactEmail,
+      address,
+      city,
+      country,
+      logo,
+      banner,
+      status,
+    } = data;
+
+    // Check if user already has a vendor profile
+    const existing = await prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (existing) {
+      throw new AppError(
+        'User already has a vendor profile',
+        400,
+        'VENDOR_EXISTS'
+      );
+    }
+
+    // Check if user exists and has VENDOR role
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    }
+
+    if (user.role !== 'VENDOR') {
+      throw new AppError(
+        'User must have VENDOR role',
+        400,
+        'INVALID_USER_ROLE'
+      );
+    }
+
+    const vendor = await prisma.vendorProfile.create({
+      data: {
+        userId,
+        businessName,
+        businessNameAr,
+        description,
+        descriptionAr,
+        commercialLicense,
+        taxNumber,
+        contactPhone,
+        contactEmail,
+        address,
+        city,
+        country: country || 'SA',
+        logo,
+        banner,
+        status: status || 'PENDING_APPROVAL',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    logger.info(`Vendor profile created: ${vendor.businessName} (${vendor.id})`);
+    return vendor;
+  }
+
+  /**
+   * Update vendor profile
+   * @param {string} id - Vendor profile ID
+   * @param {Object} data - Updates
+   * @returns {Object} Updated vendor
+   */
+  async updateVendor(id, data) {
+    // Check if vendor exists
+    await this.getVendorById(id);
+
+    const {
+      businessName,
+      businessNameAr,
+      description,
+      descriptionAr,
+      commercialLicense,
+      taxNumber,
+      contactPhone,
+      contactEmail,
+      address,
+      city,
+      country,
+      logo,
+      banner,
+    } = data;
+
+    const vendor = await prisma.vendorProfile.update({
+      where: { id },
+      data: {
+        ...(businessName !== undefined && { businessName }),
+        ...(businessNameAr !== undefined && { businessNameAr }),
+        ...(description !== undefined && { description }),
+        ...(descriptionAr !== undefined && { descriptionAr }),
+        ...(commercialLicense !== undefined && { commercialLicense }),
+        ...(taxNumber !== undefined && { taxNumber }),
+        ...(contactPhone !== undefined && { contactPhone }),
+        ...(contactEmail !== undefined && { contactEmail }),
+        ...(address !== undefined && { address }),
+        ...(city !== undefined && { city }),
+        ...(country !== undefined && { country }),
+        ...(logo !== undefined && { logo }),
+        ...(banner !== undefined && { banner }),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    logger.info(`Vendor updated: ${id}`);
+    return vendor;
+  }
+
+  /**
+   * Update vendor status (Admin only)
+   * @param {string} id - Vendor profile ID
+   * @param {string} status - New status (PENDING_APPROVAL, ACTIVE, SUSPENDED, REJECTED)
+   * @returns {Object} Updated vendor
+   */
+  async updateVendorStatus(id, status) {
+    await this.getVendorById(id);
+
+    const validStatuses = ['PENDING_APPROVAL', 'ACTIVE', 'SUSPENDED', 'REJECTED'];
+    if (!validStatuses.includes(status)) {
+      throw new AppError('Invalid status', 400, 'INVALID_STATUS');
+    }
+
+    const updateData = { status };
+
+    // Set isVerified and verifiedAt when approving
+    if (status === 'ACTIVE') {
+      updateData.isVerified = true;
+      updateData.verifiedAt = new Date();
+    }
+
+    const vendor = await prisma.vendorProfile.update({
+      where: { id },
+      data: updateData,
+    });
+
+    logger.info(`Vendor status updated: ${id} -> ${status}`);
+    return vendor;
+  }
+
+  /**
+   * Get vendor statistics
+   * @param {string} vendorId - Vendor profile ID
+   * @returns {Object} Vendor stats
+   */
+  async getVendorStats(vendorId) {
+    const vendor = await this.getVendorById(vendorId);
+
+    const stats = await prisma.autoPart.groupBy({
+      by: ['isApproved', 'isActive'],
+      where: { vendorId },
+      _count: true,
+    });
+
+    const totalParts = await prisma.autoPart.count({
+      where: { vendorId },
+    });
+
+    const activeParts = await prisma.autoPart.count({
+      where: { vendorId, isActive: true, isApproved: true },
+    });
+
+    const pendingParts = await prisma.autoPart.count({
+      where: { vendorId, isApproved: false },
+    });
+
+    return {
+      vendor: {
+        id: vendor.id,
+        businessName: vendor.businessName,
+        status: vendor.status,
+        isVerified: vendor.isVerified,
+      },
+      stats: {
+        totalParts,
+        activeParts,
+        pendingParts,
+        totalSales: vendor.totalSales,
+        averageRating: vendor.averageRating,
+        totalReviews: vendor.totalReviews,
+      },
+    };
+  }
+
+  /**
+   * Delete vendor (Admin only - soft delete by setting status to REJECTED)
+   * @param {string} id - Vendor profile ID
+   */
+  async deleteVendor(id) {
+    await this.getVendorById(id);
+
+    // Soft delete by setting status to REJECTED and deactivating all parts
+    await prisma.$transaction(async (tx) => {
+      // Deactivate all vendor's parts
+      await tx.autoPart.updateMany({
+        where: { vendorId: id },
+        data: { isActive: false },
+      });
+
+      // Update vendor status
+      await tx.vendorProfile.update({
+        where: { id },
+        data: { status: 'REJECTED', isVerified: false },
+      });
+    });
+
+    logger.info(`Vendor deleted (soft): ${id}`);
+  }
+}
+
+module.exports = new VendorService();

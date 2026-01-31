@@ -10,13 +10,6 @@ const PORT = process.env.PORT || 3000;
 // Create HTTP server
 const server = createServer(app);
 
-server.on('error', (error) => {
-  logger.error('❌ Server Error:', error);
-  if (error.code === 'EADDRINUSE') {
-    logger.error(`Port ${PORT} is already in use. Please kill the process or use another port.`);
-  }
-});
-
 // Initialize Socket.io
 socketIo.init(server);
 
@@ -35,7 +28,7 @@ async function testDatabaseConnection() {
 async function startServer() {
   try {
     await testDatabaseConnection();
-
+    
     server.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
       logger.info(`📡 Socket.io enabled`);
@@ -54,26 +47,26 @@ startServer();
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received: closing HTTP server');
-
+  
   server.close(async () => {
     logger.info('HTTP server closed');
-
+    
     await prisma.$disconnect();
     logger.info('Database disconnected');
-
+    
     process.exit(0);
   });
 });
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT signal received: closing HTTP server');
-
+  
   server.close(async () => {
     logger.info('HTTP server closed');
-
+    
     await prisma.$disconnect();
     logger.info('Database disconnected');
-
+    
     process.exit(0);
   });
 });

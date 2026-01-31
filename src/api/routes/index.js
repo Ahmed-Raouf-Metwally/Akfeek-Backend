@@ -23,6 +23,23 @@ const adminSettingsRoutes = require('./admin/settings.routes');
 const towingRoutes = require('./towing.routes');
 const technicianTowingRoutes = require('./technicianTowing.routes');
 
+// Auto Parts Marketplace routes
+const vendorRoutes = require('./vendors.routes');
+const autoPartCategoryRoutes = require('./autoPartCategories.routes');
+const autoPartRoutes = require('./autoParts.routes');
+const marketplaceOrderRoutes = require('./marketplaceOrders.routes');
+
+// ... existing routes
+// ... (imports)
+
+// ...
+
+// Auto Parts Marketplace routes
+router.use('/vendors', vendorRoutes);
+router.use('/auto-part-categories', autoPartCategoryRoutes);
+router.use('/auto-parts', autoPartRoutes);
+router.use('/marketplace-orders', marketplaceOrderRoutes);
+
 // Public routes (no authentication required)
 router.use('/auth', authRoutes);
 router.use('/brands', brandRoutes);
@@ -46,16 +63,8 @@ router.use('/notifications', notificationRoutes);
 router.use('/addresses', addressRoutes);
 
 // Towing service routes
-// Towing service routes
 router.use('/bookings/towing', towingRoutes);
 router.use('/technician/towing', technicianTowingRoutes);
-
-// Car Wash service routes
-// Car Wash service routes
-const carWashRoutes = require('./carwash.routes');
-// const technicianCarWashRoutes = require('./technicianCarwash.routes');
-router.use('/bookings/carwash', carWashRoutes);
-// router.use('/technician/carwash', technicianCarWashRoutes);
 
 // Tracking routes (real-time location)
 const trackingRoutes = require('./tracking.routes');
@@ -64,5 +73,10 @@ router.use('/technician/tracking', trackingRoutes);
 
 // Admin routes
 router.use('/admin/settings', adminSettingsRoutes);
+
+// Auto Parts Marketplace routes
+router.use('/vendors', vendorRoutes);
+router.use('/auto-part-categories', autoPartCategoryRoutes);
+router.use('/auto-parts', autoPartRoutes);
 
 module.exports = router;

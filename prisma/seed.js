@@ -15,19 +15,19 @@ const IMAGES = {
   ford: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=200&h=200&fit=crop',
   chevrolet: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=200&h=200&fit=crop',
   gmc: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=200&h=200&fit=crop',
-
+  
   // Vehicle Model Images
   sedan: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop',
   suv: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=300&fit=crop',
   truck: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
-
+  
   // Service Images
   carWash: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
   oilChange: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&h=300&fit=crop',
   brakeService: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&h=300&fit=crop',
   engineRepair: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&h=300&fit=crop',
   towing: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
-
+  
   // Product Images
   oil: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=300&h=300&fit=crop',
   filter: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=300&h=300&fit=crop',
@@ -68,37 +68,6 @@ async function main() {
     },
   });
   console.log('✅ Admin user: admin@akfeek.com / Admin123!\n');
-
-  // ============================================
-  // 0.1 Car Wash Technician
-  // ============================================
-  console.log('👤 Seeding Car Wash Technician...');
-  await prisma.user.upsert({
-    where: { email: 'washer@akfeek.com' },
-    update: {},
-    create: {
-      email: 'washer@akfeek.com',
-      passwordHash: hash,
-      role: 'TECHNICIAN',
-      status: 'ACTIVE',
-      emailVerified: true,
-      phone: '966599999998',
-      phoneVerified: true,
-      profile: {
-        create: {
-          firstName: 'Wash',
-          lastName: 'Pro',
-          avatar: 'https://images.unsplash.com/photo-1605218427368-35bded87bd4d?w=200&h=200&fit=crop',
-          bio: 'Expert in mobile car detailing',
-          specializations: ['Mobile Car Wash', 'CLEANING'],
-          isAvailable: true,
-          currentLat: 24.7136,
-          currentLng: 46.6753,
-        },
-      },
-    },
-  });
-  console.log('✅ Car Wash Technician: washer@akfeek.com / Admin123!\n');
 
   // ============================================
   // 1. Vehicle Brands with Logos
@@ -412,8 +381,6 @@ async function main() {
     { name: 'Battery Jump Start', nameAr: 'تشغيل البطارية', desc: 'Emergency battery jump start', descAr: 'تشغيل البطارية الطارئ', type: 'EMERGENCY', category: 'EMERGENCY', duration: 20, image: IMAGES.towing },
     { name: 'Ekfik Full Inspection', nameAr: 'فحص أكفيك الكامل', desc: 'Comprehensive vehicle inspection with valet service', descAr: 'فحص شامل للمركبة مع خدمة الڤاليه', type: 'INSPECTION', category: 'INSPECTION', duration: 180, image: IMAGES.brakeService },
     { name: 'Pre-Purchase Inspection', nameAr: 'فحص قبل الشراء', desc: 'Complete inspection before buying', descAr: 'فحص كامل قبل الشراء', type: 'INSPECTION', category: 'INSPECTION', duration: 120, image: IMAGES.brakeService },
-    // New Mobile Car Wash for Broadcast Flow
-    { name: 'Mobile Car Wash', nameAr: 'غسيل متنقل فوري', desc: 'Immediate mobile car wash at your location', descAr: 'غسيل سيارات متنقل فوري في موقعك', type: 'EMERGENCY', category: 'CLEANING', duration: 45, image: IMAGES.carWash },
   ];
 
   const serviceIdByName = {};
@@ -423,22 +390,22 @@ async function main() {
     });
     const service = existing
       ? await prisma.service.update({
-        where: { id: existing.id },
-        data: { imageUrl: svcData.image },
-      })
+          where: { id: existing.id },
+          data: { imageUrl: svcData.image },
+        })
       : await prisma.service.create({
-        data: {
-          name: svcData.name,
-          nameAr: svcData.nameAr,
-          description: svcData.desc,
-          descriptionAr: svcData.descAr,
-          type: svcData.type,
-          category: svcData.category,
-          estimatedDuration: svcData.duration,
-          imageUrl: svcData.image,
-          isActive: true,
-        },
-      });
+          data: {
+        name: svcData.name,
+        nameAr: svcData.nameAr,
+        description: svcData.desc,
+        descriptionAr: svcData.descAr,
+        type: svcData.type,
+        category: svcData.category,
+        estimatedDuration: svcData.duration,
+            imageUrl: svcData.image,
+            isActive: true,
+          },
+        });
     serviceIdByName[svcData.name] = service.id;
   }
   console.log(`✅ Created ${servicesData.length} services\n`);
@@ -1044,7 +1011,7 @@ async function main() {
 
       const txnNum = transactionCount + 4000;
       const txnNumber = `TXN-COMP-${String(txnNum).padStart(6, '0')}`;
-
+      
       const existingTxn = await prisma.transaction.findUnique({ where: { transactionNumber: txnNumber } });
       if (existingTxn) {
         transactionCount++;
@@ -1084,8 +1051,10 @@ async function main() {
     const technician = allTechnicians.find((t) => t.id === booking.technicianId);
     if (!technician) continue;
 
-    await prisma.rating.create({
-      data: {
+    await prisma.rating.upsert({
+      where: { bookingId: booking.id },
+      update: {},
+      create: {
         bookingId: booking.id,
         raterId: booking.customerId,
         rateeId: technician.id,
@@ -1140,7 +1109,332 @@ async function main() {
   console.log(`✅ Created ${notificationCount} notifications\n`);
 
   // ============================================
-  // Summary
+  // 18. Auto Parts Vendor Marketplace
+  // ============================================
+  console.log('🏪 Seeding Auto Parts Vendor Marketplace...');
+
+  // 18.1 Create Vendors
+  const vendorsData = [
+    { 
+      email: 'vendor1@akfeek.com', 
+      phone: '+966571234001', 
+      businessName: 'Speedy Parts KSA', 
+      businessNameAr: 'قطع غيار السريعة', 
+      city: 'Riyadh',
+      desc: 'Top quality parts for all Japanese cars',
+      descAr: 'قطع غيار عالية الجودة للسيارات اليابانية'
+    },
+    { 
+      email: 'vendor2@akfeek.com', 
+      phone: '+966571234002', 
+      businessName: 'Luxury Auto Spares', 
+      businessNameAr: 'قطع غيار السيارات الفاخرة', 
+      city: 'Jeddah',
+      desc: 'Specialized in German luxury vehicles',
+      descAr: 'متخصصون في السيارات الألمانية الفاخرة'
+    },
+    { 
+      email: 'vendor3@akfeek.com', 
+      phone: '+966571234003', 
+      businessName: 'Desert Offroad', 
+      businessNameAr: 'صحراء للأوف رود', 
+      city: 'Dammam',
+      desc: 'Performance parts for 4x4 and SUVs',
+      descAr: 'قطع غيار الأداء لسيارات الدفع الرباعي'
+    }
+  ];
+
+  const allVendors = [];
+  for (const vData of vendorsData) {
+    const user = await prisma.user.upsert({
+      where: { email: vData.email },
+      update: { role: 'VENDOR' }, // Ensure role is updated if exists
+      create: {
+        email: vData.email,
+        phone: vData.phone,
+        passwordHash: hash,
+        role: 'VENDOR',
+        status: 'ACTIVE',
+        emailVerified: true,
+        phoneVerified: true,
+        profile: {
+          create: {
+            firstName: 'Vendor',
+            lastName: 'Manager',
+            avatar: IMAGES.accessory, 
+          }
+        }
+      }
+    });
+
+    const vendorProfile = await prisma.vendorProfile.upsert({
+      where: { userId: user.id },
+      update: {},
+      create: {
+        userId: user.id,
+        businessName: vData.businessName,
+        businessNameAr: vData.businessNameAr,
+        description: vData.desc,
+        descriptionAr: vData.descAr,
+        contactEmail: vData.email,
+        contactPhone: vData.phone,
+        address: 'Industrial Area',
+        city: vData.city,
+        country: 'SA',
+        taxNumber: `TAX-${Math.floor(Math.random() * 10000000)}`,
+        commercialLicense: `LIC-${Math.floor(Math.random() * 10000000)}`,
+        status: 'ACTIVE',
+        logo: `https://ui-avatars.com/api/?name=${vData.businessName.replace(' ', '+')}&background=random`,
+      }
+    });
+    allVendors.push(vendorProfile);
+  }
+  console.log(`✅ Created ${allVendors.length} vendors`);
+
+  // 18.2 Create Auto Part Categories (Hierarchy)
+  const categoriesData = [
+    {
+      name: 'Engine', nameAr: 'المحرك', icon: 'https://cdn-icons-png.flaticon.com/512/3209/3209955.png',
+      children: [
+        { name: 'Filters', nameAr: 'الفلاتر', icon: 'https://cdn-icons-png.flaticon.com/512/2402/2402283.png' },
+        { name: 'Ignition', nameAr: 'الإشعال', icon: 'https://cdn-icons-png.flaticon.com/512/5666/5666750.png' },
+        { name: 'Belts & Chains', nameAr: 'الأحزمة والسلاسل', icon: 'https://cdn-icons-png.flaticon.com/512/4332/4332829.png' }
+      ]
+    },
+    {
+      name: 'Brakes', nameAr: 'الفرامل', icon: 'https://cdn-icons-png.flaticon.com/512/2061/2061972.png',
+      children: [
+        { name: 'Brake Pads', nameAr: 'فحمات الفرامل', icon: 'https://cdn-icons-png.flaticon.com/512/3209/3209867.png' },
+        { name: 'Brake Discs', nameAr: 'أقراص الفرامل', icon: 'https://cdn-icons-png.flaticon.com/512/3209/3209867.png' }
+      ]
+    },
+    {
+      name: 'Suspension', nameAr: 'نظام التعليق', icon: 'https://cdn-icons-png.flaticon.com/512/3210/3210087.png',
+      children: [
+        { name: 'Shock Absorbers', nameAr: 'ممتص الصدمات', icon: 'https://cdn-icons-png.flaticon.com/512/3210/3210087.png' },
+        { name: 'Control Arms', nameAr: 'أذرع التحكم', icon: 'https://cdn-icons-png.flaticon.com/512/3210/3210087.png' }
+      ]
+    }
+  ];
+
+  const categoryMap = {}; // name -> id
+
+  for (const cat of categoriesData) {
+    const parent = await prisma.autoPartCategory.upsert({
+      where: { name: cat.name },
+      update: {},
+      create: {
+        name: cat.name,
+        nameAr: cat.nameAr,
+        imageUrl: cat.icon,
+      }
+    });
+    categoryMap[cat.name] = parent.id;
+
+    if (cat.children) {
+      for (const child of cat.children) {
+        const sub = await prisma.autoPartCategory.upsert({
+          where: { name: child.name },
+          update: {},
+          create: {
+            name: child.name,
+            nameAr: child.nameAr,
+            parentId: parent.id,
+            imageUrl: child.icon,
+          }
+        });
+        categoryMap[child.name] = sub.id;
+      }
+    }
+  }
+  console.log(`✅ Created Auto Part Categories hierarchy`);
+
+  // 18.3 Create Auto Parts
+  const autoPartsSeed = [
+    {
+      name: 'High Performance Air Filter',
+      nameAr: 'فلتر هواء عالي الأداء',
+      sku: 'AF-HP-001',
+      brand: 'K&N',
+      price: 250,
+      stock: 50,
+      category: 'Filters',
+      vendorIdx: 0, // Speedy Parts
+      images: [IMAGES.filter],
+      compatibleBrands: ['Toyota', 'Nissan']
+    },
+    {
+      name: 'Ceramic Brake Pad Set - Front',
+      nameAr: 'طقم فحمات سيراميك - أمامي',
+      sku: 'BP-CR-100',
+      brand: 'Akebono',
+      price: 450,
+      stock: 30,
+      category: 'Brake Pads',
+      vendorIdx: 0, 
+      images: [IMAGES.brakePad],
+      compatibleBrands: ['Toyota', 'Honda']
+    },
+    {
+      name: 'OEM Oil Filter',
+      nameAr: 'فلتر زيت أصلي',
+      sku: 'OF-OEM-99',
+      brand: 'Toyota Genuine Parts',
+      price: 45,
+      stock: 500,
+      category: 'Filters',
+      vendorIdx: null, // Platform owned
+      images: [IMAGES.oil],
+      compatibleBrands: ['Toyota']
+    },
+    {
+      name: 'Sport Suspension Kit',
+      nameAr: 'طقم تعليق رياضي',
+      sku: 'SUS-SP-55',
+      brand: 'Bilstein',
+      price: 3500,
+      stock: 5,
+      category: 'Shock Absorbers',
+      vendorIdx: 1, // Luxury Auto
+      images: [IMAGES.accessory],
+      compatibleBrands: ['BMW', 'Mercedes-Benz']
+    },
+    {
+      name: 'Offroad Lift Kit 2.5"',
+      nameAr: 'طقم رفع 2.5 بوصة للطرق الوعرة',
+      sku: 'OFF-LFT-25',
+      brand: 'Old Man Emu',
+      price: 5500,
+      stock: 10,
+      category: 'Suspension',
+      vendorIdx: 2, // Desert Offroad
+      images: [IMAGES.truck],
+      compatibleBrands: ['Toyota', 'Nissan'] // Land cruiser, Patrol
+    }
+  ];
+
+  let partCount = 0;
+  for (const part of autoPartsSeed) {
+    const catId = categoryMap[part.category] || categoryMap['Engine']; // fallback
+    const vendorId = part.vendorIdx !== null ? allVendors[part.vendorIdx].id : null;
+    const isApproved = vendorId === null || part.vendorIdx === 0; // Platform and 1st vendor approved
+
+    const createdPart = await prisma.autoPart.upsert({
+      where: { sku: part.sku },
+      update: {},
+      create: {
+        name: part.name,
+        nameAr: part.nameAr,
+        sku: part.sku,
+        brand: part.brand,
+        price: part.price,
+        stockQuantity: part.stock,
+        categoryId: catId,
+        vendorId: vendorId,
+        createdByUserId: vendorId ? allVendors[part.vendorIdx].userId : admin.id,
+        description: `High quality ${part.name} for your vehicle.`,
+        descriptionAr: `${part.nameAr} عالي الجودة لسيارتك.`,
+        isApproved: isApproved,
+        isActive: true,
+        images: {
+          create: part.images.map((url, i) => ({
+            url,
+            isPrimary: i === 0,
+            sortOrder: i
+          }))
+        }
+      }
+    });
+    partCount++;
+
+    // Add Vehicle Compatibility (simple logic: all models of that brand)
+    for (const brandName of part.compatibleBrands) {
+      const brandModels = await prisma.vehicleModel.findMany({
+        where: { brand: { name: brandName } },
+        take: 3 // limit to 3 models per brand to avoid bloat
+      });
+
+      for (const model of brandModels) {
+        await prisma.autoPartCompatibility.create({
+          data: {
+            partId: createdPart.id,
+            vehicleModelId: model.id,
+          }
+        });
+      }
+    }
+  }
+  console.log(`✅ Created ${partCount} auto parts with images and compatibility`);
+
+
+  // ============================================
+  // 19. Marketplace Orders
+  // ============================================
+  console.log('🛍️ Seeding Marketplace Orders...');
+  
+  const allAutoParts = await prisma.autoPart.findMany({ include: { vendor: true } });
+  const orderStatuses = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
+  let orderCount = 0;
+
+  for (let i = 0; i < Math.min(10, allCustomers.length); i++) {
+    const customer = allCustomers[i];
+    // Each customer places 1-2 orders
+    const numOrders = 1 + Math.floor(Math.random() * 2);
+
+    for (let j = 0; j < numOrders; j++) {
+      const selectedParts = [];
+      const numItems = 1 + Math.floor(Math.random() * 3); // 1-3 items per order
+      
+      for(let k=0; k<numItems; k++) {
+        selectedParts.push(allAutoParts[Math.floor(Math.random() * allAutoParts.length)]);
+      }
+
+      // Calculate totals
+      let subtotal = 0;
+      selectedParts.forEach(p => subtotal += Number(p.price));
+      
+      const shippingCost = 35; 
+      const tax = subtotal * 0.15;
+      const totalAmount = subtotal + shippingCost + tax;
+      
+      const status = orderStatuses[Math.floor(Math.random() * orderStatuses.length)];
+      const orderDate = new Date();
+      orderDate.setDate(orderDate.getDate() - Math.floor(Math.random() * 30));
+
+      await prisma.marketplaceOrder.create({
+        data: {
+          orderNumber: `ORD-${Date.now().toString().slice(-6)}-${Math.floor(Math.random()*1000)}`,
+          customerId: customer.id,
+          subtotal,
+          shippingCost,
+          tax,
+          totalAmount,
+          status,
+          paymentStatus: status === 'PENDING' ? 'PENDING' : 'PAID',
+          paymentMethod: ['CARD', 'APPLE_PAY', 'STC_PAY'][Math.floor(Math.random() * 3)],
+          createdAt: orderDate,
+          recipientName: `${customer.profile?.firstName || 'Customer'} ${customer.profile?.lastName || ''}`.trim(),
+          recipientPhone: customer.phone,
+          shippingAddress: `Building ${Math.floor(Math.random()*100)}, Street ${Math.floor(Math.random()*10)}`,
+          shippingCity: customer.profile?.addresses?.[0]?.city || 'Riyadh',
+          shippingCountry: 'Saudi Arabia',
+          items: {
+             create: selectedParts.map(part => ({
+               autoPartId: part.id,
+               vendorId: part.vendorId, // Can be null if platform owned
+               quantity: 1,
+               unitPrice: part.price,
+               totalPrice: part.price,
+               status: status // Items inherit order status initially
+             }))
+          }
+        }
+      });
+      orderCount++;
+    }
+  }
+  console.log(`✅ Created ${orderCount} marketplace orders`);
+
   // ============================================
   console.log('✅ Comprehensive database seeding completed successfully! 🎉\n');
 
@@ -1172,6 +1466,10 @@ async function main() {
     prisma.transaction.count(),
     prisma.rating.count(),
     prisma.notification.count(),
+    prisma.vendorProfile.count(),
+    prisma.autoPartCategory.count(),
+    prisma.autoPart.count(),
+    prisma.marketplaceOrder.count(),
   ]);
 
   console.log('📊 Final Summary:');
@@ -1202,6 +1500,10 @@ async function main() {
   console.log(`   - Transactions: ${summary[24]}`);
   console.log(`   - Ratings: ${summary[25]}`);
   console.log(`   - Notifications: ${summary[26]}`);
+  console.log(`   - Vendors: ${summary[27]}`);
+  console.log(`   - Auto Part Categories: ${summary[28]}`);
+  console.log(`   - Auto Parts: ${summary[29]}`);
+  console.log(`   - Marketplace Orders: ${summary[30]}`);
   console.log('\n🎉 All tables seeded with realistic data and real images!');
 }
 
