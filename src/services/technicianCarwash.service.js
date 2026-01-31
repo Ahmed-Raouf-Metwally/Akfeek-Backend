@@ -21,7 +21,7 @@ class TechnicianCarWashService {
         });
 
         if (!technician || technician.role !== 'TECHNICIAN') {
-            throw new AppError('Technician not found', 404, 'NOT_FOUND');
+            throw new AppError('Technician not found', 404, 'USER_NOT_FOUND');
         }
 
         if (!technician.profile?.isAvailable) {

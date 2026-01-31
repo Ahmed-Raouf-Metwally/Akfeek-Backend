@@ -52,13 +52,13 @@ Authorization: Bearer <your_jwt_token>
             }
         },
         servers: [{
-                url: 'http://localhost:5000',
-                description: 'Development Server - بيئة التطوير'
-            },
-            {
-                url: 'https://akfeek-backend.developteam.site',
-                description: 'Production Server - بيئة الإنتاج'
-            }
+            url: 'http://localhost:5000',
+            description: 'Development Server - بيئة التطوير'
+        },
+        {
+            url: 'https://akfeek-backend.developteam.site',
+            description: 'Production Server - بيئة الإنتاج'
+        }
         ],
         components: {
             securitySchemes: {
@@ -247,101 +247,105 @@ Authorization: Bearer <your_jwt_token>
             bearerAuth: []
         }],
         tags: [{
-                name: 'Authentication',
-                description: 'User authentication endpoints - نقاط المصادقة',
-                externalDocs: {
-                    description: 'Authentication Guide',
-                    url: 'https://docs.autoservice.com/authentication'
-                }
-            },
-            {
-                name: 'Vehicle Brands',
-                description: 'Vehicle brand management (Toyota, BMW, etc.) - إدارة ماركات المركبات'
-            },
-            {
-                name: 'Vehicle Models',
-                description: 'Vehicle model management (Camry, X5, etc.) - إدارة موديلات المركبات'
-            },
-            {
-                name: 'Users',
-                description: 'User profile management - إدارة الملف الشخصي'
-            },
-            {
-                name: 'Vehicles',
-                description: 'Vehicle management - إدارة المركبات'
-            },
-            {
-                name: 'Services',
-                description: 'Service catalog - كتالوج الخدمات'
-            },
-            {
-                name: 'Products',
-                description: 'Product catalog (E-Commerce model) - كتالوج المنتجات'
-            },
-            {
-                name: 'Bookings',
-                description: 'Booking management (All 4 models) - إدارة الحجوزات'
-            },
-            {
-                name: 'Broadcasts',
-                description: 'Emergency job broadcasts (Indrive model) - بث وظائف الطوارئ'
-            },
-            {
-                name: 'Inspections',
-                description: 'Vehicle inspections (Ekfik model) - فحص المركبات'
-            },
-            {
-                name: 'Supply Requests',
-                description: 'Spare parts supply chain - سلسلة توريد قطع الغيار'
-            },
-            {
-                name: 'Invoices',
-                description: 'Invoice management - إدارة الفواتير'
-            },
-            {
-                name: 'Payments',
-                description: 'Payment processing - معالجة الدفع'
-            },
-            {
-                name: 'Wallets',
-                description: 'Wallet & transactions - المحفظة والمعاملات'
-            },
-            {
-                name: 'Ratings',
-                description: 'Reviews & ratings - التقييمات والمراجعات'
-            },
-            {
-                name: 'Notifications',
-                description: 'Push notifications - الإشعارات'
-            },
-            {
-                name: 'Addresses',
-                description: 'Address management - إدارة العناوين'
-            },
-            {
-                name: 'Towing Service',
-                description: 'Emergency towing service - خدمة السحب الطارئة'
-            },
-            {
-                name: 'Technician Towing',
-                description: 'Technician towing endpoints - نقاط خدمة السحب للفنيين'
-            },
-            {
-                name: 'Admin Settings',
-                description: 'System settings management for administrators - إدارة إعدادات النظام للمسؤولين'
-            },
-            {
-                name: 'Marketplace Vendors',
-                description: 'Vendor management for auto parts - إدارة البائعين لقطع الغيار'
-            },
-            {
-                name: 'Auto Part Categories',
-                description: 'Auto part category management - إدارة فئات قطع الغيار'
-            },
-            {
-                name: 'Auto Parts',
-                description: 'Auto parts catalog management - إدارة كتالوج قطع الغيار'
+            name: 'Authentication',
+            description: 'User authentication endpoints - نقاط المصادقة',
+            externalDocs: {
+                description: 'Authentication Guide',
+                url: 'https://docs.autoservice.com/authentication'
             }
+        },
+        {
+            name: 'Vehicle Brands',
+            description: 'Vehicle brand management (Toyota, BMW, etc.) - إدارة ماركات المركبات'
+        },
+        {
+            name: 'Vehicle Models',
+            description: 'Vehicle model management (Camry, X5, etc.) - إدارة موديلات المركبات'
+        },
+        {
+            name: 'Users',
+            description: 'User profile management - إدارة الملف الشخصي'
+        },
+        {
+            name: 'Vehicles',
+            description: 'Vehicle management - إدارة المركبات'
+        },
+        {
+            name: 'Services',
+            description: 'Service catalog - كتالوج الخدمات'
+        },
+        {
+            name: 'Products',
+            description: 'Product catalog (E-Commerce model) - كتالوج المنتجات'
+        },
+        {
+            name: 'Bookings',
+            description: 'Booking management (All 4 models) - إدارة الحجوزات'
+        },
+        {
+            name: 'Broadcasts',
+            description: 'Emergency job broadcasts (Indrive model) - بث وظائف الطوارئ'
+        },
+        {
+            name: 'Inspections',
+            description: 'Vehicle inspections (Ekfik model) - فحص المركبات'
+        },
+        {
+            name: 'Supply Requests',
+            description: 'Spare parts supply chain - سلسلة توريد قطع الغيار'
+        },
+        {
+            name: 'Invoices',
+            description: 'Invoice management - إدارة الفواتير'
+        },
+        {
+            name: 'Payments',
+            description: 'Payment processing - معالجة الدفع'
+        },
+        {
+            name: 'Wallets',
+            description: 'Wallet & transactions - المحفظة والمعاملات'
+        },
+        {
+            name: 'Ratings',
+            description: 'Reviews & ratings - التقييمات والمراجعات'
+        },
+        {
+            name: 'Notifications',
+            description: 'Push notifications - الإشعارات'
+        },
+        {
+            name: 'Addresses',
+            description: 'Address management - إدارة العناوين'
+        },
+        {
+            name: 'Towing Service',
+            description: 'Emergency towing service - خدمة السحب الطارئة'
+        },
+        {
+            name: 'Technician Towing',
+            description: 'Technician towing endpoints - نقاط خدمة السحب للفنيين'
+        },
+        {
+            name: 'Technician Car Wash',
+            description: 'Car Wash technician endpoints for viewing requests and offering services - نقاط خدمة غسيل السيارات للفنيين'
+        },
+        {
+            name: 'Admin Settings',
+            description: 'System settings management for administrators - إدارة إعدادات النظام للمسؤولين'
+        },
+        {
+            name: 'Marketplace Vendors',
+            description: 'Vendor management for auto parts - إدارة البائعين لقطع الغيار'
+        },
+        {
+            name: 'Auto Part Categories',
+            description: 'Auto part category management - إدارة فئات قطع الغيار'
+        },
+        {
+            name: 'Auto Parts',
+            description: 'Auto parts catalog management - إدارة كتالوج قطع الغيار'
+        }
         ]
     },
     apis: [

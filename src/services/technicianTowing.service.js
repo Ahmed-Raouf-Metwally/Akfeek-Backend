@@ -21,7 +21,7 @@ class TechnicianTowingService {
         });
 
         if (!technician || technician.role !== 'TECHNICIAN') {
-            throw new AppError('Technician not found', 404, 'NOT_FOUND');
+            throw new AppError('Technician not found', 404, 'USER_NOT_FOUND');
         }
 
         if (!technician.profile?.isAvailable) {
@@ -159,7 +159,7 @@ class TechnicianTowingService {
         });
 
         if (!technician || technician.role !== 'TECHNICIAN') {
-            throw new AppError('Technician not found', 404, 'NOT_FOUND');
+            throw new AppError('Technician not found', 404, 'USER_NOT_FOUND');
         }
 
         if (technician.status !== 'ACTIVE') {
@@ -184,7 +184,7 @@ class TechnicianTowingService {
         });
 
         if (!broadcast) {
-            throw new AppError('Broadcast not found', 404, 'NOT_FOUND');
+            throw new AppError('Broadcast not found', 404, 'BROADCAST_NOT_FOUND');
         }
 
         if (broadcast.status !== 'BROADCASTING') {
@@ -320,7 +320,7 @@ class TechnicianTowingService {
         });
 
         if (!booking) {
-            throw new AppError('Booking not found', 404, 'NOT_FOUND');
+            throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
         }
 
         if (booking.technicianId !== technicianId) {

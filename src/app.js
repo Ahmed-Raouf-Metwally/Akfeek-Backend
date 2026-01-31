@@ -32,7 +32,7 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -110,14 +110,8 @@ app.get('/', (req, res) => {
 app.use('/api', routes);
 
 // 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Route not found',
-    errorAr: 'المسار غير موجود',
-    code: 'NOT_FOUND',
-    path: req.originalUrl
-  });
+app.use((req, res, next) => {
+  next(new errorMiddleware.AppError('Route not found', 404, 'ROUTE_NOT_FOUND'));
 });
 
 // Global error handler

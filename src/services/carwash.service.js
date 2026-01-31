@@ -146,7 +146,7 @@ class CarWashService {
         });
 
         if (!broadcast) {
-            throw new AppError('Broadcast not found', 404, 'NOT_FOUND');
+            throw new AppError('Broadcast not found', 404, 'BROADCAST_NOT_FOUND');
         }
 
         if (broadcast.booking.customerId !== customerId) {
@@ -215,16 +215,16 @@ class CarWashService {
             include: { booking: true }
         });
 
-        if (!broadcast) throw new AppError('Broadcast not found', 404, 'NOT_FOUND');
+        if (!broadcast) throw new AppError('Broadcast not found', 404, 'BROADCAST_NOT_FOUND');
         if (broadcast.booking.customerId !== customerId) throw new AppError('Unauthorized access', 403, 'FORBIDDEN');
-        if (broadcast.status !== 'BROADCASTING') throw new AppError('Broadcast is not active', 400, 'INVALID_STATUS');
+        if (broadcast.status !== 'BROADCASTING' && broadcast.status !== 'OFFERS_RECEIVED' && broadcast.status !== 'TECHNICIAN_SELECTED') throw new AppError('Broadcast is not active', 400, 'INVALID_STATUS');
 
         const offer = await prisma.jobOffer.findFirst({
             where: { id: offerId, broadcastId },
             include: { technician: { include: { profile: true } } }
         });
 
-        if (!offer) throw new AppError('Offer not found', 404, 'NOT_FOUND');
+        if (!offer) throw new AppError('Offer not found', 404, 'OFFER_NOT_FOUND');
 
         // Start transaction
         const result = await prisma.$transaction(async (tx) => {
@@ -237,7 +237,7 @@ class CarWashService {
             // Update broadcast status
             await tx.jobBroadcast.update({
                 where: { id: broadcastId },
-                data: { status: 'COMPLETED' }
+                data: { status: 'TECHNICIAN_SELECTED' }
             });
 
             // Update booking
@@ -246,8 +246,9 @@ class CarWashService {
                 data: {
                     technicianId: offer.technicianId,
                     status: 'TECHNICIAN_ASSIGNED',
-                    agreedPrice: offer.bidAmount,
-                    acceptedAt: new Date()
+                    totalPrice: offer.bidAmount,
+                    subtotal: offer.bidAmount // Assuming flat rate for now
+                    // acceptedAt removed as it's not in schema
                 },
                 include: {
                     technician: { include: { profile: true } }

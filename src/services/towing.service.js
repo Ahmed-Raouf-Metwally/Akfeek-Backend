@@ -37,7 +37,7 @@ class TowingService {
         });
 
         if (!vehicle) {
-            throw new AppError('Vehicle not found', 404, 'NOT_FOUND');
+            throw new AppError('Vehicle not found', 404, 'VEHICLE_NOT_FOUND');
         }
 
         // Get towing service
@@ -205,7 +205,7 @@ class TowingService {
         });
 
         if (!broadcast) {
-            throw new AppError('Broadcast not found', 404, 'NOT_FOUND');
+            throw new AppError('Broadcast not found', 404, 'BROADCAST_NOT_FOUND');
         }
 
         // Verify ownership
@@ -277,7 +277,7 @@ class TowingService {
         });
 
         if (!broadcast) {
-            throw new AppError('Broadcast not found', 404, 'NOT_FOUND');
+            throw new AppError('Broadcast not found', 404, 'BROADCAST_NOT_FOUND');
         }
 
         if (broadcast.booking.customerId !== customerId) {
@@ -304,7 +304,7 @@ class TowingService {
         });
 
         if (!offer) {
-            throw new AppError('Offer not found', 404, 'NOT_FOUND');
+            throw new AppError('Offer not found', 404, 'OFFER_NOT_FOUND');
         }
 
         if (offer.status !== 'PENDING') {
@@ -342,7 +342,7 @@ class TowingService {
                     id: broadcastId
                 },
                 data: {
-                    status: 'COMPLETED'
+                    status: 'TECHNICIAN_SELECTED'
                 }
             });
 
@@ -354,8 +354,9 @@ class TowingService {
                 data: {
                     technicianId: offer.technicianId,
                     status: 'TECHNICIAN_ASSIGNED',
-                    agreedPrice: offer.bidAmount,
-                    acceptedAt: new Date()
+                    totalPrice: offer.bidAmount,
+                    subtotal: offer.bidAmount
+                    // agreedPrice/acceptedAt removed as per schema
                 },
                 include: {
                     technician: {

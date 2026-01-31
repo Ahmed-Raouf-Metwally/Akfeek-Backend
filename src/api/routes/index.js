@@ -47,24 +47,24 @@ router.use('/models', modelRoutes);
 
 // Protected routes (authentication required)
 // These will have auth middleware applied in individual route files
+// Towing service routes (Must come before generic /bookings)
+router.use('/bookings/towing', towingRoutes);
+router.use('/technician/towing', technicianTowingRoutes);
+
+// Car Wash service routes (Must come before generic /bookings)
+const carWashRoutes = require('./carwash.routes');
+const technicianCarWashRoutes = require('./technicianCarwash.routes');
+router.use('/bookings/carwash', carWashRoutes);
+router.use('/technician/carwash', technicianCarWashRoutes);
+
+// Protected routes (authentication required)
+// These will have auth middleware applied in individual route files
 router.use('/users', userRoutes);
 router.use('/vehicles', vehicleRoutes);
 router.use('/services', serviceRoutes);
 router.use('/products', productRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/broadcasts', broadcastRoutes);
-router.use('/inspections', inspectionRoutes);
-router.use('/supplies', supplyRoutes);
-router.use('/invoices', invoiceRoutes);
-router.use('/payments', paymentRoutes);
-router.use('/wallets', walletRoutes);
-router.use('/ratings', ratingRoutes);
-router.use('/notifications', notificationRoutes);
-router.use('/addresses', addressRoutes);
-
-// Towing service routes
-router.use('/bookings/towing', towingRoutes);
-router.use('/technician/towing', technicianTowingRoutes);
 
 // Tracking routes (real-time location)
 const trackingRoutes = require('./tracking.routes');

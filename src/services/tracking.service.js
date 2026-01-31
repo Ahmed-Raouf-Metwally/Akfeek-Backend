@@ -134,7 +134,7 @@ class TrackingService {
         });
 
         if (!booking) {
-            throw new AppError('Booking not found', 404, 'NOT_FOUND');
+            throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
         }
 
         if (!booking.technicianId) {
@@ -227,7 +227,7 @@ class TrackingService {
         });
 
         if (!booking || !booking.technicianId) {
-            throw new AppError('Booking or technician not found', 404, 'NOT_FOUND');
+            throw new AppError('Booking or technician not found', 404, 'BOOKING_NOT_FOUND');
         }
 
         const whereClause = {

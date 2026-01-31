@@ -81,8 +81,8 @@ model User {
     technicianLocations TechnicianLocation[] @relation("TechnicianLocations")
 
     // Vendor Relations
-    vendorProfile VendorProfile?
-    autoParts     AutoPart[]     @relation("VendorParts")
+    vendorProfile     VendorProfile?
+    autoParts         AutoPart[]         @relation("VendorParts")
     marketplaceOrders MarketplaceOrder[]
 
     @@index([email])
@@ -206,8 +206,8 @@ model VehicleModel {
     updatedAt DateTime @updatedAt
 
     // Relations
-    userVehicles       UserVehicle[]
-    compatibleProducts ProductCompatibility[]
+    userVehicles        UserVehicle[]
+    compatibleProducts  ProductCompatibility[]
     compatibleAutoParts AutoPartCompatibility[]
 
     @@unique([brandId, name, year])
@@ -399,173 +399,173 @@ model ProductCompatibility {
 // ================================================================================================
 
 enum VendorStatus {
-  PENDING_APPROVAL
-  ACTIVE
-  SUSPENDED
-  REJECTED
+    PENDING_APPROVAL
+    ACTIVE
+    SUSPENDED
+    REJECTED
 }
 
 model VendorProfile {
-  id              String       @id @default(uuid())
-  userId          String       @unique
-  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  businessName    String
-  businessNameAr  String?
-  description     String?      @db.Text
-  descriptionAr   String?      @db.Text
-  
-  // Registration Documents
-  commercialLicense String?
-  taxNumber         String?
-  
-  // Contact Information
-  contactPhone      String
-  contactEmail      String
-  
-  // Address
-  address           String?
-  city              String?
-  country           String       @default("SA")
-  
-  // Business Details
-  logo              String?
-  banner            String?
-  
-  // Verification & Status
-  status            VendorStatus @default(PENDING_APPROVAL)
-  isVerified        Boolean      @default(false)
-  verifiedAt        DateTime?
-  
-  // Ratings & Stats
-  averageRating     Float?       @default(0)
-  totalReviews      Int          @default(0)
-  totalSales        Int          @default(0)
-  
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  
-  // Relations
-  parts             AutoPart[]   @relation("VendorOwnedParts")
-  orderItems        MarketplaceOrderItem[]
-  
-  @@index([userId])
-  @@index([status])
-  @@index([isVerified])
+    id     String @id @default(uuid())
+    userId String @unique
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    businessName   String
+    businessNameAr String?
+    description    String? @db.Text
+    descriptionAr  String? @db.Text
+
+    // Registration Documents
+    commercialLicense String?
+    taxNumber         String?
+
+    // Contact Information
+    contactPhone String
+    contactEmail String
+
+    // Address
+    address String?
+    city    String?
+    country String  @default("SA")
+
+    // Business Details
+    logo   String?
+    banner String?
+
+    // Verification & Status
+    status     VendorStatus @default(PENDING_APPROVAL)
+    isVerified Boolean      @default(false)
+    verifiedAt DateTime?
+
+    // Ratings & Stats
+    averageRating Float? @default(0)
+    totalReviews  Int    @default(0)
+    totalSales    Int    @default(0)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    parts      AutoPart[]             @relation("VendorOwnedParts")
+    orderItems MarketplaceOrderItem[]
+
+    @@index([userId])
+    @@index([status])
+    @@index([isVerified])
 }
 
 model AutoPartCategory {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  nameAr      String?
-  description String?  @db.Text
-  descriptionAr String? @db.Text
-  icon        String?
-  imageUrl    String?
-  parentId    String?
-  parent      AutoPartCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    AutoPartCategory[] @relation("CategoryHierarchy")
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  parts       AutoPart[]
-  
-  @@index([parentId])
-  @@index([isActive])
+    id            String             @id @default(uuid())
+    name          String             @unique
+    nameAr        String?
+    description   String?            @db.Text
+    descriptionAr String?            @db.Text
+    icon          String?
+    imageUrl      String?
+    parentId      String?
+    parent        AutoPartCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+    children      AutoPartCategory[] @relation("CategoryHierarchy")
+    isActive      Boolean            @default(true)
+    sortOrder     Int                @default(0)
+    createdAt     DateTime           @default(now())
+    updatedAt     DateTime           @updatedAt
+
+    parts AutoPart[]
+
+    @@index([parentId])
+    @@index([isActive])
 }
 
 model AutoPart {
-  id              String   @id @default(uuid())
-  sku             String   @unique
-  name            String
-  nameAr          String?
-  description     String?  @db.Text
-  descriptionAr   String?  @db.Text
-  
-  // Ownership: NULL = Platform-owned, otherwise Vendor-owned
-  vendorId        String?
-  vendor          VendorProfile? @relation("VendorOwnedParts", fields: [vendorId], references: [id], onDelete: Cascade)
-  
-  // Added by (tracks who created the part, even if platform-owned)
-  createdByUserId String
-  createdByUser   User     @relation("VendorParts", fields: [createdByUserId], references: [id])
-  
-  categoryId      String
-  category        AutoPartCategory @relation(fields: [categoryId], references: [id])
-  
-  brand           String
-  partNumber      String?
-  oemNumber       String?
-  
-  price           Decimal  @db.Decimal(10, 2)
-  compareAtPrice  Decimal? @db.Decimal(10, 2)
-  cost            Decimal? @db.Decimal(10, 2)
-  
-  stockQuantity   Int      @default(0)
-  lowStockThreshold Int?   @default(10)
-  
-  weight          Float?
-  dimensions      Json?
-  
-  specifications  Json?
-  
-  isActive        Boolean  @default(true)
-  isFeatured      Boolean  @default(false)
-  
-  // Admin approval for vendor parts
-  isApproved      Boolean  @default(true)
-  approvedAt      DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  images          AutoPartImage[]
-  compatibility   AutoPartCompatibility[]
-  orderItems      MarketplaceOrderItem[]
-  
-  @@index([categoryId])
-  @@index([vendorId])
-  @@index([createdByUserId])
-  @@index([brand])
-  @@index([sku])
-  @@index([isActive, isFeatured])
-  @@index([isApproved])
+    id            String  @id @default(uuid())
+    sku           String  @unique
+    name          String
+    nameAr        String?
+    description   String? @db.Text
+    descriptionAr String? @db.Text
+
+    // Ownership: NULL = Platform-owned, otherwise Vendor-owned
+    vendorId String?
+    vendor   VendorProfile? @relation("VendorOwnedParts", fields: [vendorId], references: [id], onDelete: Cascade)
+
+    // Added by (tracks who created the part, even if platform-owned)
+    createdByUserId String
+    createdByUser   User   @relation("VendorParts", fields: [createdByUserId], references: [id])
+
+    categoryId String
+    category   AutoPartCategory @relation(fields: [categoryId], references: [id])
+
+    brand      String
+    partNumber String?
+    oemNumber  String?
+
+    price          Decimal  @db.Decimal(10, 2)
+    compareAtPrice Decimal? @db.Decimal(10, 2)
+    cost           Decimal? @db.Decimal(10, 2)
+
+    stockQuantity     Int  @default(0)
+    lowStockThreshold Int? @default(10)
+
+    weight     Float?
+    dimensions Json?
+
+    specifications Json?
+
+    isActive   Boolean @default(true)
+    isFeatured Boolean @default(false)
+
+    // Admin approval for vendor parts
+    isApproved Boolean   @default(true)
+    approvedAt DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    images        AutoPartImage[]
+    compatibility AutoPartCompatibility[]
+    orderItems    MarketplaceOrderItem[]
+
+    @@index([categoryId])
+    @@index([vendorId])
+    @@index([createdByUserId])
+    @@index([brand])
+    @@index([sku])
+    @@index([isActive, isFeatured])
+    @@index([isApproved])
 }
 
 model AutoPartImage {
-  id        String   @id @default(uuid())
-  partId    String
-  part      AutoPart @relation(fields: [partId], references: [id], onDelete: Cascade)
-  
-  url       String
-  altText   String?
-  sortOrder Int      @default(0)
-  isPrimary Boolean  @default(false)
-  
-  createdAt DateTime @default(now())
-  
-  @@index([partId])
-  @@index([isPrimary])
+    id     String   @id @default(uuid())
+    partId String
+    part   AutoPart @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+    url       String
+    altText   String?
+    sortOrder Int     @default(0)
+    isPrimary Boolean @default(false)
+
+    createdAt DateTime @default(now())
+
+    @@index([partId])
+    @@index([isPrimary])
 }
 
 model AutoPartCompatibility {
-  id             String       @id @default(uuid())
-  partId         String
-  part           AutoPart     @relation(fields: [partId], references: [id], onDelete: Cascade)
-  
-  vehicleModelId String
-  vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
-  
-  notes          String?      @db.Text
-  fitmentType    String?
-  
-  createdAt      DateTime     @default(now())
-  
-  @@unique([partId, vehicleModelId])
-  @@index([partId])
-  @@index([vehicleModelId])
+    id     String   @id @default(uuid())
+    partId String
+    part   AutoPart @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+    vehicleModelId String
+    vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
+
+    notes       String? @db.Text
+    fitmentType String?
+
+    createdAt DateTime @default(now())
+
+    @@unique([partId, vehicleModelId])
+    @@index([partId])
+    @@index([vehicleModelId])
 }
 
 // ================================================================================================
@@ -694,15 +694,16 @@ model Booking {
     updatedAt DateTime @updatedAt
 
     // Relations
-    services         BookingService[]
-    products         BookingProduct[]
-    statusHistory    BookingStatusHistory[]
-    jobBroadcast     JobBroadcast?
-    inspectionReport InspectionReport?
-    supplyRequests   SupplyRequest[]
-    invoice          Invoice?
-    rating           Rating?
-    notifications    Notification[]
+    services            BookingService[]
+    products            BookingProduct[]
+    statusHistory       BookingStatusHistory[]
+    jobBroadcast        JobBroadcast?
+    inspectionReport    InspectionReport?
+    supplyRequests      SupplyRequest[]
+    invoice             Invoice?
+    rating              Rating?
+    notifications       Notification[]
+    technicianLocations TechnicianLocation[]   @relation("BookingTracking")
 
     @@index([customerId])
     @@index([technicianId])
@@ -1308,80 +1309,81 @@ model TechnicianLocation {
     @@index([bookingId])
     @@index([createdAt])
 }
+
 // ================================================================================================
 // MARKETPLACE ORDERS
 // ================================================================================================
 
 enum OrderStatus {
-  PENDING
-  CONFIRMED
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
-  REFUNDED
+    PENDING
+    CONFIRMED
+    PROCESSING
+    SHIPPED
+    DELIVERED
+    CANCELLED
+    REFUNDED
 }
 
 model MarketplaceOrder {
-  id              String   @id @default(uuid())
-  orderNumber     String   @unique // ORD-202X-XXXX
-  
-  customerId      String
-  customer        User     @relation(fields: [customerId], references: [id])
-  
-  // Financials
-  subtotal        Decimal  @db.Decimal(10, 2)
-  tax             Decimal  @db.Decimal(10, 2)
-  shippingCost    Decimal  @db.Decimal(10, 2)
-  discount        Decimal  @db.Decimal(10, 2) @default(0)
-  totalAmount     Decimal  @db.Decimal(10, 2)
-  
-  status          OrderStatus @default(PENDING)
-  paymentStatus   String   @default("PENDING") // PENDING, PAID, FAILED
-  paymentMethod   String?  // CARD, CASH, WALLET
-  
-  // Shipping details snapshot
-  shippingAddress String?  @db.Text
-  shippingCity    String?
-  shippingCountry String   @default("SA")
-  recipientName   String?
-  recipientPhone  String?
-  
-  notes           String?  @db.Text
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  items           MarketplaceOrderItem[]
-  
-  @@index([customerId])
-  @@index([status])
-  @@index([createdAt])
+    id          String @id @default(uuid())
+    orderNumber String @unique // ORD-202X-XXXX
+
+    customerId String
+    customer   User   @relation(fields: [customerId], references: [id])
+
+    // Financials
+    subtotal     Decimal @db.Decimal(10, 2)
+    tax          Decimal @db.Decimal(10, 2)
+    shippingCost Decimal @db.Decimal(10, 2)
+    discount     Decimal @default(0) @db.Decimal(10, 2)
+    totalAmount  Decimal @db.Decimal(10, 2)
+
+    status        OrderStatus @default(PENDING)
+    paymentStatus String      @default("PENDING") // PENDING, PAID, FAILED
+    paymentMethod String? // CARD, CASH, WALLET
+
+    // Shipping details snapshot
+    shippingAddress String? @db.Text
+    shippingCity    String?
+    shippingCountry String  @default("SA")
+    recipientName   String?
+    recipientPhone  String?
+
+    notes String? @db.Text
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    items MarketplaceOrderItem[]
+
+    @@index([customerId])
+    @@index([status])
+    @@index([createdAt])
 }
 
 model MarketplaceOrderItem {
-  id              String   @id @default(uuid())
-  
-  orderId         String
-  order           MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
-  autoPartId      String
-  autoPart        AutoPart @relation(fields: [autoPartId], references: [id])
-  
-  vendorId        String?
-  vendor          VendorProfile? @relation(fields: [vendorId], references: [id])
-  
-  quantity        Int
-  unitPrice       Decimal  @db.Decimal(10, 2)
-  totalPrice      Decimal  @db.Decimal(10, 2)
-  
-  // Per-item status allows partial fulfillment in multi-vendor orders
-  status          OrderStatus @default(PENDING) 
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@index([orderId])
-  @@index([vendorId])
-  @@index([status])
+    id String @id @default(uuid())
+
+    orderId String
+    order   MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+    autoPartId String
+    autoPart   AutoPart @relation(fields: [autoPartId], references: [id])
+
+    vendorId String?
+    vendor   VendorProfile? @relation(fields: [vendorId], references: [id])
+
+    quantity   Int
+    unitPrice  Decimal @db.Decimal(10, 2)
+    totalPrice Decimal @db.Decimal(10, 2)
+
+    // Per-item status allows partial fulfillment in multi-vendor orders
+    status OrderStatus @default(PENDING)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([orderId])
+    @@index([vendorId])
+    @@index([status])
 }
