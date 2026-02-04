@@ -28,7 +28,7 @@ async function testDatabaseConnection() {
 async function startServer() {
   try {
     await testDatabaseConnection();
-    
+
     server.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
       logger.info(`📡 Socket.io enabled`);
@@ -47,26 +47,26 @@ startServer();
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received: closing HTTP server');
-  
+
   server.close(async () => {
     logger.info('HTTP server closed');
-    
+
     await prisma.$disconnect();
     logger.info('Database disconnected');
-    
+
     process.exit(0);
   });
 });
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT signal received: closing HTTP server');
-  
+
   server.close(async () => {
     logger.info('HTTP server closed');
-    
+
     await prisma.$disconnect();
     logger.info('Database disconnected');
-    
+
     process.exit(0);
   });
 });
@@ -81,3 +81,5 @@ process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
+
+// Force restart

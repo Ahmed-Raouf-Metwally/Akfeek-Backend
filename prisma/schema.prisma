@@ -74,6 +74,7 @@ model User {
 
     // Notifications & Ratings
     notifications   Notification[]
+    activityLogs    ActivityLog[]
     ratingsGiven    Rating[]       @relation("RaterRatings")
     ratingsReceived Rating[]       @relation("RateeRatings")
 
@@ -1386,4 +1387,28 @@ model MarketplaceOrderItem {
     @@index([orderId])
     @@index([vendorId])
     @@index([status])
+}
+
+// ================================================================================================
+// SYSTEM ACTIVITY LOG
+// ================================================================================================
+
+model ActivityLog {
+    id     String  @id @default(uuid())
+    userId String? // Optional: System actions might not have a user
+    user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+    action   String // e.g., "USER_LOGIN", "BOOKING_CREATED"
+    entity   String // e.g., "Booking", "User", "Invoice"
+    entityId String? // ID of the affected entity
+
+    details   Json? // Flexible payload for details (diff, ip, user agent)
+    ipAddress String?
+
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@index([action])
+    @@index([entity, entityId])
+    @@index([createdAt])
 }

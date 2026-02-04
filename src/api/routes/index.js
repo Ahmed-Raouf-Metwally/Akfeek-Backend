@@ -73,6 +73,7 @@ router.use('/wallets', walletRoutes);
 router.use('/ratings', ratingRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/addresses', addressRoutes);
+router.use('/activity', require('./activity.routes'));
 
 // Tracking routes (real-time location)
 const trackingRoutes = require('./tracking.routes');
@@ -81,6 +82,7 @@ router.use('/technician/tracking', trackingRoutes);
 
 // Admin routes
 router.use('/admin/settings', adminSettingsRoutes);
+router.use('/dashboard', require('./dashboard.routes'));
 
 // Auto Parts Marketplace routes
 router.use('/vendors', vendorRoutes);

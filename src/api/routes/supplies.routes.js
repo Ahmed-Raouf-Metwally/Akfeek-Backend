@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middlewares/auth.middleware');
-const stubController = require('../controllers/stub.controller');
+const supplyController = require('../controllers/supply.controller');
+const authenticate = require('../middlewares/auth.middleware');
+const authorize = require('../middlewares/role.middleware');
 
-router.use(authMiddleware);
+router.use(authenticate);
 
-router.get('/', stubController.list);
+router.get('/', authorize('ADMIN', 'SUPPLIER', 'TECHNICIAN'), supplyController.list);
+router.get('/:id', authorize('ADMIN', 'SUPPLIER', 'TECHNICIAN'), supplyController.getById);
 
 module.exports = router;
