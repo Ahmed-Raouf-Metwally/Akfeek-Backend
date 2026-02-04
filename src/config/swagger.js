@@ -137,6 +137,176 @@ Authorization: Bearer <your_jwt_token>
                             description: 'Total number of pages'
                         }
                     }
+                },
+                // Address schemas
+                Address: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'string',
+                            format: 'uuid',
+                            description: 'Address ID'
+                        },
+                        userId: {
+                            type: 'string',
+                            format: 'uuid',
+                            description: 'User ID'
+                        },
+                        label: {
+                            type: 'string',
+                            description: 'Address label (e.g., Home, Work)',
+                            example: 'Home'
+                        },
+                        labelAr: {
+                            type: 'string',
+                            nullable: true,
+                            description: 'Arabic label',
+                            example: 'المنزل'
+                        },
+                        street: {
+                            type: 'string',
+                            description: 'Street address',
+                            example: 'King Fahd Road'
+                        },
+                        streetAr: {
+                            type: 'string',
+                            nullable: true,
+                            description: 'Arabic street name',
+                            example: 'طريق الملك فهد'
+                        },
+                        city: {
+                            type: 'string',
+                            description: 'City',
+                            example: 'Riyadh'
+                        },
+                        cityAr: {
+                            type: 'string',
+                            nullable: true,
+                            description: 'Arabic city name',
+                            example: 'الرياض'
+                        },
+                        state: {
+                            type: 'string',
+                            nullable: true,
+                            description: 'State/Province'
+                        },
+                        stateAr: {
+                            type: 'string',
+                            nullable: true,
+                            description: 'Arabic state name'
+                        },
+                        postalCode: {
+                            type: 'string',
+                            nullable: true,
+                            description: 'Postal code',
+                            example: '12345'
+                        },
+                        country: {
+                            type: 'string',
+                            description: 'Country code',
+                            example: 'SA',
+                            default: 'SA'
+                        },
+                        latitude: {
+                            type: 'number',
+                            format: 'double',
+                            description: 'GPS latitude',
+                            example: 24.7136
+                        },
+                        longitude: {
+                            type: 'number',
+                            format: 'double',
+                            description: 'GPS longitude',
+                            example: 46.6753
+                        },
+                        isDefault: {
+                            type: 'boolean',
+                            description: 'Is this the default address?',
+                            example: true
+                        },
+                        createdAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Creation timestamp'
+                        },
+                        updatedAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Last update timestamp'
+                        }
+                    }
+                },
+                AddressInput: {
+                    type: 'object',
+                    required: ['label', 'street', 'city', 'latitude', 'longitude'],
+                    properties: {
+                        label: {
+                            type: 'string',
+                            description: 'Address label (e.g., Home, Work)',
+                            example: 'Home'
+                        },
+                        labelAr: {
+                            type: 'string',
+                            description: 'Arabic label',
+                            example: 'المنزل'
+                        },
+                        street: {
+                            type: 'string',
+                            description: 'Street address',
+                            example: 'King Fahd Road'
+                        },
+                        streetAr: {
+                            type: 'string',
+                            description: 'Arabic street name',
+                            example: 'طريق الملك فهد'
+                        },
+                        city: {
+                            type: 'string',
+                            description: 'City',
+                            example: 'Riyadh'
+                        },
+                        cityAr: {
+                            type: 'string',
+                            description: 'Arabic city name',
+                            example: 'الرياض'
+                        },
+                        state: {
+                            type: 'string',
+                            description: 'State/Province'
+                        },
+                        stateAr: {
+                            type: 'string',
+                            description: 'Arabic state name'
+                        },
+                        postalCode: {
+                            type: 'string',
+                            description: 'Postal code',
+                            example: '12345'
+                        },
+                        country: {
+                            type: 'string',
+                            description: 'Country code',
+                            example: 'SA',
+                            default: 'SA'
+                        },
+                        latitude: {
+                            type: 'number',
+                            format: 'double',
+                            description: 'GPS latitude',
+                            example: 24.7136
+                        },
+                        longitude: {
+                            type: 'number',
+                            format: 'double',
+                            description: 'GPS longitude',
+                            example: 46.6753
+                        },
+                        isDefault: {
+                            type: 'boolean',
+                            description: 'Set as default address?',
+                            example: false
+                        }
+                    }
                 }
             },
             parameters: {

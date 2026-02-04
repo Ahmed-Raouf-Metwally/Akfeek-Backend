@@ -65,6 +65,14 @@ router.use('/services', serviceRoutes);
 router.use('/products', productRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/broadcasts', broadcastRoutes);
+router.use('/inspections', inspectionRoutes);
+router.use('/supplies', supplyRoutes);
+router.use('/invoices', invoiceRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/wallets', walletRoutes);
+router.use('/ratings', ratingRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/addresses', addressRoutes);
 
 // Tracking routes (real-time location)
 const trackingRoutes = require('./tracking.routes');

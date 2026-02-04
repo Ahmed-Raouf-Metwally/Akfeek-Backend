@@ -113,6 +113,10 @@ module.exports = (err, req, res, next) => {
       en: 'User not found',
       ar: 'المستخدم غير موجود'
     },
+    ADDRESS_NOT_FOUND: {
+      en: 'Address not found',
+      ar: 'العنوان غير موجود'
+    },
 
     // Database errors
     DATABASE_ERROR: {
