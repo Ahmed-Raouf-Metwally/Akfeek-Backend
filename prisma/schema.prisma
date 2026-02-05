@@ -3,12 +3,12 @@
 // ================================================================================================
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "mysql"
-    url      = env("DATABASE_URL")
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 // ================================================================================================
@@ -16,144 +16,147 @@ datasource db {
 // ================================================================================================
 
 enum UserRole {
-    CUSTOMER
-    TECHNICIAN
-    SUPPLIER
-    VENDOR
-    ADMIN
+  CUSTOMER
+  TECHNICIAN
+  SUPPLIER
+  VENDOR
+  ADMIN
 }
 
 enum UserStatus {
-    ACTIVE
-    INACTIVE
-    SUSPENDED
-    PENDING_VERIFICATION
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
 }
 
 enum Language {
-    EN // English
-    AR // Arabic
+  EN // English
+  AR // Arabic
 }
 
 model User {
-    id                String     @id @default(uuid())
-    email             String     @unique
-    phone             String?    @unique
-    passwordHash      String
-    role              UserRole
-    status            UserStatus @default(PENDING_VERIFICATION)
-    emailVerified     Boolean    @default(false)
-    phoneVerified     Boolean    @default(false)
-    preferredLanguage Language   @default(AR) // Default to Arabic
-    createdAt         DateTime   @default(now())
-    updatedAt         DateTime   @updatedAt
+  id                String     @id @default(uuid())
+  email             String     @unique
+  phone             String?    @unique
+  passwordHash      String
+  role              UserRole
+  status            UserStatus @default(PENDING_VERIFICATION)
+  emailVerified     Boolean    @default(false)
+  phoneVerified     Boolean    @default(false)
+  preferredLanguage Language   @default(AR) // Default to Arabic
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
-    // Relations
-    profile   Profile?
-    vehicles  UserVehicle[] // Customer's vehicles
-    addresses Address[]
+  // Relations
+  profile   Profile?
+  vehicles  UserVehicle[] // Customer's vehicles
+  addresses Address[]
 
-    // Bookings
-    bookingsAsCustomer   Booking[] @relation("CustomerBookings")
-    bookingsAsTechnician Booking[] @relation("TechnicianBookings")
+  // Bookings
+  bookingsAsCustomer   Booking[] @relation("CustomerBookings")
+  bookingsAsTechnician Booking[] @relation("TechnicianBookings")
 
-    // Broadcasts & Offers
-    jobBroadcasts JobBroadcast[]
-    jobOffers     JobOffer[]
+  // Broadcasts & Offers
+  jobBroadcasts JobBroadcast[]
+  jobOffers     JobOffer[]
 
-    // Inspections & Supply
-    inspectionReports InspectionReport[]
-    supplyRequests    SupplyRequest[]    @relation("TechnicianSupplyRequests")
-    supplierRequests  SupplyRequest[]    @relation("SupplierSupplyRequests")
+  // Inspections & Supply
+  inspectionReports InspectionReport[]
+  supplyRequests    SupplyRequest[]    @relation("TechnicianSupplyRequests")
+  supplierRequests  SupplyRequest[]    @relation("SupplierSupplyRequests")
 
-    // Financials
-    invoices     Invoice[]
-    wallet       Wallet?
-    transactions Transaction[]
-    payments     Payment[]
+  // Financials
+  invoices     Invoice[]
+  wallet       Wallet?
+  transactions Transaction[]
+  payments     Payment[]
 
-    // Notifications & Ratings
-    notifications   Notification[]
-    activityLogs    ActivityLog[]
-    ratingsGiven    Rating[]       @relation("RaterRatings")
-    ratingsReceived Rating[]       @relation("RateeRatings")
+  // Notifications & Ratings
+  notifications   Notification[]
+  activityLogs    ActivityLog[]
+  ratingsGiven    Rating[]       @relation("RaterRatings")
+  ratingsReceived Rating[]       @relation("RateeRatings")
 
-    // Location Tracking
-    technicianLocations TechnicianLocation[] @relation("TechnicianLocations")
+  // Location Tracking
+  technicianLocations TechnicianLocation[] @relation("TechnicianLocations")
 
-    // Vendor Relations
-    vendorProfile     VendorProfile?
-    autoParts         AutoPart[]         @relation("VendorParts")
-    marketplaceOrders MarketplaceOrder[]
+  // Vendor Relations
+  vendorProfile     VendorProfile?
+  autoParts         AutoPart[]         @relation("VendorParts")
+  marketplaceOrders MarketplaceOrder[]
 
-    @@index([email])
-    @@index([phone])
-    @@index([role, status])
+  // Workshop Reviews
+  workshopReviews WorkshopReview[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([role, status])
 }
 
 model Profile {
-    id     String @id @default(uuid())
-    userId String @unique
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    firstName String
-    lastName  String
-    avatar    String?
-    bio       String? @db.Text
-    bioAr     String? @db.Text // Arabic bio
+  firstName String
+  lastName  String
+  avatar    String?
+  bio       String? @db.Text
+  bioAr     String? @db.Text // Arabic bio
 
-    // Technician-specific
-    licenseNumber   String?
-    yearsExperience Int?
-    specializations Json? // Array of service types
-    serviceRadius   Float? // km radius for emergency services
-    isAvailable     Boolean @default(true)
+  // Technician-specific
+  licenseNumber   String?
+  yearsExperience Int?
+  specializations Json? // Array of service types
+  serviceRadius   Float? // km radius for emergency services
+  isAvailable     Boolean @default(true)
 
-    // Supplier-specific
-    businessName      String?
-    businessNameAr    String? // Arabic business name
-    businessLicense   String?
-    warehouseLocation String?
+  // Supplier-specific
+  businessName      String?
+  businessNameAr    String? // Arabic business name
+  businessLicense   String?
+  warehouseLocation String?
 
-    // Location (for real-time tracking)
-    currentLat         Float?
-    currentLng         Float?
-    lastLocationUpdate DateTime?
+  // Location (for real-time tracking)
+  currentLat         Float?
+  currentLng         Float?
+  lastLocationUpdate DateTime?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([userId])
+  @@index([userId])
 }
 
 model Address {
-    id     String @id @default(uuid())
-    userId String
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    label      String // "Home", "Work", etc.
-    labelAr    String? // Arabic label
-    street     String
-    streetAr   String? // Arabic street name
-    city       String
-    cityAr     String? // Arabic city name
-    state      String?
-    stateAr    String? // Arabic state name
-    postalCode String?
-    country    String  @default("SA")
+  label      String // "Home", "Work", etc.
+  labelAr    String? // Arabic label
+  street     String
+  streetAr   String? // Arabic street name
+  city       String
+  cityAr     String? // Arabic city name
+  state      String?
+  stateAr    String? // Arabic state name
+  postalCode String?
+  country    String  @default("SA")
 
-    latitude  Float
-    longitude Float
+  latitude  Float
+  longitude Float
 
-    isDefault Boolean  @default(false)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    bookings      Booking[]
-    jobBroadcasts JobBroadcast[]
+  // Relations
+  bookings      Booking[]
+  jobBroadcasts JobBroadcast[]
 
-    @@index([userId])
+  @@index([userId])
 }
 
 // ================================================================================================
@@ -161,98 +164,98 @@ model Address {
 // ================================================================================================
 
 enum VehicleType {
-    SEDAN // سيدان - Standard sedan cars
-    HATCHBACK // هاتشباك - Hatchback cars
-    COUPE // كوبيه - Coupe cars
-    SMALL_SUV // دفع رباعي صغير - Compact SUV
-    LARGE_SEDAN // سيدان كبيرة - Full-size sedan
-    SUV // دفع رباعي - Sport Utility Vehicle
-    CROSSOVER // كروس أوفر - Crossover SUV
-    TRUCK // شاحنة/بيك أب - Pickup truck
-    VAN // فان - Van
-    BUS // باص - Bus
+  SEDAN // سيدان - Standard sedan cars
+  HATCHBACK // هاتشباك - Hatchback cars
+  COUPE // كوبيه - Coupe cars
+  SMALL_SUV // دفع رباعي صغير - Compact SUV
+  LARGE_SEDAN // سيدان كبيرة - Full-size sedan
+  SUV // دفع رباعي - Sport Utility Vehicle
+  CROSSOVER // كروس أوفر - Crossover SUV
+  TRUCK // شاحنة/بيك أب - Pickup truck
+  VAN // فان - Van
+  BUS // باص - Bus
 }
 
 // New: Separate brand and model tables for better data management
 model VehicleBrand {
-    id       String  @id @default(uuid())
-    name     String  @unique // Toyota, BMW, Mercedes-Benz
-    nameAr   String? // تويوتا, بي ام دبليو
-    logo     String? // Brand logo URL
-    isActive Boolean @default(true)
+  id       String  @id @default(uuid())
+  name     String  @unique // Toyota, BMW, Mercedes-Benz
+  nameAr   String? // تويوتا, بي ام دبليو
+  logo     String? // Brand logo URL
+  isActive Boolean @default(true)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    models VehicleModel[]
+  // Relations
+  models VehicleModel[]
 
-    @@index([name])
+  @@index([name])
 }
 
 model VehicleModel {
-    id      String       @id @default(uuid())
-    brandId String
-    brand   VehicleBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  id      String       @id @default(uuid())
+  brandId String
+  brand   VehicleBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
-    name     String // Camry, X5, C-Class
-    nameAr   String? // كامري
-    year     Int // 2023, 2024
-    type     VehicleType
-    imageUrl String?
+  name     String // Camry, X5, C-Class
+  nameAr   String? // كامري
+  year     Int // 2023, 2024
+  type     VehicleType
+  imageUrl String?
 
-    isActive Boolean @default(true)
+  isActive Boolean @default(true)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    userVehicles        UserVehicle[]
-    compatibleProducts  ProductCompatibility[]
-    compatibleAutoParts AutoPartCompatibility[]
+  // Relations
+  userVehicles        UserVehicle[]
+  compatibleProducts  ProductCompatibility[]
+  compatibleAutoParts AutoPartCompatibility[]
 
-    @@unique([brandId, name, year])
-    @@index([brandId])
-    @@index([name])
+  @@unique([brandId, name, year])
+  @@index([brandId])
+  @@index([name])
 }
 
 model UserVehicle {
-    id     String @id @default(uuid())
-    userId String
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    // Vehicle Model Reference
-    vehicleModelId String
-    vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id])
+  // Vehicle Model Reference
+  vehicleModelId String
+  vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id])
 
-    // Basic Information
-    ownerName String? // الأسم - Owner name
+  // Basic Information
+  ownerName String? // الأسم - Owner name
 
-    // License Plate Information (Saudi Format)
-    plateLettersAr String? // الأحرف العربية - Arabic letters (e.g., "ع س س")
-    plateLettersEn String? // الأحرف الإنجليزية - English letters (e.g., "SEJ")
-    plateDigits    String // الأرقام - Digits (e.g., "7415")
-    plateRegion    String? // رمز المنطقة - Region code (e.g., "K", "أ")
-    plateNumber    String  @unique // رقم اللوحة الكامل - Full plate for display/search
+  // License Plate Information (Saudi Format)
+  plateLettersAr String? // الأحرف العربية - Arabic letters (e.g., "ع س س")
+  plateLettersEn String? // الأحرف الإنجليزية - English letters (e.g., "SEJ")
+  plateDigits    String // الأرقام - Digits (e.g., "7415")
+  plateRegion    String? // رمز المنطقة - Region code (e.g., "K", "أ")
+  plateNumber    String  @unique // رقم اللوحة الكامل - Full plate for display/search
 
-    color          String? // اللون
-    vin            String? @unique // رقم الهيكل - Chassis number
-    currentMileage Int? // عداد الكيلومترات
+  color          String? // اللون
+  vin            String? @unique // رقم الهيكل - Chassis number
+  currentMileage Int? // عداد الكيلومترات
 
-    // Engine Information
-    fuelType           String? // نوع الوقود - Petrol/Diesel/Electric/Hybrid
-    engineCapacity     String? // سعة المحرك - e.g., "2.0L", "3.5L"
-    engineSerialNumber String? // الرقم التسلسلي للمحرك
+  // Engine Information
+  fuelType           String? // نوع الوقود - Petrol/Diesel/Electric/Hybrid
+  engineCapacity     String? // سعة المحرك - e.g., "2.0L", "3.5L"
+  engineSerialNumber String? // الرقم التسلسلي للمحرك
 
-    isDefault Boolean  @default(false)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    bookings Booking[]
+  // Relations
+  bookings Booking[]
 
-    @@index([userId])
-    @@index([vehicleModelId])
+  @@index([userId])
+  @@index([vehicleModelId])
 }
 
 // ================================================================================================
@@ -260,87 +263,87 @@ model UserVehicle {
 // ================================================================================================
 
 enum ServiceType {
-    FIXED // Direct Booking: Car Wash, Polishing
-    CATALOG // E-Commerce: Oil Change, Filter Replacement
-    EMERGENCY // Indrive/Broadcast: Roadside, Mobile Workshop
-    INSPECTION // Ekfik Lifecycle: Valet & Inspection
+  FIXED // Direct Booking: Car Wash, Polishing
+  CATALOG // E-Commerce: Oil Change, Filter Replacement
+  EMERGENCY // Indrive/Broadcast: Roadside, Mobile Workshop
+  INSPECTION // Ekfik Lifecycle: Valet & Inspection
 }
 
 enum ServiceCategory {
-    CLEANING
-    MAINTENANCE
-    REPAIR
-    EMERGENCY
-    INSPECTION
-    CUSTOMIZATION
-    CERTIFIED_WORKSHOP
+  CLEANING
+  MAINTENANCE
+  REPAIR
+  EMERGENCY
+  INSPECTION
+  CUSTOMIZATION
+  CERTIFIED_WORKSHOP
 }
 
 enum DeliveryMethod {
-    FLATBED // سطحة - Akfeek sends a flatbed
-    SELF_DELIVERY // تسليم للمركز - Customer delivers vehicle
+  FLATBED // سطحة - Akfeek sends a flatbed
+  SELF_DELIVERY // تسليم للمركز - Customer delivers vehicle
 }
 
 model Service {
-    id            String  @id @default(uuid())
-    name          String
-    nameAr        String?
-    description   String? @db.Text
-    descriptionAr String? @db.Text
+  id            String  @id @default(uuid())
+  name          String
+  nameAr        String?
+  description   String? @db.Text
+  descriptionAr String? @db.Text
 
-    type     ServiceType
-    category ServiceCategory
+  type     ServiceType
+  category ServiceCategory
 
-    imageUrl String?
-    icon     String?
+  imageUrl String?
+  icon     String?
 
-    isActive          Boolean @default(true)
-    requiresVehicle   Boolean @default(true)
-    estimatedDuration Int? // minutes
+  isActive          Boolean @default(true)
+  requiresVehicle   Boolean @default(true)
+  estimatedDuration Int? // minutes
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    pricing         ServicePricing[]
-    bookingServices BookingService[]
-    addOns          ServiceAddOn[]   @relation("ServiceAddOns")
-    parentAddOns    ServiceAddOn[]   @relation("ParentService")
+  // Relations
+  pricing         ServicePricing[]
+  bookingServices BookingService[]
+  addOns          ServiceAddOn[]   @relation("ServiceAddOns")
+  parentAddOns    ServiceAddOn[]   @relation("ParentService")
 
-    @@index([type, isActive])
-    @@index([category])
+  @@index([type, isActive])
+  @@index([category])
 }
 
 model ServicePricing {
-    id        String  @id @default(uuid())
-    serviceId String
-    service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-    vehicleType     VehicleType
-    basePrice       Decimal     @db.Decimal(10, 2)
-    discountedPrice Decimal?    @db.Decimal(10, 2)
+  vehicleType     VehicleType
+  basePrice       Decimal     @db.Decimal(10, 2)
+  discountedPrice Decimal?    @db.Decimal(10, 2)
 
-    isActive  Boolean  @default(true)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@unique([serviceId, vehicleType])
-    @@index([serviceId])
+  @@unique([serviceId, vehicleType])
+  @@index([serviceId])
 }
 
 model ServiceAddOn {
-    id        String  @id @default(uuid())
-    serviceId String
-    service   Service @relation("ParentService", fields: [serviceId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  serviceId String
+  service   Service @relation("ParentService", fields: [serviceId], references: [id], onDelete: Cascade)
 
-    addOnId String
-    addOn   Service @relation("ServiceAddOns", fields: [addOnId], references: [id])
+  addOnId String
+  addOn   Service @relation("ServiceAddOns", fields: [addOnId], references: [id])
 
-    additionalPrice Decimal  @db.Decimal(10, 2)
-    createdAt       DateTime @default(now())
+  additionalPrice Decimal  @db.Decimal(10, 2)
+  createdAt       DateTime @default(now())
 
-    @@unique([serviceId, addOnId])
-    @@index([serviceId])
+  @@unique([serviceId, addOnId])
+  @@index([serviceId])
 }
 
 // ================================================================================================
@@ -348,57 +351,57 @@ model ServiceAddOn {
 // ================================================================================================
 
 enum ProductCategory {
-    OIL
-    FILTER
-    BRAKE_PAD
-    BATTERY
-    TIRE
-    FLUID
-    ACCESSORY
+  OIL
+  FILTER
+  BRAKE_PAD
+  BATTERY
+  TIRE
+  FLUID
+  ACCESSORY
 }
 
 model Product {
-    id          String  @id @default(uuid())
-    sku         String  @unique
-    name        String
-    nameAr      String?
-    description String? @db.Text
+  id          String  @id @default(uuid())
+  sku         String  @unique
+  name        String
+  nameAr      String?
+  description String? @db.Text
 
-    category ProductCategory
-    brand    String
-    imageUrl String?
+  category ProductCategory
+  brand    String
+  imageUrl String?
 
-    price         Decimal @db.Decimal(10, 2)
-    stockQuantity Int     @default(0)
+  price         Decimal @db.Decimal(10, 2)
+  stockQuantity Int     @default(0)
 
-    isActive   Boolean @default(true)
-    isFeatured Boolean @default(false)
+  isActive   Boolean @default(true)
+  isFeatured Boolean @default(false)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    compatibility   ProductCompatibility[]
-    bookingProducts BookingProduct[]
+  // Relations
+  compatibility   ProductCompatibility[]
+  bookingProducts BookingProduct[]
 
-    @@index([category, isActive])
-    @@index([sku])
+  @@index([category, isActive])
+  @@index([sku])
 }
 
 model ProductCompatibility {
-    id        String  @id @default(uuid())
-    productId String
-    product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-    // Vehicle Model Reference
-    vehicleModelId String
-    vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
+  // Vehicle Model Reference
+  vehicleModelId String
+  vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@unique([productId, vehicleModelId])
-    @@index([productId])
-    @@index([vehicleModelId])
+  @@unique([productId, vehicleModelId])
+  @@index([productId])
+  @@index([vehicleModelId])
 }
 
 // ================================================================================================
@@ -406,173 +409,173 @@ model ProductCompatibility {
 // ================================================================================================
 
 enum VendorStatus {
-    PENDING_APPROVAL
-    ACTIVE
-    SUSPENDED
-    REJECTED
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  REJECTED
 }
 
 model VendorProfile {
-    id     String @id @default(uuid())
-    userId String @unique
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    businessName   String
-    businessNameAr String?
-    description    String? @db.Text
-    descriptionAr  String? @db.Text
+  businessName   String
+  businessNameAr String?
+  description    String? @db.Text
+  descriptionAr  String? @db.Text
 
-    // Registration Documents
-    commercialLicense String?
-    taxNumber         String?
+  // Registration Documents
+  commercialLicense String?
+  taxNumber         String?
 
-    // Contact Information
-    contactPhone String
-    contactEmail String
+  // Contact Information
+  contactPhone String
+  contactEmail String
 
-    // Address
-    address String?
-    city    String?
-    country String  @default("SA")
+  // Address
+  address String?
+  city    String?
+  country String  @default("SA")
 
-    // Business Details
-    logo   String?
-    banner String?
+  // Business Details
+  logo   String?
+  banner String?
 
-    // Verification & Status
-    status     VendorStatus @default(PENDING_APPROVAL)
-    isVerified Boolean      @default(false)
-    verifiedAt DateTime?
+  // Verification & Status
+  status     VendorStatus @default(PENDING_APPROVAL)
+  isVerified Boolean      @default(false)
+  verifiedAt DateTime?
 
-    // Ratings & Stats
-    averageRating Float? @default(0)
-    totalReviews  Int    @default(0)
-    totalSales    Int    @default(0)
+  // Ratings & Stats
+  averageRating Float? @default(0)
+  totalReviews  Int    @default(0)
+  totalSales    Int    @default(0)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    parts      AutoPart[]             @relation("VendorOwnedParts")
-    orderItems MarketplaceOrderItem[]
+  // Relations
+  parts      AutoPart[]             @relation("VendorOwnedParts")
+  orderItems MarketplaceOrderItem[]
 
-    @@index([userId])
-    @@index([status])
-    @@index([isVerified])
+  @@index([userId])
+  @@index([status])
+  @@index([isVerified])
 }
 
 model AutoPartCategory {
-    id            String             @id @default(uuid())
-    name          String             @unique
-    nameAr        String?
-    description   String?            @db.Text
-    descriptionAr String?            @db.Text
-    icon          String?
-    imageUrl      String?
-    parentId      String?
-    parent        AutoPartCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-    children      AutoPartCategory[] @relation("CategoryHierarchy")
-    isActive      Boolean            @default(true)
-    sortOrder     Int                @default(0)
-    createdAt     DateTime           @default(now())
-    updatedAt     DateTime           @updatedAt
+  id            String             @id @default(uuid())
+  name          String             @unique
+  nameAr        String?
+  description   String?            @db.Text
+  descriptionAr String?            @db.Text
+  icon          String?
+  imageUrl      String?
+  parentId      String?
+  parent        AutoPartCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children      AutoPartCategory[] @relation("CategoryHierarchy")
+  isActive      Boolean            @default(true)
+  sortOrder     Int                @default(0)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
-    parts AutoPart[]
+  parts AutoPart[]
 
-    @@index([parentId])
-    @@index([isActive])
+  @@index([parentId])
+  @@index([isActive])
 }
 
 model AutoPart {
-    id            String  @id @default(uuid())
-    sku           String  @unique
-    name          String
-    nameAr        String?
-    description   String? @db.Text
-    descriptionAr String? @db.Text
+  id            String  @id @default(uuid())
+  sku           String  @unique
+  name          String
+  nameAr        String?
+  description   String? @db.Text
+  descriptionAr String? @db.Text
 
-    // Ownership: NULL = Platform-owned, otherwise Vendor-owned
-    vendorId String?
-    vendor   VendorProfile? @relation("VendorOwnedParts", fields: [vendorId], references: [id], onDelete: Cascade)
+  // Ownership: NULL = Platform-owned, otherwise Vendor-owned
+  vendorId String?
+  vendor   VendorProfile? @relation("VendorOwnedParts", fields: [vendorId], references: [id], onDelete: Cascade)
 
-    // Added by (tracks who created the part, even if platform-owned)
-    createdByUserId String
-    createdByUser   User   @relation("VendorParts", fields: [createdByUserId], references: [id])
+  // Added by (tracks who created the part, even if platform-owned)
+  createdByUserId String
+  createdByUser   User   @relation("VendorParts", fields: [createdByUserId], references: [id])
 
-    categoryId String
-    category   AutoPartCategory @relation(fields: [categoryId], references: [id])
+  categoryId String
+  category   AutoPartCategory @relation(fields: [categoryId], references: [id])
 
-    brand      String
-    partNumber String?
-    oemNumber  String?
+  brand      String
+  partNumber String?
+  oemNumber  String?
 
-    price          Decimal  @db.Decimal(10, 2)
-    compareAtPrice Decimal? @db.Decimal(10, 2)
-    cost           Decimal? @db.Decimal(10, 2)
+  price          Decimal  @db.Decimal(10, 2)
+  compareAtPrice Decimal? @db.Decimal(10, 2)
+  cost           Decimal? @db.Decimal(10, 2)
 
-    stockQuantity     Int  @default(0)
-    lowStockThreshold Int? @default(10)
+  stockQuantity     Int  @default(0)
+  lowStockThreshold Int? @default(10)
 
-    weight     Float?
-    dimensions Json?
+  weight     Float?
+  dimensions Json?
 
-    specifications Json?
+  specifications Json?
 
-    isActive   Boolean @default(true)
-    isFeatured Boolean @default(false)
+  isActive   Boolean @default(true)
+  isFeatured Boolean @default(false)
 
-    // Admin approval for vendor parts
-    isApproved Boolean   @default(true)
-    approvedAt DateTime?
+  // Admin approval for vendor parts
+  isApproved Boolean   @default(true)
+  approvedAt DateTime?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    images        AutoPartImage[]
-    compatibility AutoPartCompatibility[]
-    orderItems    MarketplaceOrderItem[]
+  images        AutoPartImage[]
+  compatibility AutoPartCompatibility[]
+  orderItems    MarketplaceOrderItem[]
 
-    @@index([categoryId])
-    @@index([vendorId])
-    @@index([createdByUserId])
-    @@index([brand])
-    @@index([sku])
-    @@index([isActive, isFeatured])
-    @@index([isApproved])
+  @@index([categoryId])
+  @@index([vendorId])
+  @@index([createdByUserId])
+  @@index([brand])
+  @@index([sku])
+  @@index([isActive, isFeatured])
+  @@index([isApproved])
 }
 
 model AutoPartImage {
-    id     String   @id @default(uuid())
-    partId String
-    part   AutoPart @relation(fields: [partId], references: [id], onDelete: Cascade)
+  id     String   @id @default(uuid())
+  partId String
+  part   AutoPart @relation(fields: [partId], references: [id], onDelete: Cascade)
 
-    url       String
-    altText   String?
-    sortOrder Int     @default(0)
-    isPrimary Boolean @default(false)
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([partId])
-    @@index([isPrimary])
+  @@index([partId])
+  @@index([isPrimary])
 }
 
 model AutoPartCompatibility {
-    id     String   @id @default(uuid())
-    partId String
-    part   AutoPart @relation(fields: [partId], references: [id], onDelete: Cascade)
+  id     String   @id @default(uuid())
+  partId String
+  part   AutoPart @relation(fields: [partId], references: [id], onDelete: Cascade)
 
-    vehicleModelId String
-    vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
+  vehicleModelId String
+  vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
 
-    notes       String? @db.Text
-    fitmentType String?
+  notes       String? @db.Text
+  fitmentType String?
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@unique([partId, vehicleModelId])
-    @@index([partId])
-    @@index([vehicleModelId])
+  @@unique([partId, vehicleModelId])
+  @@index([partId])
+  @@index([vehicleModelId])
 }
 
 // ================================================================================================
@@ -580,31 +583,31 @@ model AutoPartCompatibility {
 // ================================================================================================
 
 model SupplierPart {
-    id         String @id @default(uuid())
-    supplierId String
+  id         String @id @default(uuid())
+  supplierId String
 
-    sku         String
-    name        String
-    nameAr      String?
-    description String? @db.Text
+  sku         String
+  name        String
+  nameAr      String?
+  description String? @db.Text
 
-    category String
-    brand    String?
-    imageUrl String?
+  category String
+  brand    String?
+  imageUrl String?
 
-    unitPrice     Decimal @db.Decimal(10, 2)
-    stockQuantity Int     @default(0)
-    minimumOrder  Int     @default(1)
+  unitPrice     Decimal @db.Decimal(10, 2)
+  stockQuantity Int     @default(0)
+  minimumOrder  Int     @default(1)
 
-    isActive  Boolean  @default(true)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    supplyRequestItems SupplyRequestItem[]
+  // Relations
+  supplyRequestItems SupplyRequestItem[]
 
-    @@unique([supplierId, sku])
-    @@index([supplierId, isActive])
+  @@unique([supplierId, sku])
+  @@index([supplierId, isActive])
 }
 
 // ================================================================================================
@@ -612,52 +615,93 @@ model SupplierPart {
 // ================================================================================================
 
 model CertifiedWorkshop {
-    id            String  @id @default(uuid())
-    name          String
-    nameAr        String?
-    description   String? @db.Text
-    descriptionAr String? @db.Text
+  id            String  @id @default(uuid())
+  name          String
+  nameAr        String?
+  description   String? @db.Text
+  descriptionAr String? @db.Text
 
-    // Location
-    address   String
-    addressAr String?
-    city      String
-    cityAr    String?
-    latitude  Float
-    longitude Float
+  // Location
+  address   String
+  addressAr String?
+  city      String
+  cityAr    String?
+  latitude  Float
+  longitude Float
 
-    // Contact
-    phone String
-    email String?
+  // Contact
+  phone String
+  email String?
 
-    // Working Hours (JSON format: {"sunday": {"open": "08:00", "close": "18:00"}, ...})
-    workingHours Json?
+  // Working Hours (JSON format: {"sunday": {"open": "08:00", "close": "18:00"}, ...})
+  workingHours Json?
 
-    // Services Offered (JSON array of service types)
-    services String @db.Text
+  // Services Offered (JSON array of service types)
+  services String @db.Text
 
-    // Ratings & Stats
-    averageRating Float? @default(0)
-    totalReviews  Int    @default(0)
-    totalBookings Int    @default(0)
+  // Ratings & Stats
+  averageRating Float? @default(0)
+  totalReviews  Int    @default(0)
+  totalBookings Int    @default(0)
 
-    // Media
-    logo   String?
-    images Json? // Array of image URLs
+  // Capacity Management
+  maxDailyCapacity Int? // Maximum bookings per day (optional)
 
-    // Status
-    isActive   Boolean   @default(true)
-    isVerified Boolean   @default(false)
-    verifiedAt DateTime?
+  // Media
+  logo   String?
+  images Json? // Array of image URLs
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  // Status
+  isActive   Boolean   @default(true)
+  isVerified Boolean   @default(false)
+  verifiedAt DateTime?
 
-    // Relations
-    bookings Booking[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([isActive, isVerified])
-    @@index([city])
+  // Relations
+  bookings Booking[]
+  reviews  WorkshopReview[]
+
+  @@index([isActive, isVerified])
+  @@index([city])
+  @@index([averageRating])
+}
+
+model WorkshopReview {
+  id String @id @default(uuid())
+
+  // Relations
+  workshopId String
+  workshop   CertifiedWorkshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bookingId String?  @unique
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  // Review Content
+  rating    Int     @db.SmallInt // 1-5 stars
+  comment   String? @db.Text
+  commentAr String? @db.Text
+
+  // Response from workshop (optional)
+  response    String?   @db.Text
+  responseAr  String?   @db.Text
+  respondedAt DateTime?
+
+  // Status
+  isApproved Boolean @default(true) // Admin can hide inappropriate reviews
+  isVerified Boolean @default(false) // Verified purchase (has booking)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workshopId, isApproved])
+  @@index([userId])
+  @@index([rating])
+  @@index([createdAt])
 }
 
 // ================================================================================================
@@ -665,171 +709,172 @@ model CertifiedWorkshop {
 // ================================================================================================
 
 enum BookingStatus {
-    // Universal States
-    PENDING // Initial state
-    CONFIRMED // Accepted by system/technician
+  // Universal States
+  PENDING // Initial state
+  CONFIRMED // Accepted by system/technician
 
-    // Indrive Model States
-    BROADCASTING // Looking for technicians
-    OFFERS_RECEIVED // Technicians have bid
-    TECHNICIAN_ASSIGNED // Customer selected a technician
+  // Indrive Model States
+  BROADCASTING // Looking for technicians
+  OFFERS_RECEIVED // Technicians have bid
+  TECHNICIAN_ASSIGNED // Customer selected a technician
 
-    // Ekfik Model States
-    PICKUP_SCHEDULED // Valet pickup scheduled
-    IN_TRANSIT_PICKUP // Technician picking up vehicle
-    INSPECTING // Vehicle being inspected
-    QUOTE_PENDING // Waiting for customer approval
-    QUOTE_APPROVED // Customer approved repairs
-    QUOTE_REJECTED // Customer rejected - return vehicle
+  // Ekfik Model States
+  PICKUP_SCHEDULED // Valet pickup scheduled
+  IN_TRANSIT_PICKUP // Technician picking up vehicle
+  INSPECTING // Vehicle being inspected
+  QUOTE_PENDING // Waiting for customer approval
+  QUOTE_APPROVED // Customer approved repairs
+  QUOTE_REJECTED // Customer rejected - return vehicle
 
-    // Execution States
-    IN_PROGRESS // Work started
-    PARTS_NEEDED // Technician requested parts
-    PARTS_ORDERED // Parts requested from supplier
-    PARTS_DELIVERED // Parts received
+  // Execution States
+  IN_PROGRESS // Work started
+  PARTS_NEEDED // Technician requested parts
+  PARTS_ORDERED // Parts requested from supplier
+  PARTS_DELIVERED // Parts received
 
-    // Completion States
-    COMPLETED // Service finished
-    READY_FOR_DELIVERY // Vehicle ready for return (Ekfik)
-    IN_TRANSIT_DELIVERY // Returning vehicle
-    DELIVERED // Vehicle returned to customer
+  // Completion States
+  COMPLETED // Service finished
+  READY_FOR_DELIVERY // Vehicle ready for return (Ekfik)
+  IN_TRANSIT_DELIVERY // Returning vehicle
+  DELIVERED // Vehicle returned to customer
 
-    // Terminal States
-    CANCELLED // Cancelled by customer/admin
-    REJECTED // Rejected by technician
-    NO_SHOW // Customer didn't show up
+  // Terminal States
+  CANCELLED // Cancelled by customer/admin
+  REJECTED // Rejected by technician
+  NO_SHOW // Customer didn't show up
 }
 
 model Booking {
-    id            String @id @default(uuid())
-    bookingNumber String @unique // AUTO-GEN: BKG-20260123-001
+  id            String @id @default(uuid())
+  bookingNumber String @unique // AUTO-GEN: BKG-20260123-001
 
-    // Relationships
-    customerId String
-    customer   User   @relation("CustomerBookings", fields: [customerId], references: [id])
+  // Relationships
+  customerId String
+  customer   User   @relation("CustomerBookings", fields: [customerId], references: [id])
 
-    technicianId String?
-    technician   User?   @relation("TechnicianBookings", fields: [technicianId], references: [id])
+  technicianId String?
+  technician   User?   @relation("TechnicianBookings", fields: [technicianId], references: [id])
 
-    vehicleId String
-    vehicle   UserVehicle @relation(fields: [vehicleId], references: [id])
+  vehicleId String
+  vehicle   UserVehicle @relation(fields: [vehicleId], references: [id])
 
-    addressId String?
-    address   Address? @relation(fields: [addressId], references: [id])
+  addressId String?
+  address   Address? @relation(fields: [addressId], references: [id])
 
-    // Certified Workshop Fields
-    workshopId     String?
-    workshop       CertifiedWorkshop? @relation(fields: [workshopId], references: [id])
-    deliveryMethod DeliveryMethod?
-    flatbedFee     Decimal?           @default(0) @db.Decimal(10, 2)
+  // Certified Workshop Fields
+  workshopId     String?
+  workshop       CertifiedWorkshop? @relation(fields: [workshopId], references: [id])
+  deliveryMethod DeliveryMethod?
+  flatbedFee     Decimal?           @default(0) @db.Decimal(10, 2)
 
-    // Scheduling
-    scheduledDate DateTime?
-    scheduledTime String? // "09:00" - Store as string for flexibility
-    completedAt   DateTime?
+  // Scheduling
+  scheduledDate DateTime?
+  scheduledTime String? // "09:00" - Store as string for flexibility
+  completedAt   DateTime?
 
-    // Location (for Emergency/Indrive model)
-    pickupLat     Float?
-    pickupLng     Float?
-    pickupAddress String?
+  // Location (for Emergency/Indrive model)
+  pickupLat     Float?
+  pickupLng     Float?
+  pickupAddress String?
 
-    destinationLat     Float?
-    destinationLng     Float?
-    destinationAddress String?
+  destinationLat     Float?
+  destinationLng     Float?
+  destinationAddress String?
 
-    // Pricing
-    subtotal    Decimal @default(0) @db.Decimal(10, 2)
-    laborFee    Decimal @default(0) @db.Decimal(10, 2)
-    deliveryFee Decimal @default(0) @db.Decimal(10, 2)
-    partsTotal  Decimal @default(0) @db.Decimal(10, 2)
-    discount    Decimal @default(0) @db.Decimal(10, 2)
-    tax         Decimal @default(0) @db.Decimal(10, 2)
-    totalPrice  Decimal @default(0) @db.Decimal(10, 2)
+  // Pricing
+  subtotal    Decimal @default(0) @db.Decimal(10, 2)
+  laborFee    Decimal @default(0) @db.Decimal(10, 2)
+  deliveryFee Decimal @default(0) @db.Decimal(10, 2)
+  partsTotal  Decimal @default(0) @db.Decimal(10, 2)
+  discount    Decimal @default(0) @db.Decimal(10, 2)
+  tax         Decimal @default(0) @db.Decimal(10, 2)
+  totalPrice  Decimal @default(0) @db.Decimal(10, 2)
 
-    // Distance calculation (for delivery fee)
-    distanceKm        Float?
-    estimatedDuration Int? // minutes
+  // Distance calculation (for delivery fee)
+  distanceKm        Float?
+  estimatedDuration Int? // minutes
 
-    // Status & Metadata
-    metadata      Json? // Additional data (vehicle condition, pricing, etc.)
-    status        BookingStatus @default(PENDING)
-    notes         String?       @db.Text
-    internalNotes String?       @db.Text // Admin/Technician only
+  // Status & Metadata
+  metadata      Json? // Additional data (vehicle condition, pricing, etc.)
+  status        BookingStatus @default(PENDING)
+  notes         String?       @db.Text
+  internalNotes String?       @db.Text // Admin/Technician only
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    services            BookingService[]
-    products            BookingProduct[]
-    statusHistory       BookingStatusHistory[]
-    jobBroadcast        JobBroadcast?
-    inspectionReport    InspectionReport?
-    supplyRequests      SupplyRequest[]
-    invoice             Invoice?
-    rating              Rating?
-    notifications       Notification[]
-    technicianLocations TechnicianLocation[]   @relation("BookingTracking")
+  // Relations
+  services            BookingService[]
+  products            BookingProduct[]
+  statusHistory       BookingStatusHistory[]
+  jobBroadcast        JobBroadcast?
+  inspectionReport    InspectionReport?
+  supplyRequests      SupplyRequest[]
+  invoice             Invoice?
+  rating              Rating?
+  workshopReview      WorkshopReview?
+  notifications       Notification[]
+  technicianLocations TechnicianLocation[]   @relation("BookingTracking")
 
-    @@index([customerId])
-    @@index([technicianId])
-    @@index([status])
-    @@index([scheduledDate])
-    @@index([createdAt])
+  @@index([customerId])
+  @@index([technicianId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([createdAt])
 }
 
 model BookingService {
-    id        String  @id @default(uuid())
-    bookingId String
-    booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-    serviceId String
-    service   Service @relation(fields: [serviceId], references: [id])
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
 
-    quantity   Int     @default(1)
-    unitPrice  Decimal @db.Decimal(10, 2)
-    totalPrice Decimal @db.Decimal(10, 2)
+  quantity   Int     @default(1)
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([bookingId])
-    @@index([serviceId])
+  @@index([bookingId])
+  @@index([serviceId])
 }
 
 model BookingProduct {
-    id        String  @id @default(uuid())
-    bookingId String
-    booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-    productId String
-    product   Product @relation(fields: [productId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
-    quantity   Int     @default(1)
-    unitPrice  Decimal @db.Decimal(10, 2)
-    totalPrice Decimal @db.Decimal(10, 2)
+  quantity   Int     @default(1)
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([bookingId])
-    @@index([productId])
+  @@index([bookingId])
+  @@index([productId])
 }
 
 model BookingStatusHistory {
-    id        String  @id @default(uuid())
-    bookingId String
-    booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-    fromStatus BookingStatus?
-    toStatus   BookingStatus
+  fromStatus BookingStatus?
+  toStatus   BookingStatus
 
-    changedBy String? // userId
-    reason    String? @db.Text
-    metadata  Json? // Additional context
+  changedBy String? // userId
+  reason    String? @db.Text
+  metadata  Json? // Additional context
 
-    timestamp DateTime @default(now())
+  timestamp DateTime @default(now())
 
-    @@index([bookingId])
-    @@index([timestamp])
+  @@index([bookingId])
+  @@index([timestamp])
 }
 
 // ================================================================================================
@@ -837,74 +882,74 @@ model BookingStatusHistory {
 // ================================================================================================
 
 enum BroadcastStatus {
-    BROADCASTING
-    OFFERS_RECEIVED
-    TECHNICIAN_SELECTED
-    CANCELLED
-    EXPIRED
+  BROADCASTING
+  OFFERS_RECEIVED
+  TECHNICIAN_SELECTED
+  CANCELLED
+  EXPIRED
 }
 
 model JobBroadcast {
-    id        String  @id @default(uuid())
-    bookingId String  @unique
-    booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-    customerId String
-    customer   User   @relation(fields: [customerId], references: [id])
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id])
 
-    // Location
-    addressId       String?
-    address         Address? @relation(fields: [addressId], references: [id])
-    latitude        Float
-    longitude       Float
-    locationAddress String
+  // Location
+  addressId       String?
+  address         Address? @relation(fields: [addressId], references: [id])
+  latitude        Float
+  longitude       Float
+  locationAddress String
 
-    // Broadcast Settings
-    radiusKm       Float    @default(10) // Search radius
-    broadcastUntil DateTime // Expiry time
+  // Broadcast Settings
+  radiusKm       Float    @default(10) // Search radius
+  broadcastUntil DateTime // Expiry time
 
-    // Problem Description
-    description     String   @db.Text
-    urgency         String? // LOW, MEDIUM, HIGH
-    estimatedBudget Decimal? @db.Decimal(10, 2)
+  // Problem Description
+  description     String   @db.Text
+  urgency         String? // LOW, MEDIUM, HIGH
+  estimatedBudget Decimal? @db.Decimal(10, 2)
 
-    status BroadcastStatus @default(BROADCASTING)
+  status BroadcastStatus @default(BROADCASTING)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    offers JobOffer[]
+  // Relations
+  offers JobOffer[]
 
-    @@index([customerId])
-    @@index([status])
-    @@index([latitude, longitude])
+  @@index([customerId])
+  @@index([status])
+  @@index([latitude, longitude])
 }
 
 model JobOffer {
-    id          String       @id @default(uuid())
-    broadcastId String
-    broadcast   JobBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  id          String       @id @default(uuid())
+  broadcastId String
+  broadcast   JobBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
 
-    technicianId String
-    technician   User   @relation(fields: [technicianId], references: [id])
+  technicianId String
+  technician   User   @relation(fields: [technicianId], references: [id])
 
-    // Offer Details
-    bidAmount        Decimal @db.Decimal(10, 2)
-    estimatedArrival Int // minutes
-    message          String? @db.Text
+  // Offer Details
+  bidAmount        Decimal @db.Decimal(10, 2)
+  estimatedArrival Int // minutes
+  message          String? @db.Text
 
-    // Technician Location (snapshot at time of offer)
-    technicianLat Float
-    technicianLng Float
-    distanceKm    Float
+  // Technician Location (snapshot at time of offer)
+  technicianLat Float
+  technicianLng Float
+  distanceKm    Float
 
-    isSelected Boolean  @default(false)
-    createdAt  DateTime @default(now())
+  isSelected Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
-    @@index([broadcastId])
-    @@index([technicianId])
-    @@index([isSelected])
+  @@index([broadcastId])
+  @@index([technicianId])
+  @@index([isSelected])
 }
 
 // ================================================================================================
@@ -912,73 +957,73 @@ model JobOffer {
 // ================================================================================================
 
 enum InspectionStatus {
-    PENDING
-    IN_PROGRESS
-    COMPLETED
-    APPROVED
-    REJECTED
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+  REJECTED
 }
 
 model InspectionReport {
-    id        String  @id @default(uuid())
-    bookingId String  @unique
-    booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-    technicianId String
-    technician   User   @relation(fields: [technicianId], references: [id])
+  technicianId String
+  technician   User   @relation(fields: [technicianId], references: [id])
 
-    // Inspection Details
-    mileage          Int
-    inspectionDate   DateTime @default(now())
-    overallCondition String? // GOOD, FAIR, POOR
+  // Inspection Details
+  mileage          Int
+  inspectionDate   DateTime @default(now())
+  overallCondition String? // GOOD, FAIR, POOR
 
-    notes  String? @db.Text
-    images Json? // Array of image URLs
-    videos Json? // Array of video URLs
+  notes  String? @db.Text
+  images Json? // Array of image URLs
+  videos Json? // Array of video URLs
 
-    // Quote
-    estimatedCost     Decimal @db.Decimal(10, 2)
-    estimatedDuration Int? // hours
+  // Quote
+  estimatedCost     Decimal @db.Decimal(10, 2)
+  estimatedDuration Int? // hours
 
-    status InspectionStatus @default(PENDING)
+  status InspectionStatus @default(PENDING)
 
-    customerResponse String? // APPROVED, REJECTED
-    customerComment  String?   @db.Text
-    respondedAt      DateTime?
+  customerResponse String? // APPROVED, REJECTED
+  customerComment  String?   @db.Text
+  respondedAt      DateTime?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    items InspectionItem[]
+  // Relations
+  items InspectionItem[]
 
-    @@index([bookingId])
-    @@index([technicianId])
-    @@index([status])
+  @@index([bookingId])
+  @@index([technicianId])
+  @@index([status])
 }
 
 model InspectionItem {
-    id       String           @id @default(uuid())
-    reportId String
-    report   InspectionReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  id       String           @id @default(uuid())
+  reportId String
+  report   InspectionReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
-    category String // "Engine", "Brakes", "Suspension"
-    issue    String
-    issueAr  String?
-    severity String // LOW, MEDIUM, HIGH, CRITICAL
+  category String // "Engine", "Brakes", "Suspension"
+  issue    String
+  issueAr  String?
+  severity String // LOW, MEDIUM, HIGH, CRITICAL
 
-    recommendedAction String  @db.Text
-    estimatedCost     Decimal @db.Decimal(10, 2)
+  recommendedAction String  @db.Text
+  estimatedCost     Decimal @db.Decimal(10, 2)
 
-    requiresPart Boolean @default(false)
-    partName     String?
-    partSku      String?
+  requiresPart Boolean @default(false)
+  partName     String?
+  partSku      String?
 
-    priority Int @default(1) // Execution order
+  priority Int @default(1) // Execution order
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([reportId])
+  @@index([reportId])
 }
 
 // ================================================================================================
@@ -986,76 +1031,76 @@ model InspectionItem {
 // ================================================================================================
 
 enum SupplyRequestStatus {
-    PENDING
-    ACCEPTED
-    IN_PREPARATION
-    READY_FOR_PICKUP
-    IN_DELIVERY
-    DELIVERED
-    CANCELLED
-    REJECTED
+  PENDING
+  ACCEPTED
+  IN_PREPARATION
+  READY_FOR_PICKUP
+  IN_DELIVERY
+  DELIVERED
+  CANCELLED
+  REJECTED
 }
 
 model SupplyRequest {
-    id            String @id @default(uuid())
-    requestNumber String @unique // AUTO-GEN: SR-20260123-001
+  id            String @id @default(uuid())
+  requestNumber String @unique // AUTO-GEN: SR-20260123-001
 
-    technicianId String
-    technician   User   @relation("TechnicianSupplyRequests", fields: [technicianId], references: [id])
+  technicianId String
+  technician   User   @relation("TechnicianSupplyRequests", fields: [technicianId], references: [id])
 
-    supplierId String
-    supplier   User   @relation("SupplierSupplyRequests", fields: [supplierId], references: [id])
+  supplierId String
+  supplier   User   @relation("SupplierSupplyRequests", fields: [supplierId], references: [id])
 
-    bookingId String? // Optional: Linked to specific booking
-    booking   Booking? @relation(fields: [bookingId], references: [id])
+  bookingId String? // Optional: Linked to specific booking
+  booking   Booking? @relation(fields: [bookingId], references: [id])
 
-    // Delivery Details
-    deliveryAddress String
-    deliveryLat     Float?
-    deliveryLng     Float?
+  // Delivery Details
+  deliveryAddress String
+  deliveryLat     Float?
+  deliveryLng     Float?
 
-    // Pricing
-    subtotal    Decimal @default(0) @db.Decimal(10, 2)
-    deliveryFee Decimal @default(0) @db.Decimal(10, 2)
-    markup      Decimal @default(0) @db.Decimal(10, 2) // Added to customer invoice
-    totalCost   Decimal @default(0) @db.Decimal(10, 2)
+  // Pricing
+  subtotal    Decimal @default(0) @db.Decimal(10, 2)
+  deliveryFee Decimal @default(0) @db.Decimal(10, 2)
+  markup      Decimal @default(0) @db.Decimal(10, 2) // Added to customer invoice
+  totalCost   Decimal @default(0) @db.Decimal(10, 2)
 
-    status SupplyRequestStatus @default(PENDING)
-    notes  String?             @db.Text
+  status SupplyRequestStatus @default(PENDING)
+  notes  String?             @db.Text
 
-    requestedAt DateTime  @default(now())
-    acceptedAt  DateTime?
-    deliveredAt DateTime?
+  requestedAt DateTime  @default(now())
+  acceptedAt  DateTime?
+  deliveredAt DateTime?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    items       SupplyRequestItem[]
-    transaction Transaction?
+  // Relations
+  items       SupplyRequestItem[]
+  transaction Transaction?
 
-    @@index([technicianId])
-    @@index([supplierId])
-    @@index([bookingId])
-    @@index([status])
+  @@index([technicianId])
+  @@index([supplierId])
+  @@index([bookingId])
+  @@index([status])
 }
 
 model SupplyRequestItem {
-    id        String        @id @default(uuid())
-    requestId String
-    request   SupplyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  id        String        @id @default(uuid())
+  requestId String
+  request   SupplyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
-    partId String
-    part   SupplierPart @relation(fields: [partId], references: [id])
+  partId String
+  part   SupplierPart @relation(fields: [partId], references: [id])
 
-    quantity   Int
-    unitPrice  Decimal @db.Decimal(10, 2)
-    totalPrice Decimal @db.Decimal(10, 2)
+  quantity   Int
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([requestId])
-    @@index([partId])
+  @@index([requestId])
+  @@index([partId])
 }
 
 // ================================================================================================
@@ -1063,177 +1108,177 @@ model SupplyRequestItem {
 // ================================================================================================
 
 enum InvoiceStatus {
-    DRAFT
-    PENDING
-    PAID
-    PARTIALLY_PAID
-    OVERDUE
-    CANCELLED
+  DRAFT
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  OVERDUE
+  CANCELLED
 }
 
 model Invoice {
-    id            String @id @default(uuid())
-    invoiceNumber String @unique // AUTO-GEN: INV-20260123-001
+  id            String @id @default(uuid())
+  invoiceNumber String @unique // AUTO-GEN: INV-20260123-001
 
-    bookingId String  @unique
-    booking   Booking @relation(fields: [bookingId], references: [id])
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id])
 
-    customerId String
-    customer   User   @relation(fields: [customerId], references: [id])
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id])
 
-    // Amounts
-    subtotal    Decimal @db.Decimal(10, 2)
-    tax         Decimal @default(0) @db.Decimal(10, 2)
-    discount    Decimal @default(0) @db.Decimal(10, 2)
-    totalAmount Decimal @db.Decimal(10, 2)
-    paidAmount  Decimal @default(0) @db.Decimal(10, 2)
+  // Amounts
+  subtotal    Decimal @db.Decimal(10, 2)
+  tax         Decimal @default(0) @db.Decimal(10, 2)
+  discount    Decimal @default(0) @db.Decimal(10, 2)
+  totalAmount Decimal @db.Decimal(10, 2)
+  paidAmount  Decimal @default(0) @db.Decimal(10, 2)
 
-    status InvoiceStatus @default(DRAFT)
+  status InvoiceStatus @default(DRAFT)
 
-    issuedAt DateTime  @default(now())
-    dueDate  DateTime?
-    paidAt   DateTime?
+  issuedAt DateTime  @default(now())
+  dueDate  DateTime?
+  paidAt   DateTime?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    lineItems InvoiceLineItem[]
-    payments  Payment[]
+  // Relations
+  lineItems InvoiceLineItem[]
+  payments  Payment[]
 
-    @@index([customerId])
-    @@index([status])
-    @@index([issuedAt])
+  @@index([customerId])
+  @@index([status])
+  @@index([issuedAt])
 }
 
 model InvoiceLineItem {
-    id        String  @id @default(uuid())
-    invoiceId String
-    invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-    description   String
-    descriptionAr String?
-    itemType      String // SERVICE, PRODUCT, LABOR, DELIVERY, PART
+  description   String
+  descriptionAr String?
+  itemType      String // SERVICE, PRODUCT, LABOR, DELIVERY, PART
 
-    quantity   Int     @default(1)
-    unitPrice  Decimal @db.Decimal(10, 2)
-    totalPrice Decimal @db.Decimal(10, 2)
+  quantity   Int     @default(1)
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([invoiceId])
+  @@index([invoiceId])
 }
 
 enum PaymentMethod {
-    CASH
-    CARD
-    WALLET
-    BANK_TRANSFER
-    APPLE_PAY
-    MADA
+  CASH
+  CARD
+  WALLET
+  BANK_TRANSFER
+  APPLE_PAY
+  MADA
 }
 
 enum PaymentStatus {
-    PENDING
-    PROCESSING
-    COMPLETED
-    FAILED
-    REFUNDED
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
 }
 
 model Payment {
-    id            String @id @default(uuid())
-    paymentNumber String @unique // AUTO-GEN: PAY-20260123-001
+  id            String @id @default(uuid())
+  paymentNumber String @unique // AUTO-GEN: PAY-20260123-001
 
-    invoiceId String
-    invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
 
-    customerId String
-    customer   User   @relation(fields: [customerId], references: [id])
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id])
 
-    amount Decimal       @db.Decimal(10, 2)
-    method PaymentMethod
-    status PaymentStatus @default(PENDING)
+  amount Decimal       @db.Decimal(10, 2)
+  method PaymentMethod
+  status PaymentStatus @default(PENDING)
 
-    // Payment Gateway Details
-    gatewayReference String? @unique
-    gatewayResponse  Json?
+  // Payment Gateway Details
+  gatewayReference String? @unique
+  gatewayResponse  Json?
 
-    processedAt DateTime?
-    createdAt   DateTime  @default(now())
-    updatedAt   DateTime  @updatedAt
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-    @@index([invoiceId])
-    @@index([customerId])
-    @@index([status])
+  @@index([invoiceId])
+  @@index([customerId])
+  @@index([status])
 }
 
 model Wallet {
-    id     String @id @default(uuid())
-    userId String @unique
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    balance        Decimal @default(0) @db.Decimal(10, 2)
-    pendingBalance Decimal @default(0) @db.Decimal(10, 2) // Locked for pending transactions
+  balance        Decimal @default(0) @db.Decimal(10, 2)
+  pendingBalance Decimal @default(0) @db.Decimal(10, 2) // Locked for pending transactions
 
-    currency String @default("SAR")
+  currency String @default("SAR")
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // Relations
-    transactions Transaction[]
+  // Relations
+  transactions Transaction[]
 
-    @@index([userId])
+  @@index([userId])
 }
 
 enum TransactionType {
-    EARNING // Technician/Supplier income
-    WITHDRAWAL // Cash out
-    REFUND // Money returned
-    COMMISSION // Platform fee deduction
-    SUPPLY_PAYMENT // Payment for supply request
-    ADJUSTMENT // Admin adjustment
+  EARNING // Technician/Supplier income
+  WITHDRAWAL // Cash out
+  REFUND // Money returned
+  COMMISSION // Platform fee deduction
+  SUPPLY_PAYMENT // Payment for supply request
+  ADJUSTMENT // Admin adjustment
 }
 
 enum TransactionStatus {
-    PENDING
-    COMPLETED
-    FAILED
-    CANCELLED
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
 }
 
 model Transaction {
-    id                String @id @default(uuid())
-    transactionNumber String @unique // AUTO-GEN: TXN-20260123-001
+  id                String @id @default(uuid())
+  transactionNumber String @unique // AUTO-GEN: TXN-20260123-001
 
-    walletId String
-    wallet   Wallet @relation(fields: [walletId], references: [id])
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id])
 
-    userId String
-    user   User   @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-    type          TransactionType
-    amount        Decimal         @db.Decimal(10, 2)
-    balanceBefore Decimal         @db.Decimal(10, 2)
-    balanceAfter  Decimal         @db.Decimal(10, 2)
+  type          TransactionType
+  amount        Decimal         @db.Decimal(10, 2)
+  balanceBefore Decimal         @db.Decimal(10, 2)
+  balanceAfter  Decimal         @db.Decimal(10, 2)
 
-    description String
-    status      TransactionStatus @default(PENDING)
+  description String
+  status      TransactionStatus @default(PENDING)
 
-    // Related Entities
-    supplyRequestId String?        @unique
-    supplyRequest   SupplyRequest? @relation(fields: [supplyRequestId], references: [id])
+  // Related Entities
+  supplyRequestId String?        @unique
+  supplyRequest   SupplyRequest? @relation(fields: [supplyRequestId], references: [id])
 
-    metadata Json? // Additional context
+  metadata Json? // Additional context
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([walletId])
-    @@index([userId])
-    @@index([type])
-    @@index([createdAt])
+  @@index([walletId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 // ================================================================================================
@@ -1241,31 +1286,31 @@ model Transaction {
 // ================================================================================================
 
 model Rating {
-    id        String  @id @default(uuid())
-    bookingId String  @unique
-    booking   Booking @relation(fields: [bookingId], references: [id])
+  id        String  @id @default(uuid())
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id])
 
-    raterId String // Who gave the rating
-    rater   User   @relation("RaterRatings", fields: [raterId], references: [id])
+  raterId String // Who gave the rating
+  rater   User   @relation("RaterRatings", fields: [raterId], references: [id])
 
-    rateeId String // Who received the rating
-    ratee   User   @relation("RateeRatings", fields: [rateeId], references: [id])
+  rateeId String // Who received the rating
+  ratee   User   @relation("RateeRatings", fields: [rateeId], references: [id])
 
-    score  Int // 1-5 stars
-    review String? @db.Text
+  score  Int // 1-5 stars
+  review String? @db.Text
 
-    // Detailed Ratings (optional)
-    punctuality     Int? // 1-5
-    professionalism Int? // 1-5
-    quality         Int? // 1-5
-    communication   Int? // 1-5
+  // Detailed Ratings (optional)
+  punctuality     Int? // 1-5
+  professionalism Int? // 1-5
+  quality         Int? // 1-5
+  communication   Int? // 1-5
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([bookingId])
-    @@index([raterId])
-    @@index([rateeId])
+  @@index([bookingId])
+  @@index([raterId])
+  @@index([rateeId])
 }
 
 // ================================================================================================
@@ -1273,54 +1318,54 @@ model Rating {
 // ================================================================================================
 
 enum NotificationType {
-    BOOKING_CREATED
-    BOOKING_CONFIRMED
-    BOOKING_CANCELLED
+  BOOKING_CREATED
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
 
-    BROADCAST_NEW
-    OFFER_RECEIVED
-    OFFER_ACCEPTED
+  BROADCAST_NEW
+  OFFER_RECEIVED
+  OFFER_ACCEPTED
 
-    INSPECTION_SUBMITTED
-    QUOTE_APPROVED
-    QUOTE_REJECTED
+  INSPECTION_SUBMITTED
+  QUOTE_APPROVED
+  QUOTE_REJECTED
 
-    SUPPLY_REQUEST_NEW
-    SUPPLY_REQUEST_ACCEPTED
-    SUPPLY_DELIVERED
+  SUPPLY_REQUEST_NEW
+  SUPPLY_REQUEST_ACCEPTED
+  SUPPLY_DELIVERED
 
-    PAYMENT_RECEIVED
-    PAYMENT_FAILED
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
 
-    STATUS_UPDATE
-    MESSAGE
-    SYSTEM
+  STATUS_UPDATE
+  MESSAGE
+  SYSTEM
 }
 
 model Notification {
-    id     String @id @default(uuid())
-    userId String
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    type      NotificationType
-    title     String
-    titleAr   String?
-    message   String           @db.Text
-    messageAr String?          @db.Text
+  type      NotificationType
+  title     String
+  titleAr   String?
+  message   String           @db.Text
+  messageAr String?          @db.Text
 
-    // Related Entity
-    bookingId String?
-    booking   Booking? @relation(fields: [bookingId], references: [id])
+  // Related Entity
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
 
-    metadata Json? // Additional data
+  metadata Json? // Additional data
 
-    isRead Boolean   @default(false)
-    readAt DateTime?
+  isRead Boolean   @default(false)
+  readAt DateTime?
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([userId, isRead])
-    @@index([createdAt])
+  @@index([userId, isRead])
+  @@index([createdAt])
 }
 
 // ================================================================================================
@@ -1328,21 +1373,21 @@ model Notification {
 // ================================================================================================
 
 model SystemSettings {
-    id    String @id @default(uuid())
-    key   String @unique // e.g., "TOWING_SEARCH_RADIUS"
-    value String // JSON or plain value
-    type  String // "NUMBER", "JSON", "BOOLEAN", "STRING"
+  id    String @id @default(uuid())
+  key   String @unique // e.g., "TOWING_SEARCH_RADIUS"
+  value String // JSON or plain value
+  type  String // "NUMBER", "JSON", "BOOLEAN", "STRING"
 
-    description   String? // English description
-    descriptionAr String? // Arabic description
+  description   String? // English description
+  descriptionAr String? // Arabic description
 
-    category   String  @default("GENERAL") // "TOWING", "GENERAL", "PRICING", "NOTIFICATION"
-    isEditable Boolean @default(true) // Allow admin to edit
+  category   String  @default("GENERAL") // "TOWING", "GENERAL", "PRICING", "NOTIFICATION"
+  isEditable Boolean @default(true) // Allow admin to edit
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([category])
+  @@index([category])
 }
 
 // ================================================================================================
@@ -1350,30 +1395,30 @@ model SystemSettings {
 // ================================================================================================
 
 model TechnicianLocation {
-    id           String @id @default(uuid())
-    technicianId String
-    technician   User   @relation("TechnicianLocations", fields: [technicianId], references: [id], onDelete: Cascade)
+  id           String @id @default(uuid())
+  technicianId String
+  technician   User   @relation("TechnicianLocations", fields: [technicianId], references: [id], onDelete: Cascade)
 
-    // Current GPS location
-    latitude  Float
-    longitude Float
-    heading   Float? // Direction in degrees (0-360)
-    speed     Float? // Speed in km/h
-    accuracy  Float? // GPS accuracy in meters
+  // Current GPS location
+  latitude  Float
+  longitude Float
+  heading   Float? // Direction in degrees (0-360)
+  speed     Float? // Speed in km/h
+  accuracy  Float? // GPS accuracy in meters
 
-    // Context - which booking is this technician working on
-    bookingId String?
-    booking   Booking? @relation("BookingTracking", fields: [bookingId], references: [id], onDelete: SetNull)
+  // Context - which booking is this technician working on
+  bookingId String?
+  booking   Booking? @relation("BookingTracking", fields: [bookingId], references: [id], onDelete: SetNull)
 
-    // Status
-    status String @default("ONLINE") // OFFLINE, ONLINE, ON_JOB
+  // Status
+  status String @default("ONLINE") // OFFLINE, ONLINE, ON_JOB
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([technicianId])
-    @@index([bookingId])
-    @@index([createdAt])
+  @@index([technicianId])
+  @@index([bookingId])
+  @@index([createdAt])
 }
 
 // ================================================================================================
@@ -1381,77 +1426,77 @@ model TechnicianLocation {
 // ================================================================================================
 
 enum OrderStatus {
-    PENDING
-    CONFIRMED
-    PROCESSING
-    SHIPPED
-    DELIVERED
-    CANCELLED
-    REFUNDED
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
 }
 
 model MarketplaceOrder {
-    id          String @id @default(uuid())
-    orderNumber String @unique // ORD-202X-XXXX
+  id          String @id @default(uuid())
+  orderNumber String @unique // ORD-202X-XXXX
 
-    customerId String
-    customer   User   @relation(fields: [customerId], references: [id])
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id])
 
-    // Financials
-    subtotal     Decimal @db.Decimal(10, 2)
-    tax          Decimal @db.Decimal(10, 2)
-    shippingCost Decimal @db.Decimal(10, 2)
-    discount     Decimal @default(0) @db.Decimal(10, 2)
-    totalAmount  Decimal @db.Decimal(10, 2)
+  // Financials
+  subtotal     Decimal @db.Decimal(10, 2)
+  tax          Decimal @db.Decimal(10, 2)
+  shippingCost Decimal @db.Decimal(10, 2)
+  discount     Decimal @default(0) @db.Decimal(10, 2)
+  totalAmount  Decimal @db.Decimal(10, 2)
 
-    status        OrderStatus @default(PENDING)
-    paymentStatus String      @default("PENDING") // PENDING, PAID, FAILED
-    paymentMethod String? // CARD, CASH, WALLET
+  status        OrderStatus @default(PENDING)
+  paymentStatus String      @default("PENDING") // PENDING, PAID, FAILED
+  paymentMethod String? // CARD, CASH, WALLET
 
-    // Shipping details snapshot
-    shippingAddress String? @db.Text
-    shippingCity    String?
-    shippingCountry String  @default("SA")
-    recipientName   String?
-    recipientPhone  String?
+  // Shipping details snapshot
+  shippingAddress String? @db.Text
+  shippingCity    String?
+  shippingCountry String  @default("SA")
+  recipientName   String?
+  recipientPhone  String?
 
-    notes String? @db.Text
+  notes String? @db.Text
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    items MarketplaceOrderItem[]
+  items MarketplaceOrderItem[]
 
-    @@index([customerId])
-    @@index([status])
-    @@index([createdAt])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model MarketplaceOrderItem {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    orderId String
-    order   MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String
+  order   MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-    autoPartId String
-    autoPart   AutoPart @relation(fields: [autoPartId], references: [id])
+  autoPartId String
+  autoPart   AutoPart @relation(fields: [autoPartId], references: [id])
 
-    vendorId String?
-    vendor   VendorProfile? @relation(fields: [vendorId], references: [id])
+  vendorId String?
+  vendor   VendorProfile? @relation(fields: [vendorId], references: [id])
 
-    quantity   Int
-    unitPrice  Decimal @db.Decimal(10, 2)
-    totalPrice Decimal @db.Decimal(10, 2)
+  quantity   Int
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
 
-    // Per-item status allows partial fulfillment in multi-vendor orders
-    status OrderStatus @default(PENDING)
+  // Per-item status allows partial fulfillment in multi-vendor orders
+  status OrderStatus @default(PENDING)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([orderId])
-    @@index([vendorId])
-    @@index([status])
+  @@index([orderId])
+  @@index([vendorId])
+  @@index([status])
 }
 
 // ================================================================================================
@@ -1459,21 +1504,21 @@ model MarketplaceOrderItem {
 // ================================================================================================
 
 model ActivityLog {
-    id     String  @id @default(uuid())
-    userId String? // Optional: System actions might not have a user
-    user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id     String  @id @default(uuid())
+  userId String? // Optional: System actions might not have a user
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-    action   String // e.g., "USER_LOGIN", "BOOKING_CREATED"
-    entity   String // e.g., "Booking", "User", "Invoice"
-    entityId String? // ID of the affected entity
+  action   String // e.g., "USER_LOGIN", "BOOKING_CREATED"
+  entity   String // e.g., "Booking", "User", "Invoice"
+  entityId String? // ID of the affected entity
 
-    details   Json? // Flexible payload for details (diff, ip, user agent)
-    ipAddress String?
+  details   Json? // Flexible payload for details (diff, ip, user agent)
+  ipAddress String?
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([userId])
-    @@index([action])
-    @@index([entity, entityId])
-    @@index([createdAt])
+  @@index([userId])
+  @@index([action])
+  @@index([entity, entityId])
+  @@index([createdAt])
 }

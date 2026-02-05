@@ -1,6 +1,9 @@
 ﻿const express = require('express');
 const router = express.Router();
 const workshopController = require('../controllers/workshop.controller');
+const workshopReviewController = require('../controllers/workshopReview.controller');
+const workshopImageController = require('../controllers/workshopImage.controller');
+const { upload } = require('../../utils/imageUpload');
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
 
@@ -354,4 +357,361 @@ router.patch('/admin/workshops/:id/verify', requireRole('ADMIN'), workshopContro
  */
 router.delete('/admin/workshops/:id', requireRole('ADMIN'), workshopController.deleteWorkshop);
 
+// ================================================================================================
+// WORKSHOP REVIEWS
+// ================================================================================================
+
+/**
+ * @swagger
+ * /api/workshops/{id}/reviews:
+ *   post:
+ *     summary: Create a review for a workshop
+ *     description: Submit a review and rating for a workshop (requires completed booking for verified reviews)
+ *     tags: [Workshop Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Workshop ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [rating]
+ *             properties:
+ *               bookingId:
+ *                 type: string
+ *                 description: Booking ID (optional, makes review verified)
+ *               rating:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 example: 5
+ *               comment:
+ *                 type: string
+ *                 example: Excellent service and professional staff
+ *               commentAr:
+ *                 type: string
+ *                 example: خدمة ممتازة وطاقم محترف
+ *     responses:
+ *       201:
+ *         description: Review created successfully
+ *       400:
+ *         description: Validation error or already reviewed
+ *       404:
+ *         description: Workshop or booking not found
+ */
+router.post('/:id/reviews', workshopReviewController.createReview);
+
+/**
+ * @swagger
+ * /api/workshops/{id}/reviews:
+ *   get:
+ *     summary: Get workshop reviews
+ *     description: Retrieve all approved reviews for a workshop
+ *     tags: [Workshop Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: rating
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 5
+ *       - in: query
+ *         name: isVerified
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: Reviews retrieved successfully
+ */
+router.get('/:id/reviews', workshopReviewController.getWorkshopReviews);
+
+/**
+ * @swagger
+ * /api/workshops/{id}/reviews/stats:
+ *   get:
+ *     summary: Get review statistics
+ *     description: Get rating distribution and statistics for a workshop
+ *     tags: [Workshop Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Statistics retrieved successfully
+ */
+router.get('/:id/reviews/stats', workshopReviewController.getReviewStats);
+
+/**
+ * @swagger
+ * /api/workshops/admin/{id}/reviews:
+ *   get:
+ *     summary: Get workshop reviews (Admin)
+ *     description: Retrieve all reviews including unapproved ones
+ *     tags: [Workshop Reviews - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: isApproved
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: Reviews retrieved successfully
+ */
+router.get('/admin/:id/reviews', requireRole('ADMIN'), workshopReviewController.getWorkshopReviewsAdmin);
+
+/**
+ * @swagger
+ * /api/workshops/admin/reviews/{id}/approve:
+ *   patch:
+ *     summary: Update review approval status
+ *     description: Approve or hide a review
+ *     tags: [Workshop Reviews - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [isApproved]
+ *             properties:
+ *               isApproved:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Review approval status updated
+ */
+router.patch('/admin/reviews/:id/approve', requireRole('ADMIN'), workshopReviewController.updateReviewApproval);
+
+/**
+ * @swagger
+ * /api/workshops/admin/reviews/{id}/response:
+ *   post:
+ *     summary: Add workshop response to review
+ *     description: Add an official response from the workshop to a review
+ *     tags: [Workshop Reviews - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               response:
+ *                 type: string
+ *               responseAr:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Response added successfully
+ */
+router.post('/admin/reviews/:id/response', requireRole('ADMIN'), workshopReviewController.addWorkshopResponse);
+
+/**
+ * @swagger
+ * /api/workshops/admin/reviews/{id}:
+ *   delete:
+ *     summary: Delete a review
+ *     description: Permanently delete a review
+ *     tags: [Workshop Reviews - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Review deleted successfully
+ */
+router.delete('/admin/reviews/:id', requireRole('ADMIN'), workshopReviewController.deleteReview);
+
+// ================================================================================================
+// WORKSHOP IMAGES
+// ================================================================================================
+
+/**
+ * @swagger
+ * /api/workshops/{id}/logo:
+ *   post:
+ *     summary: Upload workshop logo
+ *     description: Upload a logo image for a workshop (Admin only)
+ *     tags: [Workshop Images - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Logo uploaded successfully
+ *       400:
+ *         description: Invalid file type or no file uploaded
+ */
+router.post('/:id/logo', requireRole('ADMIN'), upload.single('file'), workshopImageController.uploadLogo);
+
+/**
+ * @swagger
+ * /api/workshops/{id}/images:
+ *   post:
+ *     summary: Upload workshop images
+ *     description: Upload multiple images for a workshop (max 10 total, Admin only)
+ *     tags: [Workshop Images - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Images uploaded successfully
+ *       400:
+ *         description: Invalid file type, no files, or limit exceeded
+ */
+router.post('/:id/images', requireRole('ADMIN'), upload.array('files', 10), workshopImageController.uploadImages);
+
+/**
+ * @swagger
+ * /api/workshops/{id}/images/{imageIndex}:
+ *   delete:
+ *     summary: Delete workshop image
+ *     description: Delete a specific image by index (Admin only)
+ *     tags: [Workshop Images - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: imageIndex
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Image deleted successfully
+ *       400:
+ *         description: Invalid image index
+ */
+router.delete('/:id/images/:imageIndex', requireRole('ADMIN'), workshopImageController.deleteImage);
+
+/**
+ * @swagger
+ * /api/workshops/{id}/logo:
+ *   delete:
+ *     summary: Delete workshop logo
+ *     description: Delete the workshop logo (Admin only)
+ *     tags: [Workshop Images - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Logo deleted successfully
+ *       400:
+ *         description: Workshop has no logo
+ */
+router.delete('/:id/logo', requireRole('ADMIN'), workshopImageController.deleteLogo);
+
+module.exports = router;
 module.exports = router;

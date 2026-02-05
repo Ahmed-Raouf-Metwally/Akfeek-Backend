@@ -1,5 +1,6 @@
 const prisma = require('../utils/database/prisma');
 const { AppError } = require('../api/middlewares/error.middleware');
+const { validateWorkingHours } = require('../utils/validateWorkingHours');
 
 /**
  * Workshop Service
@@ -147,6 +148,18 @@ class WorkshopService {
         // Validate that either location coordinates are provided
         if (!latitude || !longitude) {
             throw new AppError('Latitude and longitude are required (should be extracted from locationUrl)', 400, 'VALIDATION_ERROR');
+        }
+
+        // Validate working hours if provided
+        if (workingHours) {
+            const validation = validateWorkingHours(workingHours);
+            if (!validation.isValid) {
+                throw new AppError(
+                    `Invalid working hours: ${validation.errors.join(', ')}`,
+                    400,
+                    'VALIDATION_ERROR'
+                );
+            }
         }
 
         const workshop = await prisma.certifiedWorkshop.create({
