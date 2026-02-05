@@ -198,4 +198,132 @@ async function getBookingById(req, res, next) {
   }
 }
 
-module.exports = { getAllBookings, getBookingById };
+/**
+ * Create new booking
+ * POST /api/bookings
+ */
+async function createBooking(req, res, next) {
+  try {
+    const {
+      customerId,
+      vehicleId,
+      scheduledDate,
+      scheduledTime,
+      workshopId,
+      deliveryMethod,
+      services,
+      products,
+      notes
+    } = req.body;
+
+    // Validate required fields
+    if (!customerId || !vehicleId || !scheduledDate) {
+      throw new AppError('Missing required fields', 400, 'VALIDATION_ERROR');
+    }
+
+    // Validate workshop if provided
+    if (workshopId) {
+      const workshop = await prisma.certifiedWorkshop.findUnique({
+        where: { id: workshopId }
+      });
+
+      if (!workshop) {
+        throw new AppError('Workshop not found', 404, 'NOT_FOUND');
+      }
+
+      if (!workshop.isActive || !workshop.isVerified) {
+        throw new AppError('Workshop is not available', 400, 'WORKSHOP_NOT_AVAILABLE');
+      }
+
+      // Validate delivery method for workshop bookings
+      if (deliveryMethod && !['FLATBED', 'SELF_DELIVERY'].includes(deliveryMethod)) {
+        throw new AppError('Invalid delivery method', 400, 'INVALID_DELIVERY_METHOD');
+      }
+    }
+
+    // Calculate flatbed fee if delivery method is FLATBED
+    let flatbedFee = 0;
+    if (workshopId && deliveryMethod === 'FLATBED') {
+      // TODO: Calculate distance-based flatbed fee
+      // For now, use a fixed fee
+      flatbedFee = 150; // SAR
+    }
+
+    // Generate booking number
+    const bookingNumber = `BKG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    // Calculate pricing (simplified - you may need to adjust based on your business logic)
+    let subtotal = 0;
+    let laborFee = 0;
+
+    // Create booking
+    const booking = await prisma.booking.create({
+      data: {
+        bookingNumber,
+        customerId,
+        vehicleId,
+        scheduledDate: new Date(scheduledDate),
+        scheduledTime,
+        workshopId,
+        deliveryMethod,
+        flatbedFee,
+        status: 'PENDING',
+        subtotal,
+        laborFee,
+        deliveryFee: flatbedFee,
+        partsTotal: 0,
+        discount: 0,
+        tax: 0,
+        totalPrice: flatbedFee, // Will be updated after adding services/products
+        notes
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            email: true,
+            profile: { select: { firstName: true, lastName: true } }
+          }
+        },
+        vehicle: {
+          include: {
+            vehicleModel: {
+              include: { brand: true }
+            }
+          }
+        },
+        workshop: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            city: true,
+            phone: true
+          }
+        }
+      }
+    });
+
+    // Create booking status history
+    await prisma.bookingStatusHistory.create({
+      data: {
+        bookingId: booking.id,
+        fromStatus: 'PENDING',
+        toStatus: 'PENDING',
+        changedBy: customerId,
+        reason: 'Booking created'
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Booking created successfully',
+      messageAr: 'تم إنشاء الحجز بنجاح',
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { getAllBookings, getBookingById, createBooking };

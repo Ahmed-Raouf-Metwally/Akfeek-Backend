@@ -273,6 +273,12 @@ enum ServiceCategory {
     EMERGENCY
     INSPECTION
     CUSTOMIZATION
+    CERTIFIED_WORKSHOP
+}
+
+enum DeliveryMethod {
+    FLATBED // سطحة - Akfeek sends a flatbed
+    SELF_DELIVERY // تسليم للمركز - Customer delivers vehicle
 }
 
 model Service {
@@ -602,6 +608,59 @@ model SupplierPart {
 }
 
 // ================================================================================================
+// CERTIFIED WORKSHOPS
+// ================================================================================================
+
+model CertifiedWorkshop {
+    id            String  @id @default(uuid())
+    name          String
+    nameAr        String?
+    description   String? @db.Text
+    descriptionAr String? @db.Text
+
+    // Location
+    address   String
+    addressAr String?
+    city      String
+    cityAr    String?
+    latitude  Float
+    longitude Float
+
+    // Contact
+    phone String
+    email String?
+
+    // Working Hours (JSON format: {"sunday": {"open": "08:00", "close": "18:00"}, ...})
+    workingHours Json?
+
+    // Services Offered (JSON array of service types)
+    services String @db.Text
+
+    // Ratings & Stats
+    averageRating Float? @default(0)
+    totalReviews  Int    @default(0)
+    totalBookings Int    @default(0)
+
+    // Media
+    logo   String?
+    images Json? // Array of image URLs
+
+    // Status
+    isActive   Boolean   @default(true)
+    isVerified Boolean   @default(false)
+    verifiedAt DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    bookings Booking[]
+
+    @@index([isActive, isVerified])
+    @@index([city])
+}
+
+// ================================================================================================
 // BOOKING CORE (Polymorphic - Supports All 4 Service Models)
 // ================================================================================================
 
@@ -657,6 +716,12 @@ model Booking {
 
     addressId String?
     address   Address? @relation(fields: [addressId], references: [id])
+
+    // Certified Workshop Fields
+    workshopId     String?
+    workshop       CertifiedWorkshop? @relation(fields: [workshopId], references: [id])
+    deliveryMethod DeliveryMethod?
+    flatbedFee     Decimal?           @default(0) @db.Decimal(10, 2)
 
     // Scheduling
     scheduledDate DateTime?

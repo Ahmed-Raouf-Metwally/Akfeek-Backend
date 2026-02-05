@@ -28,6 +28,7 @@ const vendorRoutes = require('./vendors.routes');
 const autoPartCategoryRoutes = require('./autoPartCategories.routes');
 const autoPartRoutes = require('./autoParts.routes');
 const marketplaceOrderRoutes = require('./marketplaceOrders.routes');
+const workshopRoutes = require('./workshops.routes');
 
 // ... existing routes
 // ... (imports)
@@ -39,6 +40,9 @@ router.use('/vendors', vendorRoutes);
 router.use('/auto-part-categories', autoPartCategoryRoutes);
 router.use('/auto-parts', autoPartRoutes);
 router.use('/marketplace-orders', marketplaceOrderRoutes);
+
+// Certified Workshops routes
+router.use('/workshops', workshopRoutes);
 
 // Public routes (no authentication required)
 router.use('/auth', authRoutes);
