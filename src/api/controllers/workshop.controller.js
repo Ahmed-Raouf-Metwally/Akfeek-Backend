@@ -1,4 +1,5 @@
 const workshopService = require('../../services/workshop.service');
+const { parseGoogleMapsUrl } = require('../../utils/mapsParser');
 
 /**
  * Certified Workshop Controller
@@ -74,7 +75,39 @@ class WorkshopController {
      */
     async createWorkshop(req, res, next) {
         try {
-            const workshop = await workshopService.createWorkshop(req.body);
+            const payload = { ...req.body };
+
+            console.log('🔍 Received payload:', JSON.stringify(payload, null, 2));
+
+            // If locationUrl is provided, try to extract coordinates
+            if (payload.locationUrl) {
+                console.log('📍 Parsing locationUrl:', payload.locationUrl);
+                const coords = await parseGoogleMapsUrl(payload.locationUrl);
+                console.log('📍 Extracted coords:', coords);
+
+                if (coords && coords.latitude && coords.longitude) {
+                    payload.latitude = coords.latitude;
+                    payload.longitude = coords.longitude;
+                } else {
+                    // If URL provided but parsing failed
+                    throw new Error('Invalid Google Maps URL. Could not extract coordinates.');
+                }
+
+                // Remove locationUrl from payload as it's not in schema
+                delete payload.locationUrl;
+            } else {
+                // If it was empty string, just remove it
+                delete payload.locationUrl;
+            }
+
+            // Check if we have coordinates (either from URL or raw payload)
+            if (!payload.latitude || !payload.longitude) {
+                throw new Error('Location is required. Please provide a valid Google Maps URL.');
+            }
+
+            console.log('✅ Final payload to service:', JSON.stringify(payload, null, 2));
+
+            const workshop = await workshopService.createWorkshop(payload);
 
             res.status(201).json({
                 success: true,
@@ -83,6 +116,7 @@ class WorkshopController {
                 data: workshop
             });
         } catch (error) {
+            console.error('❌ Error creating workshop:', error.message);
             next(error);
         }
     }
@@ -93,7 +127,25 @@ class WorkshopController {
      */
     async updateWorkshop(req, res, next) {
         try {
-            const workshop = await workshopService.updateWorkshop(req.params.id, req.body);
+            const payload = { ...req.body };
+
+            // If locationUrl is provided, extract and update coordinates
+            if (payload.locationUrl) {
+                const coords = await parseGoogleMapsUrl(payload.locationUrl);
+                if (coords && coords.latitude && coords.longitude) {
+                    payload.latitude = coords.latitude;
+                    payload.longitude = coords.longitude;
+                } else {
+                    throw new Error('Invalid Google Maps URL. Could not extract coordinates.');
+                }
+                // Remove locationUrl from payload as it's not in schema
+                delete payload.locationUrl;
+            } else if (payload.hasOwnProperty('locationUrl')) {
+                // If specifically set to empty/null but passed, remove it
+                delete payload.locationUrl;
+            }
+
+            const workshop = await workshopService.updateWorkshop(req.params.id, payload);
 
             res.json({
                 success: true,

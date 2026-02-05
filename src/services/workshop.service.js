@@ -140,8 +140,13 @@ class WorkshopService {
         } = data;
 
         // Validate required fields
-        if (!name || !city || !address || !phone || !latitude || !longitude || !services) {
+        if (!name || !city || !address || !phone || !services) {
             throw new AppError('Missing required fields', 400, 'VALIDATION_ERROR');
+        }
+
+        // Validate that either location coordinates are provided
+        if (!latitude || !longitude) {
+            throw new AppError('Latitude and longitude are required (should be extracted from locationUrl)', 400, 'VALIDATION_ERROR');
         }
 
         const workshop = await prisma.certifiedWorkshop.create({

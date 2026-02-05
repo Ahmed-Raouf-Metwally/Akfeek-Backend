@@ -177,7 +177,7 @@ router.get('/admin/all', requireRole('ADMIN'), workshopController.getAllWorkshop
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, city, address, phone, latitude, longitude, services]
+ *             required: [name, city, address, phone, services]
  *             properties:
  *               name:
  *                 type: string
@@ -200,11 +200,17 @@ router.get('/admin/all', requireRole('ADMIN'), workshopController.getAllWorkshop
  *               cityAr:
  *                 type: string
  *                 example: الرياض
+ *               locationUrl:
+ *                 type: string
+ *                 description: Google Maps URL (coordinates will be extracted automatically)
+ *                 example: https://maps.google.com/?q=24.7136,46.6753
  *               latitude:
  *                 type: number
+ *                 description: Optional if locationUrl is provided
  *                 example: 24.7136
  *               longitude:
  *                 type: number
+ *                 description: Optional if locationUrl is provided
  *                 example: 46.6753
  *               phone:
  *                 type: string
