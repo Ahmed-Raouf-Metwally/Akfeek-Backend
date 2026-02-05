@@ -714,4 +714,3 @@ router.delete('/:id/images/:imageIndex', requireRole('ADMIN'), workshopImageCont
 router.delete('/:id/logo', requireRole('ADMIN'), workshopImageController.deleteLogo);
 
 module.exports = router;
-module.exports = router;
