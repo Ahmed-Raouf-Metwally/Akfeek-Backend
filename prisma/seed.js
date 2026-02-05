@@ -409,7 +409,66 @@ async function main() {
       });
     serviceIdByName[svcData.name] = service.id;
   }
-  console.log(`✅ Created ${servicesData.length} services\n`);
+
+  // ============================================
+  // Mobile Car Service (خدمة الزرَش / الصيانة المتنقلة) – parent + sub-services
+  // ============================================
+  console.log('🚐 Seeding Mobile Car Service (parent + sub-services)...');
+  let mobileCarParent = await prisma.service.findFirst({
+    where: { type: 'MOBILE_CAR_SERVICE', parentServiceId: null },
+  });
+  if (!mobileCarParent) {
+    mobileCarParent = await prisma.service.create({
+      data: {
+        name: 'Mobile Car Service',
+        nameAr: 'خدمة الزرَش / الصيانة المتنقلة',
+        description: 'Mobile workshop and maintenance at your location.',
+        descriptionAr: 'ورشة متنقلة وصيانة في موقعك.',
+        type: 'MOBILE_CAR_SERVICE',
+        category: 'MAINTENANCE',
+        estimatedDuration: null,
+        imageUrl: IMAGES.towing,
+        isActive: true,
+        requiresVehicle: true,
+        parentServiceId: null,
+      },
+    });
+  }
+
+  const mobileSubServicesData = [
+    { name: 'Oil Change (Mobile)', nameAr: 'تغيير الزيت (متنقل)', category: 'MAINTENANCE', duration: 45 },
+    { name: 'Periodic Maintenance (Mobile)', nameAr: 'الصيانة الدورية (متنقلة)', category: 'MAINTENANCE', duration: 90 },
+    { name: 'Tire Replacement (Mobile)', nameAr: 'تغيير الإطارات (متنقل)', category: 'MAINTENANCE', duration: 60 },
+    { name: 'Battery Replacement (Mobile)', nameAr: 'تغيير البطارية (متنقل)', category: 'MAINTENANCE', duration: 30 },
+    { name: 'Electrical Repairs (Mobile)', nameAr: 'إصلاحات كهربائية (متنقلة)', category: 'REPAIR', duration: 120 },
+    { name: 'Other Mechanical (Mobile)', nameAr: 'أعمال ميكانيكية أخرى (متنقلة)', category: 'REPAIR', duration: 60 },
+  ];
+
+  const mobileSubServiceIdByName = {};
+  for (const sub of mobileSubServicesData) {
+    const existing = await prisma.service.findFirst({
+      where: { name: sub.name, parentServiceId: mobileCarParent.id },
+    });
+    const service = existing
+      ? existing
+      : await prisma.service.create({
+        data: {
+          name: sub.name,
+          nameAr: sub.nameAr,
+          description: `Mobile ${sub.name} at your location.`,
+          descriptionAr: `خدمة ${sub.nameAr} في موقعك.`,
+          type: 'MOBILE_CAR_SERVICE',
+          category: sub.category,
+          estimatedDuration: sub.duration,
+          imageUrl: IMAGES.oilChange,
+          isActive: true,
+          requiresVehicle: true,
+          parentServiceId: mobileCarParent.id,
+        },
+      });
+    mobileSubServiceIdByName[sub.name] = service.id;
+  }
+  console.log(`✅ Created Mobile Car Service (parent + ${mobileSubServicesData.length} sub-services)\n`);
 
   // Service Pricing
   console.log('💰 Setting up service pricing...');
@@ -862,11 +921,16 @@ async function main() {
 
   for (let idx = 0; idx < allBookingsForInvoice.length; idx++) {
     const booking = allBookingsForInvoice[idx];
-    const invNumber = `INV-COMP-${String(invoiceNum).padStart(5, '0')}`;
-    invoiceNum++;
 
     const existingInv = await prisma.invoice.findUnique({ where: { bookingId: booking.id } });
     if (existingInv) continue;
+
+    let invNumber = `INV-COMP-${String(invoiceNum).padStart(5, '0')}`;
+    while (await prisma.invoice.findUnique({ where: { invoiceNumber: invNumber } })) {
+      invoiceNum++;
+      invNumber = `INV-COMP-${String(invoiceNum).padStart(5, '0')}`;
+    }
+    invoiceNum++;
 
     const totalAmount = Number(booking.totalPrice) || 150;
     const status = invoiceStatuses[idx % invoiceStatuses.length];
@@ -1262,7 +1326,8 @@ async function main() {
       category: 'Filters',
       vendorIdx: 0, // Speedy Parts
       images: [IMAGES.filter],
-      compatibleBrands: ['Toyota', 'Nissan']
+      compatibleBrands: ['Toyota', 'Nissan'],
+      mobileSubServiceNames: ['Oil Change (Mobile)', 'Periodic Maintenance (Mobile)']
     },
     {
       name: 'Ceramic Brake Pad Set - Front',
@@ -1274,7 +1339,8 @@ async function main() {
       category: 'Brake Pads',
       vendorIdx: 0,
       images: [IMAGES.brakePad],
-      compatibleBrands: ['Toyota', 'Honda']
+      compatibleBrands: ['Toyota', 'Honda'],
+      mobileSubServiceNames: ['Periodic Maintenance (Mobile)', 'Other Mechanical (Mobile)']
     },
     {
       name: 'OEM Oil Filter',
@@ -1286,7 +1352,8 @@ async function main() {
       category: 'Filters',
       vendorIdx: null, // Platform owned
       images: [IMAGES.oil],
-      compatibleBrands: ['Toyota']
+      compatibleBrands: ['Toyota'],
+      mobileSubServiceNames: ['Oil Change (Mobile)']
     },
     {
       name: 'Sport Suspension Kit',
@@ -1298,7 +1365,8 @@ async function main() {
       category: 'Shock Absorbers',
       vendorIdx: 1, // Luxury Auto
       images: [IMAGES.accessory],
-      compatibleBrands: ['BMW', 'Mercedes-Benz']
+      compatibleBrands: ['BMW', 'Mercedes-Benz'],
+      mobileSubServiceNames: ['Other Mechanical (Mobile)']
     },
     {
       name: 'Offroad Lift Kit 2.5"',
@@ -1310,7 +1378,8 @@ async function main() {
       category: 'Suspension',
       vendorIdx: 2, // Desert Offroad
       images: [IMAGES.truck],
-      compatibleBrands: ['Toyota', 'Nissan'] // Land cruiser, Patrol
+      compatibleBrands: ['Toyota', 'Nissan'], // Land cruiser, Patrol
+      mobileSubServiceNames: ['Other Mechanical (Mobile)']
     }
   ];
 
@@ -1356,16 +1425,58 @@ async function main() {
       });
 
       for (const model of brandModels) {
-        await prisma.autoPartCompatibility.create({
-          data: {
+        await prisma.autoPartCompatibility.upsert({
+          where: {
+            partId_vehicleModelId: {
+              partId: createdPart.id,
+              vehicleModelId: model.id
+            }
+          },
+          update: {},
+          create: {
             partId: createdPart.id,
-            vehicleModelId: model.id,
+            vehicleModelId: model.id
           }
         });
       }
     }
+
+    // Link part to Mobile Car sub-services (AutoPartService)
+    for (const subServiceName of part.mobileSubServiceNames || []) {
+      const serviceId = mobileSubServiceIdByName[subServiceName];
+      if (serviceId) {
+        await prisma.autoPartService.upsert({
+          where: {
+            autoPartId_serviceId: { autoPartId: createdPart.id, serviceId }
+          },
+          update: {},
+          create: {
+            autoPartId: createdPart.id,
+            serviceId,
+            isRecommended: true,
+            sortOrder: 0
+          }
+        });
+      }
+    }
+
+    // AutoPartVendor: which vendor supplies this part (for mobile booking parts)
+    const vendorIdForPart = part.vendorIdx !== null ? allVendors[part.vendorIdx].id : allVendors[0].id;
+    await prisma.autoPartVendor.upsert({
+      where: {
+        autoPartId_vendorId: { autoPartId: createdPart.id, vendorId: vendorIdForPart }
+      },
+      update: { unitPrice: part.price, stockQuantity: part.stock, isAvailable: true },
+      create: {
+        autoPartId: createdPart.id,
+        vendorId: vendorIdForPart,
+        unitPrice: part.price,
+        stockQuantity: part.stock,
+        isAvailable: true
+      }
+    });
   }
-  console.log(`✅ Created ${partCount} auto parts with images and compatibility`);
+  console.log(`✅ Created ${partCount} auto parts with images, compatibility, AutoPartService, and AutoPartVendor`);
 
 
   // ============================================
@@ -1435,6 +1546,158 @@ async function main() {
     }
   }
   console.log(`✅ Created ${orderCount} marketplace orders`);
+
+  // ============================================
+  // 20. Mobile Car Service Bookings (طلبات خدمة الورش المتنقلة)
+  // ============================================
+  console.log('🚐 Seeding Mobile Car Service Bookings...');
+
+  const mobileSubServiceIds = Object.values(mobileSubServiceIdByName);
+  const mobileBookingStatuses = [
+    'PENDING',
+    'CONFIRMED',
+    'TECHNICIAN_ASSIGNED',
+    'TECHNICIAN_EN_ROUTE',
+    'ARRIVED',
+    'IN_SERVICE',
+    'IN_PROGRESS',
+    'COMPLETED'
+  ];
+  const mobileTimes = ['09:00', '10:00', '11:30', '14:00', '15:30', '16:00'];
+  let mobileBookingNum = 1;
+  let mobileBookingCount = 0;
+
+  for (let i = 0; i < Math.min(8, allCustomers.length); i++) {
+    const customer = allCustomers[i];
+    const customerVehicles = await prisma.userVehicle.findMany({
+      where: { userId: customer.id },
+      include: { vehicleModel: true }
+    });
+    const address = await prisma.address.findFirst({
+      where: { userId: customer.id },
+      orderBy: { isDefault: 'desc' }
+    });
+    if (customerVehicles.length === 0 || !address) continue;
+
+    const vehicle = customerVehicles[0];
+    const status = mobileBookingStatuses[i % mobileBookingStatuses.length];
+    const technician = status !== 'PENDING' ? allTechnicians[i % allTechnicians.length] : null;
+
+    const bookingNumber = `BKG-MOB-${String(mobileBookingNum).padStart(5, '0')}`;
+    mobileBookingNum++;
+    const existingMobileBooking = await prisma.booking.findUnique({ where: { bookingNumber } });
+    if (existingMobileBooking) continue;
+
+    const scheduledDate = new Date(now);
+    scheduledDate.setDate(scheduledDate.getDate() + (i % 5));
+    const subServiceId1 = mobileSubServiceIds[i % mobileSubServiceIds.length];
+    const subServiceId2 = mobileSubServiceIds[(i + 2) % mobileSubServiceIds.length];
+    const selectedSubServiceIds = i % 2 === 0 ? [subServiceId1] : [subServiceId1, subServiceId2];
+
+    const servicePrice1 = 80 + (i * 15);
+    const servicePrice2 = 60 + (i * 10);
+    let servicesSubtotal = selectedSubServiceIds.length === 1 ? servicePrice1 : servicePrice1 + servicePrice2;
+    const laborFee = 50;
+    const deliveryFee = 25;
+    let partsTotal = 0;
+
+    const booking = await prisma.booking.create({
+      data: {
+        bookingNumber,
+        customerId: customer.id,
+        vehicleId: vehicle.id,
+        technicianId: technician?.id || null,
+        addressId: address.id,
+        scheduledDate,
+        scheduledTime: mobileTimes[i % mobileTimes.length],
+        pickupLat: address.latitude,
+        pickupLng: address.longitude,
+        pickupAddress: `${address.street}, ${address.city}`,
+        status,
+        subtotal: servicesSubtotal,
+        laborFee,
+        deliveryFee,
+        partsTotal: 0,
+        discount: 0,
+        tax: 0,
+        totalPrice: servicesSubtotal + laborFee + deliveryFee,
+        notes: i % 2 === 0 ? 'طلب خدمة ورشة متنقلة - تغيير زيت' : 'صيانة دورية في الموقع'
+      }
+    });
+
+    for (const svcId of selectedSubServiceIds) {
+      const unitPrice = svcId === subServiceId1 ? servicePrice1 : servicePrice2;
+      await prisma.bookingService.create({
+        data: {
+          bookingId: booking.id,
+          serviceId: svcId,
+          quantity: 1,
+          unitPrice,
+          totalPrice: unitPrice
+        }
+      });
+    }
+
+    const compatibleParts = await prisma.autoPart.findMany({
+      where: {
+        isActive: true,
+        autoPartServices: { some: { serviceId: { in: selectedSubServiceIds } } },
+        compatibility: { some: { vehicleModelId: vehicle.vehicleModelId } }
+      },
+      include: {
+        autoPartVendors: { take: 1 }
+      },
+      take: 2
+    });
+
+    for (const part of compatibleParts) {
+      const qty = 1;
+      const unitPrice = Number(part.price);
+      const totalPrice = unitPrice * qty;
+      partsTotal += totalPrice;
+      const vendorId = part.autoPartVendors?.[0]?.vendorId || part.vendorId || null;
+      await prisma.bookingAutoPart.create({
+        data: {
+          bookingId: booking.id,
+          autoPartId: part.id,
+          vendorId,
+          quantity: qty,
+          unitPrice,
+          totalPrice
+        }
+      });
+    }
+
+    if (partsTotal > 0) {
+      const newSubtotal = Number(booking.subtotal) + partsTotal;
+      const newTotal = newSubtotal + Number(booking.laborFee) + Number(booking.deliveryFee);
+      const tax = newTotal * 0.15;
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { partsTotal, subtotal: newSubtotal, tax, totalPrice: newTotal + tax }
+      });
+    }
+
+    const statusHistoryEntries = [
+      { from: null, to: 'PENDING', ts: 0 },
+      { from: 'PENDING', to: status === 'PENDING' ? null : 'CONFIRMED', ts: 1 },
+      { from: 'CONFIRMED', to: status === 'CONFIRMED' ? null : status, ts: 2 }
+    ].filter((e) => e.to);
+    for (const h of statusHistoryEntries) {
+      await prisma.bookingStatusHistory.create({
+        data: {
+          bookingId: booking.id,
+          fromStatus: h.from,
+          toStatus: h.to,
+          changedBy: technician?.id || customer.id,
+          reason: `Status: ${h.to}`,
+          timestamp: new Date(booking.createdAt.getTime() + h.ts * 60000)
+        }
+      });
+    }
+    mobileBookingCount++;
+  }
+  console.log(`✅ Created ${mobileBookingCount} Mobile Car Service bookings (with pickup location, sub-services, and compatible parts)\n`);
 
   // ============================================
   // 23. Certified Workshops
@@ -1560,13 +1823,19 @@ async function main() {
 
   let workshopCount = 0;
   for (const workshopData of workshopsData) {
-    await prisma.certifiedWorkshop.upsert({
-      where: {
-        phone: workshopData.phone
-      },
-      update: workshopData,
-      create: workshopData
+    const existing = await prisma.certifiedWorkshop.findFirst({
+      where: { phone: workshopData.phone }
     });
+    if (existing) {
+      await prisma.certifiedWorkshop.update({
+        where: { id: existing.id },
+        data: workshopData
+      });
+    } else {
+      await prisma.certifiedWorkshop.create({
+        data: workshopData
+      });
+    }
     workshopCount++;
   }
   console.log(`✅ Created ${workshopCount} certified workshops\n`);

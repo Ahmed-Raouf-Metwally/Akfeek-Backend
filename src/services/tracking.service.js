@@ -65,8 +65,8 @@ class TrackingService {
                 // Calculate ETA to pickup or destination based on booking status
                 let targetLat, targetLng;
 
-                if (booking.status === 'TECHNICIAN_EN_ROUTE') {
-                    // Going to pickup location
+                if (booking.status === 'TECHNICIAN_EN_ROUTE' || booking.status === 'ON_THE_WAY') {
+                    // Going to pickup/customer location
                     targetLat = booking.pickupLat;
                     targetLng = booking.pickupLng;
                 } else if (booking.status === 'IN_PROGRESS') {
@@ -159,7 +159,7 @@ class TrackingService {
         if (location) {
             let targetLat, targetLng;
 
-            if (booking.status === 'TECHNICIAN_EN_ROUTE') {
+            if (booking.status === 'TECHNICIAN_EN_ROUTE' || booking.status === 'ON_THE_WAY') {
                 targetLat = booking.pickupLat;
                 targetLng = booking.pickupLng;
             } else if (booking.status === 'IN_PROGRESS') {

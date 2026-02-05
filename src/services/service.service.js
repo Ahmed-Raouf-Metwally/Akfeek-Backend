@@ -68,7 +68,9 @@ class ServiceCatalogService {
           include: {
             addOn: true
           }
-        }
+        },
+        parentService: { select: { id: true, name: true, nameAr: true, type: true } },
+        subServices: { where: { isActive: true }, select: { id: true, name: true, nameAr: true, type: true, category: true, estimatedDuration: true, imageUrl: true } }
       }
     });
 
@@ -89,6 +91,7 @@ class ServiceCatalogService {
       name, nameAr, description, descriptionAr, 
       type, category, estimatedDuration, 
       imageUrl, icon, isActive, requiresVehicle,
+      parentServiceId,
       pricing 
     } = data;
 
@@ -106,6 +109,7 @@ class ServiceCatalogService {
         ...(icon !== undefined && icon !== '' && { icon }),
         ...(isActive !== undefined && { isActive: !!isActive }),
         ...(requiresVehicle !== undefined && { requiresVehicle: !!requiresVehicle }),
+        ...(parentServiceId !== undefined && parentServiceId !== '' && parentServiceId !== null && { parentServiceId }),
         pricing: {
           create: pricing ? pricing.map(p => ({
             vehicleType: p.vehicleType || p.vehicleSize,
@@ -115,7 +119,8 @@ class ServiceCatalogService {
         }
       },
       include: {
-        pricing: true
+        pricing: true,
+        parentService: { select: { id: true, name: true, nameAr: true } }
       }
     });
 
@@ -133,15 +138,19 @@ class ServiceCatalogService {
     // Check existence
     await this.getServiceById(id);
 
-    const { pricing, ...updates } = data;
+    const { pricing, parentServiceId, ...updates } = data;
 
-    // Update main fields
+    const updateData = {
+      ...updates,
+      ...(updates.estimatedDuration && { estimatedDuration: parseInt(updates.estimatedDuration) })
+    };
+    if (parentServiceId !== undefined) {
+      updateData.parentServiceId = parentServiceId === '' || parentServiceId === null ? null : parentServiceId;
+    }
+
     const service = await prisma.service.update({
       where: { id },
-      data: {
-        ...updates,
-        ...(updates.estimatedDuration && { estimatedDuration: parseInt(updates.estimatedDuration) })
-      }
+      data: updateData
     });
 
     // Update pricing if provided
