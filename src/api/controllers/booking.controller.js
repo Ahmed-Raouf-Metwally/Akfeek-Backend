@@ -96,7 +96,7 @@ async function getBookingById(req, res, next) {
             id: true,
             email: true,
             phone: true,
-            profile: { select: { firstName: true, lastName: true, phoneNumber: true } },
+            profile: { select: { firstName: true, lastName: true } },
           },
         },
         vehicle: {
@@ -183,6 +183,30 @@ async function getBookingById(req, res, next) {
                 name: true,
                 nameAr: true,
                 sku: true,
+              },
+            },
+          },
+        },
+        address: {
+          select: {
+            id: true,
+            label: true,
+            labelAr: true,
+            street: true,
+            city: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
+        bookingAutoParts: {
+          include: {
+            autoPart: {
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+                nameAr: true,
+                price: true,
               },
             },
           },

@@ -267,6 +267,7 @@ enum ServiceType {
   CATALOG // E-Commerce: Oil Change, Filter Replacement
   EMERGENCY // Indrive/Broadcast: Roadside, Mobile Workshop
   INSPECTION // Ekfik Lifecycle: Valet & Inspection
+  MOBILE_CAR_SERVICE // خدمة الزرَش / الصيانة المتنقلة - Parent with sub-services
 }
 
 enum ServiceCategory {
@@ -301,6 +302,12 @@ model Service {
   requiresVehicle   Boolean @default(true)
   estimatedDuration Int? // minutes
 
+  // Mobile Car Service: parent service contains sub-services
+  parentServiceId String?
+  parentService   Service?  @relation("MobileCarSubServices", fields: [parentServiceId], references: [id], onDelete: SetNull)
+  subServices     Service[] @relation("MobileCarSubServices")
+  customAttributes Json? // Per sub-service custom attributes (not shared)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -309,9 +316,11 @@ model Service {
   bookingServices BookingService[]
   addOns          ServiceAddOn[]   @relation("ServiceAddOns")
   parentAddOns    ServiceAddOn[]   @relation("ParentService")
+  autoPartServices AutoPartService[]
 
   @@index([type, isActive])
   @@index([category])
+  @@index([parentServiceId])
 }
 
 model ServicePricing {
@@ -458,6 +467,8 @@ model VendorProfile {
   // Relations
   parts      AutoPart[]             @relation("VendorOwnedParts")
   orderItems MarketplaceOrderItem[]
+  autoPartVendors AutoPartVendor[]  // Vendors supplying parts (pricing & availability)
+  bookingAutoParts BookingAutoPart[] // Bookings where this vendor supplied parts
 
   @@index([userId])
   @@index([status])
@@ -534,6 +545,9 @@ model AutoPart {
   images        AutoPartImage[]
   compatibility AutoPartCompatibility[]
   orderItems    MarketplaceOrderItem[]
+  autoPartServices AutoPartService[]
+  autoPartVendors  AutoPartVendor[]
+  bookingAutoParts BookingAutoPart[]
 
   @@index([categoryId])
   @@index([vendorId])
@@ -576,6 +590,43 @@ model AutoPartCompatibility {
   @@unique([partId, vehicleModelId])
   @@index([partId])
   @@index([vehicleModelId])
+}
+
+// Spare part linked to one or more services (e.g. sub-services of Mobile Car Service)
+model AutoPartService {
+    id        String  @id @default(uuid())
+    autoPartId String
+    autoPart   AutoPart @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
+    serviceId  String
+    service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+    isRecommended Boolean @default(false) // Recommended for this service
+    sortOrder     Int     @default(0)
+    createdAt     DateTime @default(now())
+
+    @@unique([autoPartId, serviceId])
+    @@index([autoPartId])
+    @@index([serviceId])
+}
+
+// Vendor (supplier) can supply spare part with own pricing & availability
+model AutoPartVendor {
+    id         String   @id @default(uuid())
+    autoPartId String
+    autoPart   AutoPart      @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
+    vendorId   String
+    vendor     VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+    unitPrice      Decimal  @db.Decimal(10, 2)
+    stockQuantity  Int      @default(0)
+    isAvailable    Boolean  @default(true)
+    leadTimeDays   Int?     // Optional delivery lead time
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+
+    @@unique([autoPartId, vendorId])
+    @@index([autoPartId])
+    @@index([vendorId])
 }
 
 // ================================================================================================
@@ -738,6 +789,12 @@ enum BookingStatus {
   IN_TRANSIT_DELIVERY // Returning vehicle
   DELIVERED // Vehicle returned to customer
 
+  // Mobile / Towing tracking (technician en route, arrived, in service)
+  TECHNICIAN_EN_ROUTE // Technician on the way to customer
+  ON_THE_WAY // Alias for mobile car service flow
+  ARRIVED // Technician arrived at location
+  IN_SERVICE // Work in progress at location
+
   // Terminal States
   CANCELLED // Cancelled by customer/admin
   REJECTED // Rejected by technician
@@ -806,6 +863,7 @@ model Booking {
   // Relations
   services            BookingService[]
   products            BookingProduct[]
+  bookingAutoParts    BookingAutoPart[] // Spare parts (e.g. Mobile Car Service)
   statusHistory       BookingStatusHistory[]
   jobBroadcast        JobBroadcast?
   inspectionReport    InspectionReport?
@@ -857,6 +915,27 @@ model BookingProduct {
 
   @@index([bookingId])
   @@index([productId])
+}
+
+// Spare parts on a booking (e.g. Mobile Car Service)
+model BookingAutoPart {
+    id         String  @id @default(uuid())
+    bookingId  String
+    booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+    autoPartId String
+    autoPart   AutoPart @relation(fields: [autoPartId], references: [id])
+    vendorId   String?  // Which vendor supplied (optional)
+    vendor     VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+    quantity   Int     @default(1)
+    unitPrice  Decimal @db.Decimal(10, 2)
+    totalPrice Decimal @db.Decimal(10, 2)
+
+    createdAt DateTime @default(now())
+
+    @@index([bookingId])
+    @@index([autoPartId])
+    @@index([vendorId])
 }
 
 model BookingStatusHistory {

@@ -61,6 +61,10 @@ const technicianCarWashRoutes = require('./technicianCarwash.routes');
 router.use('/bookings/carwash', carWashRoutes);
 router.use('/technician/carwash', technicianCarWashRoutes);
 
+// Mobile Car Service (خدمة الزرَش / الصيانة المتنقلة)
+const mobileCarServiceRoutes = require('./mobileCarService.routes');
+router.use('/mobile-car-service', mobileCarServiceRoutes);
+
 // Protected routes (authentication required)
 // These will have auth middleware applied in individual route files
 router.use('/users', userRoutes);

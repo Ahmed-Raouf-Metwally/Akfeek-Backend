@@ -102,6 +102,25 @@ Each service has pricing for 4 vehicle sizes:
 
 ---
 
+### 4️⃣ **خدمة الورش المتنقلة (Mobile Car Service) وطلبات التجربة**
+
+- **خدمة أم**: Mobile Car Service (الصيانة المتنقلة في موقع العميل).
+- **خدمات فرعية**: تغيير الزيت (متنقل)، الصيانة الدورية (متنقلة)، تغيير الإطارات/البطارية، إصلاحات كهربائية، أعمال ميكانيكية أخرى.
+- **ربط القطع بالخدمات (AutoPartService)**: فلتر زيت → تغيير الزيت (متنقل)، فحمات فرامل → الصيانة الدورية، فلتر هواء → تغيير زيت + صيانة دورية، إلخ.
+- **قطع غيار + موردين (AutoPartVendor)**: كل قطعة مرتبطة بمورد مع سعر وكمية لتوفرها في الطلبات.
+- **طلبات تجريبية (Mobile Car Service Bookings)**:
+  - رقم الطلب: `BKG-MOB-00001` … `BKG-MOB-00006` (أو أكثر حسب عدد العملاء).
+  - كل طلب: عميل + سيارة + عنوان (موقع التنفيذ)، `pickupLat` / `pickupLng` / `pickupAddress`.
+  - خدمات فرعية (BookingService) + قطع متوافقة مع الخدمة والسيارة (BookingAutoPart).
+  - حالات: PENDING, CONFIRMED, TECHNICIAN_ASSIGNED, TECHNICIAN_EN_ROUTE, ARRIVED, IN_SERVICE, IN_PROGRESS, COMPLETED.
+
+**للتجربة على الطلبات القادمة من العملاء لطلب الخدمة:**
+
+1. تشغيل السيد: `npx prisma db seed`
+2. استعلام الطلبات: استخدم الـ API الذي يعيد الـ Bookings مع `pickupAddress` و `BookingService` و `BookingAutoPart` للتحقق من البيانات.
+
+---
+
 ## How to Use
 
 ### 1. **Get Vehicle Masters**
