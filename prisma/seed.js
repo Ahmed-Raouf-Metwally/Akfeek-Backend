@@ -15,19 +15,19 @@ const IMAGES = {
   ford: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=200&h=200&fit=crop',
   chevrolet: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=200&h=200&fit=crop',
   gmc: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=200&h=200&fit=crop',
-  
+
   // Vehicle Model Images
   sedan: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop',
   suv: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=300&fit=crop',
   truck: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
-  
+
   // Service Images
   carWash: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
   oilChange: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&h=300&fit=crop',
   brakeService: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&h=300&fit=crop',
   engineRepair: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&h=300&fit=crop',
   towing: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
-  
+
   // Product Images
   oil: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=300&h=300&fit=crop',
   filter: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=300&h=300&fit=crop',
@@ -170,6 +170,7 @@ async function main() {
     { email: 'tech3@akfeek.com', phone: '+966551234003', firstName: 'Saud', lastName: 'Al-Otaibi', lat: 24.6800, lng: 46.6500, license: 'TECH-003', experience: 3 },
     { email: 'tech4@akfeek.com', phone: '+966551234004', firstName: 'Yousef', lastName: 'Al-Ghamdi', lat: 24.7200, lng: 46.7200, license: 'TECH-004', experience: 10 },
     { email: 'tech5@akfeek.com', phone: '+966551234005', firstName: 'Abdulrahman', lastName: 'Al-Shehri', lat: 24.7000, lng: 46.6400, license: 'TECH-005', experience: 6 },
+    { email: 'tech_wash@akfeek.com', phone: '+966551234999', firstName: 'Wash', lastName: 'Master', lat: 24.7100, lng: 46.6800, license: 'WASH-001', experience: 4, specializations: ['CLEANING', 'EMERGENCY'] },
   ];
 
   const suppliersData = [
@@ -231,7 +232,7 @@ async function main() {
             currentLng: techData.lng,
             isAvailable: true,
             serviceRadius: 15,
-            specializations: ['MAINTENANCE', 'REPAIR', 'EMERGENCY'],
+            specializations: techData.specializations || ['MAINTENANCE', 'REPAIR', 'EMERGENCY'],
             avatar: `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000000)}?w=200&h=200&fit=crop`,
           },
         },
@@ -390,22 +391,22 @@ async function main() {
     });
     const service = existing
       ? await prisma.service.update({
-          where: { id: existing.id },
-          data: { imageUrl: svcData.image },
-        })
+        where: { id: existing.id },
+        data: { imageUrl: svcData.image },
+      })
       : await prisma.service.create({
-          data: {
-        name: svcData.name,
-        nameAr: svcData.nameAr,
-        description: svcData.desc,
-        descriptionAr: svcData.descAr,
-        type: svcData.type,
-        category: svcData.category,
-        estimatedDuration: svcData.duration,
-            imageUrl: svcData.image,
-            isActive: true,
-          },
-        });
+        data: {
+          name: svcData.name,
+          nameAr: svcData.nameAr,
+          description: svcData.desc,
+          descriptionAr: svcData.descAr,
+          type: svcData.type,
+          category: svcData.category,
+          estimatedDuration: svcData.duration,
+          imageUrl: svcData.image,
+          isActive: true,
+        },
+      });
     serviceIdByName[svcData.name] = service.id;
   }
   console.log(`✅ Created ${servicesData.length} services\n`);
@@ -676,7 +677,7 @@ async function main() {
         locationAddress: address ? `${address.street}, ${address.city}` : 'Riyadh, Saudi Arabia',
         radiusKm: 10,
         broadcastUntil,
-        description: 'Vehicle breakdown on highway. Need immediate assistance.',
+        description: idx === 2 ? 'Mobile Car Wash Request. Need cleaning.' : 'Vehicle breakdown on highway. Need immediate assistance.',
         urgency: ['LOW', 'MEDIUM', 'HIGH'][idx % 3],
         estimatedBudget: Number(booking.totalPrice) * 1.2,
         status: idx === 0 ? 'TECHNICIAN_SELECTED' : idx === 1 ? 'OFFERS_RECEIVED' : 'BROADCASTING',
@@ -1011,7 +1012,7 @@ async function main() {
 
       const txnNum = transactionCount + 4000;
       const txnNumber = `TXN-COMP-${String(txnNum).padStart(6, '0')}`;
-      
+
       const existingTxn = await prisma.transaction.findUnique({ where: { transactionNumber: txnNumber } });
       if (existingTxn) {
         transactionCount++;
@@ -1115,29 +1116,29 @@ async function main() {
 
   // 18.1 Create Vendors
   const vendorsData = [
-    { 
-      email: 'vendor1@akfeek.com', 
-      phone: '+966571234001', 
-      businessName: 'Speedy Parts KSA', 
-      businessNameAr: 'قطع غيار السريعة', 
+    {
+      email: 'vendor1@akfeek.com',
+      phone: '+966571234001',
+      businessName: 'Speedy Parts KSA',
+      businessNameAr: 'قطع غيار السريعة',
       city: 'Riyadh',
       desc: 'Top quality parts for all Japanese cars',
       descAr: 'قطع غيار عالية الجودة للسيارات اليابانية'
     },
-    { 
-      email: 'vendor2@akfeek.com', 
-      phone: '+966571234002', 
-      businessName: 'Luxury Auto Spares', 
-      businessNameAr: 'قطع غيار السيارات الفاخرة', 
+    {
+      email: 'vendor2@akfeek.com',
+      phone: '+966571234002',
+      businessName: 'Luxury Auto Spares',
+      businessNameAr: 'قطع غيار السيارات الفاخرة',
       city: 'Jeddah',
       desc: 'Specialized in German luxury vehicles',
       descAr: 'متخصصون في السيارات الألمانية الفاخرة'
     },
-    { 
-      email: 'vendor3@akfeek.com', 
-      phone: '+966571234003', 
-      businessName: 'Desert Offroad', 
-      businessNameAr: 'صحراء للأوف رود', 
+    {
+      email: 'vendor3@akfeek.com',
+      phone: '+966571234003',
+      businessName: 'Desert Offroad',
+      businessNameAr: 'صحراء للأوف رود',
       city: 'Dammam',
       desc: 'Performance parts for 4x4 and SUVs',
       descAr: 'قطع غيار الأداء لسيارات الدفع الرباعي'
@@ -1161,7 +1162,7 @@ async function main() {
           create: {
             firstName: 'Vendor',
             lastName: 'Manager',
-            avatar: IMAGES.accessory, 
+            avatar: IMAGES.accessory,
           }
         }
       }
@@ -1271,7 +1272,7 @@ async function main() {
       price: 450,
       stock: 30,
       category: 'Brake Pads',
-      vendorIdx: 0, 
+      vendorIdx: 0,
       images: [IMAGES.brakePad],
       compatibleBrands: ['Toyota', 'Honda']
     },
@@ -1371,7 +1372,7 @@ async function main() {
   // 19. Marketplace Orders
   // ============================================
   console.log('🛍️ Seeding Marketplace Orders...');
-  
+
   const allAutoParts = await prisma.autoPart.findMany({ include: { vendor: true } });
   const orderStatuses = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
   let orderCount = 0;
@@ -1384,26 +1385,26 @@ async function main() {
     for (let j = 0; j < numOrders; j++) {
       const selectedParts = [];
       const numItems = 1 + Math.floor(Math.random() * 3); // 1-3 items per order
-      
-      for(let k=0; k<numItems; k++) {
+
+      for (let k = 0; k < numItems; k++) {
         selectedParts.push(allAutoParts[Math.floor(Math.random() * allAutoParts.length)]);
       }
 
       // Calculate totals
       let subtotal = 0;
       selectedParts.forEach(p => subtotal += Number(p.price));
-      
-      const shippingCost = 35; 
+
+      const shippingCost = 35;
       const tax = subtotal * 0.15;
       const totalAmount = subtotal + shippingCost + tax;
-      
+
       const status = orderStatuses[Math.floor(Math.random() * orderStatuses.length)];
       const orderDate = new Date();
       orderDate.setDate(orderDate.getDate() - Math.floor(Math.random() * 30));
 
       await prisma.marketplaceOrder.create({
         data: {
-          orderNumber: `ORD-${Date.now().toString().slice(-6)}-${Math.floor(Math.random()*1000)}`,
+          orderNumber: `ORD-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`,
           customerId: customer.id,
           subtotal,
           shippingCost,
@@ -1415,18 +1416,18 @@ async function main() {
           createdAt: orderDate,
           recipientName: `${customer.profile?.firstName || 'Customer'} ${customer.profile?.lastName || ''}`.trim(),
           recipientPhone: customer.phone,
-          shippingAddress: `Building ${Math.floor(Math.random()*100)}, Street ${Math.floor(Math.random()*10)}`,
+          shippingAddress: `Building ${Math.floor(Math.random() * 100)}, Street ${Math.floor(Math.random() * 10)}`,
           shippingCity: customer.profile?.addresses?.[0]?.city || 'Riyadh',
           shippingCountry: 'Saudi Arabia',
           items: {
-             create: selectedParts.map(part => ({
-               autoPartId: part.id,
-               vendorId: part.vendorId, // Can be null if platform owned
-               quantity: 1,
-               unitPrice: part.price,
-               totalPrice: part.price,
-               status: status // Items inherit order status initially
-             }))
+            create: selectedParts.map(part => ({
+              autoPartId: part.id,
+              vendorId: part.vendorId, // Can be null if platform owned
+              quantity: 1,
+              unitPrice: part.price,
+              totalPrice: part.price,
+              status: status // Items inherit order status initially
+            }))
           }
         }
       });
