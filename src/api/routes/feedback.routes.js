@@ -105,9 +105,34 @@ router.get('/:id', feedbackController.getFeedbackDetail);
  *     tags: [Feedback]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Feedback ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - message
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 example: "شكراً لك، سأنتظر التحديث."
  *     responses:
  *       201:
  *         description: Reply created
+ *       400:
+ *         description: Invalid input or feedback closed
+ *       403:
+ *         description: Access denied (Not your feedback)
+ *       404:
+ *         description: Feedback not found
  */
 router.post('/:id/reply', feedbackController.replyToFeedback);
 
