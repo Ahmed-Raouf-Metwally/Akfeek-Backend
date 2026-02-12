@@ -65,6 +65,18 @@ class FeedbackController {
         }
     }
 
+    async getFeedbackStats(req, res, next) {
+        try {
+            const stats = await feedbackService.getFeedbackStats();
+            res.json({
+                success: true,
+                data: stats
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // --- ADMIN ENDPOINTS ---
 
     async getAllFeedbacksAdmin(req, res, next) {
@@ -129,7 +141,8 @@ class FeedbackController {
             const { error, value } = replySchema.validate(req.body);
             if (error) throw new AppError(error.details[0].message, 400, 'VALIDATION_ERROR');
 
-            const reply = await feedbackService.replyToFeedback(id, req.user.id, value.message);
+            const senderType = req.user.role === 'ADMIN' ? 'ADMIN' : 'USER';
+            const reply = await feedbackService.replyToFeedback(id, req.user.id, value.message, senderType);
 
             res.status(201).json({
                 success: true,

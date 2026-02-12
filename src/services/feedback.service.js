@@ -1,6 +1,7 @@
 const prisma = require('../utils/database/prisma');
 const { AppError } = require('../api/middlewares/error.middleware');
 const logger = require('../utils/logger/logger');
+const socketIo = require('../socket');
 
 /**
  * Feedback Service
@@ -161,6 +162,32 @@ class FeedbackService {
     }
 
     /**
+     * Admin: Get feedback statistics
+     */
+    async getFeedbackStats() {
+        const [urgentCount, pendingCount] = await Promise.all([
+            prisma.feedback.count({
+                where: {
+                    priority: 'URGENT',
+                    deletedAt: null,
+                    status: { notIn: ['RESOLVED', 'REJECTED', 'CLOSED'] }
+                }
+            }),
+            prisma.feedback.count({
+                where: {
+                    status: { in: ['OPEN', 'IN_PROGRESS'] },
+                    deletedAt: null
+                }
+            })
+        ]);
+
+        return {
+            urgentCount,
+            pendingCount
+        };
+    }
+
+    /**
      * Admin: List all feedbacks with advanced filtering and search
      */
     async getAllFeedbacksAdmin(filters = {}, pagination = {}) {
@@ -289,34 +316,58 @@ class FeedbackService {
     }
 
     /**
-     * Admin: Reply to user feedback
+     * Reply to user feedback (Admin or User)
+     * @param {string} feedbackId - Feedback ID
+     * @param {string} senderId - User ID of the sender
+     * @param {string} message - Reply message
+     * @param {string} senderType - 'ADMIN' or 'USER'
      */
-    async replyToFeedback(feedbackId, adminId, message) {
+    async replyToFeedback(feedbackId, senderId, message, senderType = 'ADMIN') {
         const feedback = await prisma.feedback.findUnique({
             where: { id: feedbackId },
-            select: { id: true }
+            select: { id: true, status: true, userId: true }
         });
 
         if (!feedback) throw new AppError('Feedback not found', 404, 'NOT_FOUND');
 
+        // Prevent reply if closed
+        if (feedback.status === 'CLOSED') {
+            throw new AppError('Cannot reply to a closed feedback', 400, 'FEEDBACK_CLOSED');
+        }
+
+        // Enforce ownership for USER replies
+        if (senderType === 'USER' && feedback.userId !== senderId) {
+            throw new AppError('Access denied', 403, 'FORBIDDEN');
+        }
+
         const reply = await prisma.feedbackReply.create({
             data: {
                 feedbackId,
-                senderType: 'ADMIN',
-                senderId: adminId,
+                senderType,
+                senderId,
                 message
             },
             include: {
                 sender: {
-                    select: { profile: { select: { firstName: true, lastName: true } } }
+                    select: {
+                        role: true,
+                        profile: { select: { firstName: true, lastName: true, avatar: true } }
+                    }
                 }
             }
         });
 
-        // Automatically move to IN_PROGRESS if OPEN
-        if (feedback.status === 'OPEN') {
-            await this.updateStatus(feedbackId, adminId, 'IN_PROGRESS', 'Automatically moved to IN_PROGRESS after admin reply.');
+        // Business Logic: AUTOMATIC STATUS UPDATES
+        if (senderType === 'ADMIN' && feedback.status === 'OPEN') {
+            // Admin replies to new ticket -> move to IN_PROGRESS
+            await this.updateStatus(feedbackId, senderId, 'IN_PROGRESS', 'Automatically moved to IN_PROGRESS after admin reply.');
+        } else if (senderType === 'USER' && feedback.status === 'RESOLVED') {
+            // User replies to a resolved ticket -> reopen it
+            await this.updateStatus(feedbackId, senderId, 'IN_PROGRESS', 'Ticket reopened by user reply.');
         }
+
+        // Emit real-time notification
+        socketIo.emitFeedbackReply(feedbackId, reply);
 
         return reply;
     }

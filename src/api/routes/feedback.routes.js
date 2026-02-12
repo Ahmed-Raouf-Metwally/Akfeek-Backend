@@ -96,4 +96,19 @@ router.get('/my', feedbackController.getMyFeedbacks);
  */
 router.get('/:id', feedbackController.getFeedbackDetail);
 
+/**
+ * @swagger
+ * /api/feedback/{id}/reply:
+ *   post:
+ *     summary: Reply to a feedback (Customer)
+ *     description: Allow customer to reply to an ongoing feedback conversation.
+ *     tags: [Feedback]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Reply created
+ */
+router.post('/:id/reply', feedbackController.replyToFeedback);
+
 module.exports = router;

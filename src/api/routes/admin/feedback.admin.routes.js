@@ -37,6 +37,7 @@ router.use(roleMiddleware(['ADMIN']));
  *       200:
  *         description: Paginated feedbacks
  */
+router.get('/stats', feedbackController.getFeedbackStats);
 router.get('/', feedbackController.getAllFeedbacksAdmin);
 router.get('/:id', feedbackController.getFeedbackDetail);
 
