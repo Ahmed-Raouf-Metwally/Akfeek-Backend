@@ -89,6 +89,12 @@ model User {
   // Workshop Reviews
   workshopReviews WorkshopReview[]
 
+  // Feedback Module
+  feedbacks         Feedback[]         @relation("UserFeedbacks")
+  handledFeedbacks  Feedback[]         @relation("HandledFeedbacks")
+  feedbackReplies   FeedbackReply[]
+  feedbackAuditLogs FeedbackAuditLog[]
+
   @@index([email])
   @@index([phone])
   @@index([role, status])
@@ -303,19 +309,19 @@ model Service {
   estimatedDuration Int? // minutes
 
   // Mobile Car Service: parent service contains sub-services
-  parentServiceId String?
-  parentService   Service?  @relation("MobileCarSubServices", fields: [parentServiceId], references: [id], onDelete: SetNull)
-  subServices     Service[] @relation("MobileCarSubServices")
+  parentServiceId  String?
+  parentService    Service?  @relation("MobileCarSubServices", fields: [parentServiceId], references: [id], onDelete: SetNull)
+  subServices      Service[] @relation("MobileCarSubServices")
   customAttributes Json? // Per sub-service custom attributes (not shared)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  pricing         ServicePricing[]
-  bookingServices BookingService[]
-  addOns          ServiceAddOn[]   @relation("ServiceAddOns")
-  parentAddOns    ServiceAddOn[]   @relation("ParentService")
+  pricing          ServicePricing[]
+  bookingServices  BookingService[]
+  addOns           ServiceAddOn[]    @relation("ServiceAddOns")
+  parentAddOns     ServiceAddOn[]    @relation("ParentService")
   autoPartServices AutoPartService[]
 
   @@index([type, isActive])
@@ -465,9 +471,9 @@ model VendorProfile {
   updatedAt DateTime @updatedAt
 
   // Relations
-  parts      AutoPart[]             @relation("VendorOwnedParts")
-  orderItems MarketplaceOrderItem[]
-  autoPartVendors AutoPartVendor[]  // Vendors supplying parts (pricing & availability)
+  parts            AutoPart[]             @relation("VendorOwnedParts")
+  orderItems       MarketplaceOrderItem[]
+  autoPartVendors  AutoPartVendor[] // Vendors supplying parts (pricing & availability)
   bookingAutoParts BookingAutoPart[] // Bookings where this vendor supplied parts
 
   @@index([userId])
@@ -542,9 +548,9 @@ model AutoPart {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  images        AutoPartImage[]
-  compatibility AutoPartCompatibility[]
-  orderItems    MarketplaceOrderItem[]
+  images           AutoPartImage[]
+  compatibility    AutoPartCompatibility[]
+  orderItems       MarketplaceOrderItem[]
   autoPartServices AutoPartService[]
   autoPartVendors  AutoPartVendor[]
   bookingAutoParts BookingAutoPart[]
@@ -594,39 +600,39 @@ model AutoPartCompatibility {
 
 // Spare part linked to one or more services (e.g. sub-services of Mobile Car Service)
 model AutoPartService {
-    id        String  @id @default(uuid())
-    autoPartId String
-    autoPart   AutoPart @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
-    serviceId  String
-    service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  autoPartId String
+  autoPart   AutoPart @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
+  serviceId  String
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-    isRecommended Boolean @default(false) // Recommended for this service
-    sortOrder     Int     @default(0)
-    createdAt     DateTime @default(now())
+  isRecommended Boolean  @default(false) // Recommended for this service
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
 
-    @@unique([autoPartId, serviceId])
-    @@index([autoPartId])
-    @@index([serviceId])
+  @@unique([autoPartId, serviceId])
+  @@index([autoPartId])
+  @@index([serviceId])
 }
 
 // Vendor (supplier) can supply spare part with own pricing & availability
 model AutoPartVendor {
-    id         String   @id @default(uuid())
-    autoPartId String
-    autoPart   AutoPart      @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
-    vendorId   String
-    vendor     VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  id         String        @id @default(uuid())
+  autoPartId String
+  autoPart   AutoPart      @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
+  vendorId   String
+  vendor     VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
-    unitPrice      Decimal  @db.Decimal(10, 2)
-    stockQuantity  Int      @default(0)
-    isAvailable    Boolean  @default(true)
-    leadTimeDays   Int?     // Optional delivery lead time
-    createdAt      DateTime @default(now())
-    updatedAt      DateTime @updatedAt
+  unitPrice     Decimal  @db.Decimal(10, 2)
+  stockQuantity Int      @default(0)
+  isAvailable   Boolean  @default(true)
+  leadTimeDays  Int? // Optional delivery lead time
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-    @@unique([autoPartId, vendorId])
-    @@index([autoPartId])
-    @@index([vendorId])
+  @@unique([autoPartId, vendorId])
+  @@index([autoPartId])
+  @@index([vendorId])
 }
 
 // ================================================================================================
@@ -919,23 +925,23 @@ model BookingProduct {
 
 // Spare parts on a booking (e.g. Mobile Car Service)
 model BookingAutoPart {
-    id         String  @id @default(uuid())
-    bookingId  String
-    booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-    autoPartId String
-    autoPart   AutoPart @relation(fields: [autoPartId], references: [id])
-    vendorId   String?  // Which vendor supplied (optional)
-    vendor     VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  id         String         @id @default(uuid())
+  bookingId  String
+  booking    Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  autoPartId String
+  autoPart   AutoPart       @relation(fields: [autoPartId], references: [id])
+  vendorId   String? // Which vendor supplied (optional)
+  vendor     VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
 
-    quantity   Int     @default(1)
-    unitPrice  Decimal @db.Decimal(10, 2)
-    totalPrice Decimal @db.Decimal(10, 2)
+  quantity   Int     @default(1)
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([bookingId])
-    @@index([autoPartId])
-    @@index([vendorId])
+  @@index([bookingId])
+  @@index([autoPartId])
+  @@index([vendorId])
 }
 
 model BookingStatusHistory {
@@ -1544,7 +1550,8 @@ model MarketplaceOrder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items MarketplaceOrderItem[]
+  items     MarketplaceOrderItem[]
+  feedbacks Feedback[]
 
   @@index([customerId])
   @@index([status])
@@ -1600,4 +1607,113 @@ model ActivityLog {
   @@index([action])
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+// ================================================================================================
+// FEEDBACK & COMPLAINTS MODULE
+// ================================================================================================
+
+enum FeedbackType {
+  COMPLAINT
+  SUGGESTION
+}
+
+enum FeedbackCategory {
+  DELIVERY
+  PAYMENT
+  PRODUCT
+  UI_UX
+  OTHER
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+  CLOSED
+}
+
+enum FeedbackPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum FeedbackSenderType {
+  USER
+  ADMIN
+}
+
+model Feedback {
+  id String @id @default(uuid())
+
+  userId String?
+  user   User?   @relation("UserFeedbacks", fields: [userId], references: [id], onDelete: SetNull)
+
+  orderId String?
+  order   MarketplaceOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  type        FeedbackType
+  category    FeedbackCategory
+  subject     String
+  message     String           @db.Text
+  status      FeedbackStatus   @default(OPEN)
+  priority    FeedbackPriority @default(MEDIUM)
+  isAnonymous Boolean          @default(false)
+
+  resolvedAt DateTime?
+  handledBy  String?
+  handler    User?     @relation("HandledFeedbacks", fields: [handledBy], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Soft Delete
+  deletedAt DateTime?
+
+  replies   FeedbackReply[]
+  auditLogs FeedbackAuditLog[]
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model FeedbackReply {
+  id         String   @id @default(uuid())
+  feedbackId String
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  senderType FeedbackSenderType
+  senderId   String
+  sender     User               @relation(fields: [senderId], references: [id])
+
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([feedbackId])
+  @@index([senderId])
+}
+
+model FeedbackAuditLog {
+  id         String   @id @default(uuid())
+  feedbackId String
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  oldStatus FeedbackStatus?
+  newStatus FeedbackStatus
+  changedBy String
+  changer   User            @relation(fields: [changedBy], references: [id])
+
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([feedbackId])
+  @@index([changedBy])
 }

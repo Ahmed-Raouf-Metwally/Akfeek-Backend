@@ -13,6 +13,10 @@ const server = createServer(app);
 // Initialize Socket.io
 socketIo.init(server);
 
+// Initialize Cron Jobs
+const { initCronJobs } = require('./utils/cron');
+initCronJobs();
+
 // Test database connection
 async function testDatabaseConnection() {
   try {

@@ -22,6 +22,8 @@ const addressRoutes = require('./addresses.routes');
 const adminSettingsRoutes = require('./admin/settings.routes');
 const towingRoutes = require('./towing.routes');
 const technicianTowingRoutes = require('./technicianTowing.routes');
+const feedbackRoutes = require('./feedback.routes');
+const feedbackAdminRoutes = require('./admin/feedback.admin.routes');
 
 // Auto Parts Marketplace routes
 const vendorRoutes = require('./vendors.routes');
@@ -81,6 +83,7 @@ router.use('/wallets', walletRoutes);
 router.use('/ratings', ratingRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/addresses', addressRoutes);
+router.use('/feedback', feedbackRoutes);
 router.use('/activity', require('./activity.routes'));
 
 // Tracking routes (real-time location)
@@ -90,6 +93,7 @@ router.use('/technician/tracking', trackingRoutes);
 
 // Admin routes
 router.use('/admin/settings', adminSettingsRoutes);
+router.use('/admin/feedback', feedbackAdminRoutes);
 router.use('/dashboard', require('./dashboard.routes'));
 
 // Auto Parts Marketplace routes
