@@ -67,10 +67,11 @@ model User {
   supplierRequests  SupplyRequest[]    @relation("SupplierSupplyRequests")
 
   // Financials
-  invoices     Invoice[]
-  wallet       Wallet?
-  transactions Transaction[]
-  payments     Payment[]
+  invoices          Invoice[]
+  wallet            Wallet?
+  transactions      Transaction[]
+  payments          Payment[]
+  pointTransactions PointTransaction[]
 
   // Notifications & Ratings
   notifications   Notification[]
@@ -1303,16 +1304,19 @@ model Wallet {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  balance        Decimal @default(0) @db.Decimal(10, 2)
-  pendingBalance Decimal @default(0) @db.Decimal(10, 2) // Locked for pending transactions
+  availableBalance Decimal @default(0) @db.Decimal(10, 2)
+  pendingBalance   Decimal @default(0) @db.Decimal(10, 2) // Locked for pending transactions
 
   currency String @default("SAR")
+
+  pointsBalance Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  transactions Transaction[]
+  transactions      Transaction[]
+  pointTransactions PointTransaction[]
 
   @@index([userId])
 }
@@ -1363,6 +1367,38 @@ model Transaction {
   @@index([walletId])
   @@index([userId])
   @@index([type])
+  @@index([createdAt])
+}
+
+enum PointTransactionType {
+  EARN
+  REDEEM
+  ADJUSTMENT
+  REFUND
+}
+
+model PointTransaction {
+  id String @id @default(uuid())
+
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type          PointTransactionType
+  amount        Int
+  balanceBefore Int
+  balanceAfter  Int
+
+  description String?
+  referenceId String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([walletId])
+  @@index([userId])
   @@index([createdAt])
 }
 

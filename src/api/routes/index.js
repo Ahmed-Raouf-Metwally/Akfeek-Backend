@@ -95,6 +95,7 @@ router.use('/technician/tracking', trackingRoutes);
 router.use('/admin/settings', adminSettingsRoutes);
 router.use('/admin/feedback', feedbackAdminRoutes);
 router.use('/dashboard', require('./dashboard.routes'));
+router.use('/admin/finance', require('./admin/finance.routes'));
 
 // Auto Parts Marketplace routes
 router.use('/vendors', vendorRoutes);

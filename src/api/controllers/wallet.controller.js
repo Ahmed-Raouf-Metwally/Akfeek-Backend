@@ -17,7 +17,7 @@ class WalletController {
         where: { userId },
         select: {
           id: true,
-          balance: true,
+          availableBalance: true,
           pendingBalance: true,
           currency: true,
           createdAt: true,
@@ -28,7 +28,7 @@ class WalletController {
       if (!wallet) {
         wallet = {
           id: null,
-          balance: 0,
+          availableBalance: 0,
           pendingBalance: 0,
           currency: 'SAR',
           createdAt: null,
