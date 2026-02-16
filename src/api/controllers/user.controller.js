@@ -106,7 +106,7 @@ class UserController {
   async getAllUsers(req, res, next) {
     try {
       const { role, status, search, page, limit } = req.query;
-      
+
       const result = await userService.getAllUsers(
         { role, status, search },
         { page: parseInt(page), limit: parseInt(limit) }
@@ -152,6 +152,25 @@ class UserController {
         success: true,
         message: 'User status updated',
         messageAr: 'تم تحديث حالة المستخدم',
+        data: user
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Update user by ID (Admin only)
+   * PUT /api/users/:id
+   */
+  async updateUserByAdmin(req, res, next) {
+    try {
+      const user = await userService.updateProfile(req.params.id, req.body);
+
+      res.json({
+        success: true,
+        message: 'User updated successfully',
+        messageAr: 'تم تحديث بيانات المستخدم بنجاح',
         data: user
       });
     } catch (error) {

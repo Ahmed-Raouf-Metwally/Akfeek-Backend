@@ -522,7 +522,8 @@ Authorization: Bearer <your_jwt_token>
         './src/api/routes/*.js',
         './src/api/routes/admin/*.js',
         './src/api/controllers/*.js',
-        './src/config/swagger-schemas.js'
+        './src/config/swagger-schemas.js',
+        './src/modules/vendor/*.js'
     ]
 };
 

@@ -91,6 +91,10 @@ const trackingRoutes = require('./tracking.routes');
 router.use('/technician/tracking', trackingRoutes);
 // Note: Customer tracking endpoints (/api/bookings/:id/track) are in bookings.routes.js
 
+// Vendor Onboarding Routes
+const vendorOnboardingRoutes = require('../../modules/vendor/vendor.routes');
+router.use('/vendor-onboarding', vendorOnboardingRoutes);
+
 // Admin routes
 router.use('/admin/settings', adminSettingsRoutes);
 router.use('/admin/feedback', feedbackAdminRoutes);

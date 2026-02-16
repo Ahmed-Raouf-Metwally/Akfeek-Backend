@@ -1,4 +1,5 @@
 const prisma = require('../../../utils/database/prisma');
+const { emitNotification } = require('../../../socket');
 
 class AdminFinanceController {
 
@@ -111,9 +112,24 @@ class AdminFinanceController {
                         balanceBefore: wallet.availableBalance,
                         balanceAfter: Number(wallet.availableBalance) + Number(amount),
                         description: reason || 'Admin Credit Adjustment',
-                        status: 'COMPLETED'
+                        status: 'COMPLETED',
+                        performedById: req.user.id
                     }
                 });
+
+                // 3. Create Notification
+                const notification = await prisma.notification.create({
+                    data: {
+                        userId,
+                        type: 'WALLET',
+                        title: 'Wallet Credit',
+                        titleAr: 'إيداع في المحفظة',
+                        message: `Your wallet has been credited with ${amount} SAR. Reason: ${reason || 'Admin Adjustment'}`,
+                        messageAr: `تم إيداع ${amount} ريال في محفظتك. السبب: ${reason || 'تسوية إدارية'}`,
+                        isRead: false
+                    }
+                });
+                emitNotification(userId, notification);
 
                 // 3. Update wallet balance
                 const updatedWallet = await prisma.wallet.update({
@@ -178,9 +194,24 @@ class AdminFinanceController {
                         balanceBefore: wallet.availableBalance,
                         balanceAfter: Number(wallet.availableBalance) - Number(amount),
                         description: reason || 'Admin Debit Adjustment',
-                        status: 'COMPLETED'
+                        status: 'COMPLETED',
+                        performedById: req.user.id
                     }
                 });
+
+                // 3. Create Notification
+                const notification = await prisma.notification.create({
+                    data: {
+                        userId,
+                        type: 'WALLET',
+                        title: 'Wallet Debit',
+                        titleAr: 'خصم من المحفظة',
+                        message: `Your wallet has been debited by ${amount} SAR. Reason: ${reason || 'Admin Adjustment'}`,
+                        messageAr: `تم خصم ${amount} ريال من محفظتك. السبب: ${reason || 'تسوية إدارية'}`,
+                        isRead: false
+                    }
+                });
+                emitNotification(userId, notification);
 
                 // 3. Update wallet balance
                 const updatedWallet = await prisma.wallet.update({
@@ -224,6 +255,15 @@ class AdminFinanceController {
                     where,
                     include: {
                         user: {
+                            select: {
+                                id: true,
+                                email: true,
+                                profile: {
+                                    select: { firstName: true, lastName: true }
+                                }
+                            }
+                        },
+                        performedBy: {
                             select: {
                                 id: true,
                                 email: true,
@@ -293,9 +333,25 @@ class AdminFinanceController {
                         amount: Number(amount),
                         balanceBefore: wallet.pointsBalance || 0,
                         balanceAfter: newBalance,
-                        description: reason || 'Admin Points Adjustment'
+                        description: reason || 'Admin Points Adjustment',
+                        performedById: req.user.id
                     }
                 });
+
+                // Create Notification
+                const isCredit = Number(amount) > 0;
+                const notification = await prisma.notification.create({
+                    data: {
+                        userId,
+                        type: 'POINTS',
+                        title: isCredit ? 'Points Earned' : 'Points Deducted',
+                        titleAr: isCredit ? 'نقاط مكتسبة' : 'خصم نقاط',
+                        message: `Your points balance has been adjusted by ${amount}. Reason: ${reason || 'Admin Adjustment'}`,
+                        messageAr: `تم تعديل رصيد نقاطك بمقدار ${amount}. السبب: ${reason || 'تسوية إدارية'}`,
+                        isRead: false
+                    }
+                });
+                emitNotification(userId, notification);
 
                 const updatedWallet = await prisma.wallet.update({
                     where: { id: wallet.id },
@@ -331,6 +387,17 @@ class AdminFinanceController {
             const [transactions, total] = await Promise.all([
                 prisma.transaction.findMany({
                     where: { walletId },
+                    include: {
+                        performedBy: {
+                            select: {
+                                id: true,
+                                email: true,
+                                profile: {
+                                    select: { firstName: true, lastName: true }
+                                }
+                            }
+                        }
+                    },
                     orderBy: { createdAt: 'desc' },
                     skip,
                     take: limit
@@ -347,6 +414,72 @@ class AdminFinanceController {
                     page,
                     limit
                 }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+    /**
+     * Get points configuration
+     * GET /api/admin/finance/points/settings
+     */
+    async getPointsSettings(req, res, next) {
+        try {
+            const setting = await prisma.systemSettings.findUnique({
+                where: { key: 'POINTS_CONVERSION_RATE' }
+            });
+
+            let config = { points: 100, currency: 1 }; // Default
+            if (setting && setting.value) {
+                try {
+                    config = JSON.parse(setting.value);
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            res.json({
+                success: true,
+                data: config
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Update points configuration
+     * POST /api/admin/finance/points/settings
+     */
+    async updatePointsSettings(req, res, next) {
+        try {
+            const { points, currency } = req.body;
+
+            if (!points || !currency || points <= 0 || currency <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid input. Points and Currency must be positive numbers.'
+                });
+            }
+
+            const value = JSON.stringify({ points: Number(points), currency: Number(currency) });
+
+            const setting = await prisma.systemSettings.upsert({
+                where: { key: 'POINTS_CONVERSION_RATE' },
+                update: { value },
+                create: {
+                    key: 'POINTS_CONVERSION_RATE',
+                    value,
+                    type: 'JSON',
+                    description: 'Points to Currency conversion rate',
+                    category: 'PRICING'
+                }
+            });
+
+            res.json({
+                success: true,
+                message: 'Points configuration updated',
+                data: JSON.parse(setting.value)
             });
         } catch (error) {
             next(error);

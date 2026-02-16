@@ -84,6 +84,7 @@ model User {
 
   // Vendor Relations
   vendorProfile     VendorProfile?
+  vendorApplication Vendor?            @relation("VendorApplication")
   autoParts         AutoPart[]         @relation("VendorParts")
   marketplaceOrders MarketplaceOrder[]
 
@@ -95,6 +96,12 @@ model User {
   handledFeedbacks  Feedback[]         @relation("HandledFeedbacks")
   feedbackReplies   FeedbackReply[]
   feedbackAuditLogs FeedbackAuditLog[]
+
+  // Admin Transactions
+  performedTransactions      Transaction[]      @relation("TransactionPerformer")
+  performedPointTransactions PointTransaction[] @relation("PointTransactionPerformer")
+  vendor                     Vendor?            @relation(fields: [vendorId], references: [id])
+  vendorId                   String?
 
   @@index([email])
   @@index([phone])
@@ -1361,6 +1368,9 @@ model Transaction {
 
   metadata Json? // Additional context
 
+  performedById String? @map("performedBy")
+  performedBy   User?   @relation("TransactionPerformer", fields: [performedById], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1394,6 +1404,9 @@ model PointTransaction {
   description String?
   referenceId String?
   metadata    Json?
+
+  performedById String? @map("performedBy")
+  performedBy   User?   @relation("PointTransactionPerformer", fields: [performedById], references: [id])
 
   createdAt DateTime @default(now())
 
@@ -1457,6 +1470,9 @@ enum NotificationType {
 
   PAYMENT_RECEIVED
   PAYMENT_FAILED
+
+  WALLET
+  POINTS
 
   STATUS_UPDATE
   MESSAGE
@@ -1752,4 +1768,97 @@ model FeedbackAuditLog {
 
   @@index([feedbackId])
   @@index([changedBy])
+}
+
+// ================================================================================================
+// VENDOR ONBOARDING MODULE
+// ================================================================================================
+
+enum VendorRegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum OperatingModel {
+  B2B
+  B2C
+  MARKETPLACE
+  HYBRID
+}
+
+model Vendor {
+  id           String  @id @default(uuid())
+  userId       String? @unique
+  user         User?   @relation("VendorApplication", fields: [userId], references: [id])
+  supplierId   String? @unique
+  legalName    String
+  tradeName    String?
+  supplierType String
+
+  // Address & Registration
+  country           String
+  city              String
+  addressLine1      String
+  nationalAddress   String
+  postalCode        String
+  commercialRegNo   String  @unique
+  vatRegistered     Boolean @default(false)
+  vatNumber         String?
+  eInvoicingCapable Boolean @default(false)
+
+  // Contacts
+  website             String?
+  companyEmail        String  @unique
+  companyPhone        String
+  contactPersonName   String
+  contactPersonTitle  String
+  contactPersonMobile String
+
+  // Scope Alignment
+  mainService       String
+  subService        String?
+  servicesOffered   String         @db.Text
+  coverageRegion    String
+  operatingModel    OperatingModel @default(MARKETPLACE)
+  support24_7       Boolean        @default(false)
+  emergencyResponse Boolean        @default(false)
+
+  // Capacity
+  yearsOfExperience   Int?
+  employeesBand       String?
+  monthlyCapacityBand String?
+  fleetCount          Int?    @default(0)
+
+  // Commercials
+  paymentTerms      String?
+  currency          String  @default("SAR")
+  priceListProvided Boolean @default(false)
+  discountPercent   Float?
+  payoutMethod      String
+  bankName          String?
+  iban              String?
+
+  // Workflow
+  status    VendorRegistrationStatus @default(PENDING)
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+
+  // Relations
+  coverageCities VendorCity[]
+  users          User[]
+
+  @@index([status])
+  @@index([city])
+}
+
+model VendorCity {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  cityName  String
+  createdAt DateTime @default(now())
+
+  @@index([vendorId])
 }

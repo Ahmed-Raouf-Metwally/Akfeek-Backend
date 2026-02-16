@@ -38,6 +38,12 @@ class VendorService {
             email: true,
             phone: true,
             status: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
         _count: {

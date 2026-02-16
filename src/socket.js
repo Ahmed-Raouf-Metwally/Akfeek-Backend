@@ -77,6 +77,12 @@ function init(server) {
             logger.info(`Socket disconnected: ${socket.id}`);
         });
 
+        // User joins personal notification room
+        socket.on('user:join', (userId) => {
+            socket.join(`user:${userId}`);
+            logger.info(`User joined notification room: ${userId}`);
+        });
+
         // Handle errors
         socket.on('error', (error) => {
             logger.error('Socket error:', error);
@@ -96,6 +102,20 @@ function getIo() {
         throw new Error('Socket.io not initialized. Call init() first.');
     }
     return io;
+}
+
+/**
+ * Emit notification to specific user
+ * @param {string} userId - User ID
+ * @param {object} notification - Notification data
+ */
+function emitNotification(userId, notification) {
+    if (!io) {
+        // logger.warn('Socket.io not initialized - cannot emit notification');
+        return;
+    }
+    io.to(`user:${userId}`).emit('notification:new', notification);
+    logger.debug(`Emitted notification to user: ${userId}`);
 }
 
 /**
@@ -161,6 +181,7 @@ function emitFeedbackReply(feedbackId, replyData) {
 module.exports = {
     init,
     getIo,
+    emitNotification,
     emitLocationUpdate,
     emitBookingStatusChange,
     emitTechnicianArrival,

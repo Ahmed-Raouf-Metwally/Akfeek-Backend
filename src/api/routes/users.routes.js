@@ -260,6 +260,45 @@ router.patch('/:id/status', requireRole('ADMIN'), userController.updateUserStatu
 /**
  * @swagger
  * /api/users/{id}:
+ *   put:
+ *     summary: Update user (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               bio:
+ *                 type: string
+ *               bioAr:
+ *                 type: string
+ *               avatar:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User updated
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.put('/:id', requireRole('ADMIN'), userController.updateUserByAdmin);
+
+/**
+ * @swagger
+ * /api/users/{id}:
  *   delete:
  *     summary: Delete user (Admin only)
  *     tags: [Users]

@@ -233,4 +233,62 @@ router.get('/points/audit', controller.getPointsAudit);
  */
 router.post('/points/adjust', controller.adjustPoints);
 
+/**
+ * @swagger
+ * /api/admin/finance/points/settings:
+ *   get:
+ *     summary: Get points conversion rate settings
+ *     tags: [Wallets]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Points settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     points:
+ *                       type: number
+ *                     currency:
+ *                       type: number
+ */
+router.get('/points/settings', controller.getPointsSettings);
+
+/**
+ * @swagger
+ * /api/admin/finance/points/settings:
+ *   post:
+ *     summary: Update points conversion rate settings
+ *     tags: [Wallets]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - points
+ *               - currency
+ *             properties:
+ *               points:
+ *                 type: number
+ *                 description: Number of points
+ *               currency:
+ *                 type: number
+ *                 description: Equivalent currency value
+ *     responses:
+ *       200:
+ *         description: Settings updated successfully
+ */
+router.post('/points/settings', controller.updatePointsSettings);
+
 module.exports = router;
