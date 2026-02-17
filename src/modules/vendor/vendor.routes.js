@@ -47,7 +47,7 @@ const router = express.Router();
  *               subService: { type: string, example: "Engine Tuning" }
  *               servicesOffered: { type: string, example: "Full engine diagnostic and repair services." }
  *               coverageRegion: { type: string, example: "Central Region" }
- *               operatingModel: { type: string, enum: [B2B, B2C, MARKETPLACE, HYBRID], example: "MARKETPLACE" }
+ *               operatingModel: { type: string, enum: ["MARKETPLACE"], example: "MARKETPLACE" }
  *               support24_7: { type: boolean, example: true }
  *               emergencyResponse: { type: boolean, example: true }
  *               coverageCities: { type: array, items: { type: string }, example: ["Riyadh", "Jeddah"] }

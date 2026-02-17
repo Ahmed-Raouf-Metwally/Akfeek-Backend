@@ -33,7 +33,7 @@ const registerVendorSchema = z.object({
     subService: z.string().optional(),
     servicesOffered: z.string().min(1, "Services offered description is required"),
     coverageRegion: z.string().min(1, "Coverage region is required"),
-    operatingModel: z.enum(['B2B', 'B2C', 'MARKETPLACE', 'HYBRID']),
+    operatingModel: z.enum(['MARKETPLACE']),
     support24_7: z.boolean().default(false),
     emergencyResponse: z.boolean().default(false),
 

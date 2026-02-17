@@ -1819,11 +1819,9 @@ enum VendorRegistrationStatus {
   SUSPENDED
 }
 
+// الفيندور يبيع للمستخدمين عبر التطبيق (منصة فقط)
 enum OperatingModel {
-  B2B
-  B2C
   MARKETPLACE
-  HYBRID
 }
 
 model Vendor {

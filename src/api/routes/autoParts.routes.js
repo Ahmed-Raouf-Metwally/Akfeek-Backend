@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const autoPartController = require('../controllers/autoPart.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
+const { upload: uploadAutoPartImage } = require('../../utils/autoPartImageUpload');
 const requireRole = require('../middlewares/role.middleware');
 
 /**
@@ -109,6 +110,11 @@ router.get('/:id', authMiddleware.optionalAuth, autoPartController.getPartById);
 
 // Routes requiring authentication
 router.use(authMiddleware);
+
+/**
+ * POST /api/auto-parts/upload-image - Upload image file(s), returns URL(s)
+ */
+router.post('/upload-image', uploadAutoPartImage.array('files', 10), autoPartController.uploadImage);
 
 /**
  * @swagger
@@ -259,6 +265,8 @@ router.delete('/:id', autoPartController.deletePart);
  *         description: Images added
  */
 router.post('/:id/images', autoPartController.addPartImages);
+router.delete('/:id/images/:imageId', autoPartController.deletePartImage);
+router.patch('/:id/images/:imageId/primary', autoPartController.setPrimaryPartImage);
 
 /**
  * @swagger
