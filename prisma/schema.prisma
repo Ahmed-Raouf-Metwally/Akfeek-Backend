@@ -87,6 +87,7 @@ model User {
   vendorApplication Vendor?            @relation("VendorApplication")
   autoParts         AutoPart[]         @relation("VendorParts")
   marketplaceOrders MarketplaceOrder[]
+  cart               Cart?
 
   // Workshop Reviews
   workshopReviews WorkshopReview[]
@@ -559,6 +560,7 @@ model AutoPart {
   images           AutoPartImage[]
   compatibility    AutoPartCompatibility[]
   orderItems       MarketplaceOrderItem[]
+  cartItems        CartItem[]
   autoPartServices AutoPartService[]
   autoPartVendors  AutoPartVendor[]
   bookingAutoParts BookingAutoPart[]
@@ -1571,6 +1573,42 @@ enum OrderStatus {
   CANCELLED
   REFUNDED
 }
+
+// ================================================================================================
+// CART (Customer shopping cart before checkout)
+// ================================================================================================
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items CartItem[]
+
+  @@index([userId])
+}
+
+model CartItem {
+  id         String   @id @default(uuid())
+  cartId     String
+  cart       Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  autoPartId String
+  autoPart   AutoPart @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
+  quantity   Int      @default(1)
+  unitPrice  Decimal  @db.Decimal(10, 2) // Snapshot at add time for display
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([cartId, autoPartId])
+  @@index([cartId])
+  @@index([autoPartId])
+}
+
+// ================================================================================================
+// MARKETPLACE ORDERS (after checkout from cart)
+// ================================================================================================
 
 model MarketplaceOrder {
   id          String @id @default(uuid())

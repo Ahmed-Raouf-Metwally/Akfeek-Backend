@@ -87,12 +87,12 @@ class ServiceCatalogService {
    * @returns {Object} Created service
    */
   async createService(data) {
-    const { 
-      name, nameAr, description, descriptionAr, 
-      type, category, estimatedDuration, 
+    const {
+      name, nameAr, description, descriptionAr,
+      type, category, estimatedDuration,
       imageUrl, icon, isActive, requiresVehicle,
       parentServiceId,
-      pricing 
+      pricing
     } = data;
 
     // Create service with nested pricing
@@ -172,7 +172,7 @@ class ServiceCatalogService {
     }
 
     logger.info(`Service updated: ${id}`);
-    
+
     return this.getServiceById(id);
   }
 

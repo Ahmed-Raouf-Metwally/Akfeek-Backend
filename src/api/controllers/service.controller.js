@@ -12,8 +12,8 @@ class ServiceController {
   async getAllServices(req, res, next) {
     try {
       const { category, type, search, isActive } = req.query;
-      const services = await serviceCatalogService.getAllServices({ 
-        category, type, search, isActive 
+      const services = await serviceCatalogService.getAllServices({
+        category, type, search, isActive
       });
 
       res.json({

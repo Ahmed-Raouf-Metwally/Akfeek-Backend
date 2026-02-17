@@ -42,7 +42,7 @@ const requireRole = require('../middlewares/role.middleware');
  *                 pagination:
  *                   $ref: '#/components/schemas/Pagination'
  */
-router.get('/', autoPartController.getAllParts);
+router.get('/', authMiddleware.optionalAuth, autoPartController.getAllParts);
 
 /**
  * @swagger
@@ -105,7 +105,7 @@ router.get('/vehicle/:vehicleModelId', autoPartController.getPartsByVehicle);
  *                 data:
  *                   $ref: '#/components/schemas/AutoPart'
  */
-router.get('/:id', autoPartController.getPartById);
+router.get('/:id', authMiddleware.optionalAuth, autoPartController.getPartById);
 
 // Routes requiring authentication
 router.use(authMiddleware);
