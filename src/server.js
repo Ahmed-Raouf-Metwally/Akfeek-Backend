@@ -6,6 +6,7 @@ const logger = require('./utils/logger/logger');
 const prisma = require('./utils/database/prisma');
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Create HTTP server
 const server = createServer(app);
@@ -33,8 +34,8 @@ async function startServer() {
   try {
     await testDatabaseConnection();
 
-    server.listen(PORT, () => {
-      logger.info(`🚀 Server running on port ${PORT}`);
+    server.listen(PORT, HOST, () => {
+      logger.info(`🚀 Server running on http://${HOST}:${PORT}`);
       logger.info(`📡 Socket.io enabled`);
       logger.info(`📚 API Docs: http://localhost:${PORT}/api-docs`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV}`);

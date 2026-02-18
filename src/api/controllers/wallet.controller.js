@@ -20,6 +20,7 @@ class WalletController {
           availableBalance: true,
           pendingBalance: true,
           currency: true,
+          pointsBalance: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -31,6 +32,7 @@ class WalletController {
           availableBalance: 0,
           pendingBalance: 0,
           currency: 'SAR',
+          pointsBalance: 0,
           createdAt: null,
           updatedAt: null,
         };

@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
@@ -202,6 +202,39 @@ router.put('/language', userController.updateLanguage);
  *         $ref: '#/components/responses/ForbiddenError'
  */
 router.get('/', requireRole('ADMIN'), userController.getAllUsers);
+
+/**
+ * @swagger
+ * /api/users:
+ *   post:
+ *     summary: Create user (Admin only) - e.g. vendor account
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, firstName, lastName, role]
+ *             properties:
+ *               email: { type: string }
+ *               password: { type: string }
+ *               firstName: { type: string }
+ *               lastName: { type: string }
+ *               role: { type: string, enum: [CUSTOMER, TECHNICIAN, SUPPLIER, VENDOR, ADMIN] }
+ *               phone: { type: string }
+ *               preferredLanguage: { type: string, enum: [AR, EN] }
+ *     responses:
+ *       201:
+ *         description: User created
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Email or phone already registered
+ */
+router.post('/', requireRole('ADMIN'), userController.createUser);
 
 /**
  * @swagger

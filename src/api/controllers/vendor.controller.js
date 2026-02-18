@@ -62,6 +62,28 @@ class VendorController {
   }
 
   /**
+   * Get comprehensive care bookings for current vendor (مواعيد الحجوزات)
+   * GET /api/vendors/profile/me/comprehensive-care-bookings
+   */
+  async getMyComprehensiveCareBookings(req, res, next) {
+    try {
+      const result = await vendorService.getComprehensiveCareBookings(req.user.id, {
+        page: req.query.page,
+        limit: req.query.limit,
+        status: req.query.status,
+      });
+
+      res.json({
+        success: true,
+        data: result.list,
+        pagination: result.pagination,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Create new vendor profile
    * POST /api/vendors
    */

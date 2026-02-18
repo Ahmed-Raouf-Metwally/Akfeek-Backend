@@ -1,4 +1,5 @@
 const userService = require('../../services/user.service');
+const authService = require('../../services/auth.service');
 
 /**
  * User Controller
@@ -92,6 +93,24 @@ class UserController {
         success: true,
         message: 'Language updated',
         messageAr: 'تم تحديث اللغة',
+        data: user
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Create user (Admin only) - e.g. for new vendor accounts
+   * POST /api/users
+   */
+  async createUser(req, res, next) {
+    try {
+      const user = await authService.createUserByAdmin(req.body);
+      res.status(201).json({
+        success: true,
+        message: 'User created successfully',
+        messageAr: 'تم إنشاء المستخدم بنجاح',
         data: user
       });
     } catch (error) {

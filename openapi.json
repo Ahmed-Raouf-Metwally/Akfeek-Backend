@@ -16,7 +16,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5000",
+      "url": "http://localhost:3000",
       "description": "Development Server - بيئة التطوير"
     },
     {
@@ -686,6 +686,14 @@
     {
       "name": "Auto Parts",
       "description": "Auto parts catalog management - إدارة كتالوج قطع الغيار"
+    },
+    {
+      "name": "Cart",
+      "description": "Customer cart and checkout - سلة المشتريات وإتمام الطلب"
+    },
+    {
+      "name": "Marketplace Orders",
+      "description": "Orders from marketplace (customer, vendor, admin) - طلبات المتجر"
     },
     {
       "name": "Feedback",
@@ -2086,6 +2094,184 @@
           },
           "404": {
             "description": "Brand not found - الماركة غير موجودة"
+          }
+        }
+      }
+    },
+    "/api/cart": {
+      "get": {
+        "summary": "Get my cart (with items)",
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current user cart with items"
+          }
+        }
+      }
+    },
+    "/api/cart/checkout": {
+      "post": {
+        "summary": "Create order from cart (Customer)",
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "shippingAddress": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string"
+                      },
+                      "city": {
+                        "type": "string"
+                      },
+                      "country": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "phone": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "paymentMethod": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order created from cart"
+          }
+        }
+      }
+    },
+    "/api/cart/items": {
+      "post": {
+        "summary": "Add auto part to cart",
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "autoPartId"
+                ],
+                "properties": {
+                  "autoPartId": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "default": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Item added to cart"
+          }
+        }
+      }
+    },
+    "/api/cart/items/{id}": {
+      "patch": {
+        "summary": "Update cart item quantity",
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "quantity": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cart updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove item from cart",
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item removed"
           }
         }
       }
@@ -7716,10 +7902,7 @@
                   "operatingModel": {
                     "type": "string",
                     "enum": [
-                      "B2B",
-                      "B2C",
-                      "MARKETPLACE",
-                      "HYBRID"
+                      "MARKETPLACE"
                     ],
                     "example": "MARKETPLACE"
                   },

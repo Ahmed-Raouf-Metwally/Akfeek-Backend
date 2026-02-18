@@ -175,6 +175,14 @@ class AuthService {
     // Remove password from response
     const { passwordHash, ...userWithoutPassword } = user;
 
+    if (userWithoutPassword.role === 'VENDOR') {
+      const vendor = await prisma.vendorProfile.findUnique({
+        where: { userId: user.id },
+        select: { vendorType: true }
+      });
+      userWithoutPassword.vendorType = vendor?.vendorType != null ? String(vendor.vendorType) : 'AUTO_PARTS';
+    }
+
     logger.info(`User logged in: ${user.id} (${user.role})`);
 
     return { user: userWithoutPassword, token };
@@ -307,13 +315,18 @@ class AuthService {
    * @returns {string} JWT token
    */
   generateToken(user) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      logger.error('JWT_SECRET is not set in environment');
+      throw new AppError('Server configuration error: JWT_SECRET missing', 500, 'SERVER_ERROR');
+    }
     return jwt.sign(
       {
         userId: user.id,
         role: user.role,
         email: user.email
       },
-      process.env.JWT_SECRET,
+      secret,
       { expiresIn: process.env.JWT_EXPIRY || '7d' }
     );
   }

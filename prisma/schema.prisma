@@ -226,7 +226,6 @@ model VehicleModel {
 
   // Relations
   userVehicles        UserVehicle[]
-  compatibleProducts  ProductCompatibility[]
   compatibleAutoParts AutoPartCompatibility[]
 
   @@unique([brandId, name, year])
@@ -291,6 +290,7 @@ enum ServiceCategory {
   REPAIR
   EMERGENCY
   INSPECTION
+  COMPREHENSIVE_CARE
   CUSTOMIZATION
   CERTIFIED_WORKSHOP
 }
@@ -323,6 +323,14 @@ model Service {
   subServices      Service[] @relation("MobileCarSubServices")
   customAttributes Json? // Per sub-service custom attributes (not shared)
 
+  // Comprehensive Care: service owned by a vendor (فيندور العناية الشاملة)
+  vendorId String?
+  vendor   VendorProfile? @relation("VendorComprehensiveCareServices", fields: [vendorId], references: [id], onDelete: SetNull)
+
+  // مواعيد العمل للحجز (العناية الشاملة): يوم الأسبوع + من - إلى. يمنع حجز عميلين في نفس الوقت
+  workingHours       Json?   // [{ "dayOfWeek": 0, "start": "09:00", "end": "17:00" }, ...] 0=Sun, 6=Sat
+  slotDurationMinutes Int?   // مدة كل موعد بالدقائق (افتراضي 60)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -336,6 +344,7 @@ model Service {
   @@index([type, isActive])
   @@index([category])
   @@index([parentServiceId])
+  @@index([vendorId])
 }
 
 model ServicePricing {
@@ -343,9 +352,9 @@ model ServicePricing {
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  vehicleType     VehicleType
-  basePrice       Decimal     @db.Decimal(10, 2)
-  discountedPrice Decimal?    @db.Decimal(10, 2)
+  vehicleType     String  // اسم حر من الفيندور (مثلاً سيدان، دفع رباعي، عربية صغيرة)
+  basePrice       Decimal @db.Decimal(10, 2)
+  discountedPrice Decimal? @db.Decimal(10, 2)
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -371,64 +380,6 @@ model ServiceAddOn {
 }
 
 // ================================================================================================
-// PRODUCT CATALOG (E-Commerce Model)
-// ================================================================================================
-
-enum ProductCategory {
-  OIL
-  FILTER
-  BRAKE_PAD
-  BATTERY
-  TIRE
-  FLUID
-  ACCESSORY
-}
-
-model Product {
-  id          String  @id @default(uuid())
-  sku         String  @unique
-  name        String
-  nameAr      String?
-  description String? @db.Text
-
-  category ProductCategory
-  brand    String
-  imageUrl String?
-
-  price         Decimal @db.Decimal(10, 2)
-  stockQuantity Int     @default(0)
-
-  isActive   Boolean @default(true)
-  isFeatured Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  compatibility   ProductCompatibility[]
-  bookingProducts BookingProduct[]
-
-  @@index([category, isActive])
-  @@index([sku])
-}
-
-model ProductCompatibility {
-  id        String  @id @default(uuid())
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  // Vehicle Model Reference
-  vehicleModelId String
-  vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@unique([productId, vehicleModelId])
-  @@index([productId])
-  @@index([vehicleModelId])
-}
-
-// ================================================================================================
 // AUTO PARTS MARKETPLACE - VENDOR MANAGEMENT & PARTS CATALOG
 // ================================================================================================
 
@@ -439,10 +390,19 @@ enum VendorStatus {
   REJECTED
 }
 
+enum VendorType {
+  AUTO_PARTS          // فيندور قطع الغيار / المنتجات
+  COMPREHENSIVE_CARE  // فيندور العناية الشاملة
+  CERTIFIED_WORKSHOP  // فيندور الورش المعتمدة
+  CAR_WASH            // فيندور خدمة الغسيل
+}
+
 model VendorProfile {
   id     String @id @default(uuid())
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  vendorType VendorType @default(AUTO_PARTS) // نوع الفيندور: قطع غيار أو عناية شاملة
 
   businessName   String
   businessNameAr String?
@@ -484,6 +444,8 @@ model VendorProfile {
   orderItems       MarketplaceOrderItem[]
   autoPartVendors  AutoPartVendor[] // Vendors supplying parts (pricing & availability)
   bookingAutoParts BookingAutoPart[] // Bookings where this vendor supplied parts
+  comprehensiveCareServices Service[] @relation("VendorComprehensiveCareServices") // خدمات العناية الشاملة
+  workshop         CertifiedWorkshop? // فيندور الورش المعتمدة: ورشة واحدة مرتبطة به
 
   @@index([userId])
   @@index([status])
@@ -726,6 +688,10 @@ model CertifiedWorkshop {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ربط الورشة بفيندور واحد (فيندور الورش المعتمدة)
+  vendorId String?        @unique
+  vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
   // Relations
   bookings Booking[]
   reviews  WorkshopReview[]
@@ -733,6 +699,7 @@ model CertifiedWorkshop {
   @@index([isActive, isVerified])
   @@index([city])
   @@index([averageRating])
+  @@index([vendorId])
 }
 
 model WorkshopReview {
@@ -817,6 +784,11 @@ enum BookingStatus {
   NO_SHOW // Customer didn't show up
 }
 
+enum WorkType {
+  WORK   // عمل - أول مرة
+  REWORK // إعادة عمل
+}
+
 model Booking {
   id            String @id @default(uuid())
   bookingNumber String @unique // AUTO-GEN: BKG-20260123-001
@@ -867,6 +839,9 @@ model Booking {
   distanceKm        Float?
   estimatedDuration Int? // minutes
 
+  // Work type: عمل أولي أو إعادة عمل
+  workType WorkType? @default(WORK)
+
   // Status & Metadata
   metadata      Json? // Additional data (vehicle condition, pricing, etc.)
   status        BookingStatus @default(PENDING)
@@ -878,7 +853,6 @@ model Booking {
 
   // Relations
   services            BookingService[]
-  products            BookingProduct[]
   bookingAutoParts    BookingAutoPart[] // Spare parts (e.g. Mobile Car Service)
   statusHistory       BookingStatusHistory[]
   jobBroadcast        JobBroadcast?
@@ -905,32 +879,15 @@ model BookingService {
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id])
 
-  quantity   Int     @default(1)
-  unitPrice  Decimal @db.Decimal(10, 2)
-  totalPrice Decimal @db.Decimal(10, 2)
+  quantity          Int     @default(1)
+  unitPrice         Decimal @db.Decimal(10, 2)
+  totalPrice        Decimal @db.Decimal(10, 2)
+  estimatedMinutes  Int?    // وقت الخدمة بالدقائق (من Service.estimatedDuration)
 
   createdAt DateTime @default(now())
 
   @@index([bookingId])
   @@index([serviceId])
-}
-
-model BookingProduct {
-  id        String  @id @default(uuid())
-  bookingId String
-  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-
-  quantity   Int     @default(1)
-  unitPrice  Decimal @db.Decimal(10, 2)
-  totalPrice Decimal @db.Decimal(10, 2)
-
-  createdAt DateTime @default(now())
-
-  @@index([bookingId])
-  @@index([productId])
 }
 
 // Spare parts on a booking (e.g. Mobile Car Service)

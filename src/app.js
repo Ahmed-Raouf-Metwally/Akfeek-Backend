@@ -11,6 +11,27 @@ const logger = require('./utils/logger/logger');
 const app = express();
 
 // ================================================================================================
+// CORS – must be first so preflight (OPTIONS) gets CORS headers before Helmet
+// ================================================================================================
+const allowedOriginsRaw = process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000';
+const allowedOrigins = allowedOriginsRaw.split(',').map((o) => o.trim()).filter(Boolean);
+if (allowedOrigins.length === 0) allowedOrigins.push('*');
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const normalized = origin.replace(/\/$/, '');
+    const ok = allowedOrigins.includes('*') || allowedOrigins.some((o) => o.replace(/\/$/, '') === normalized);
+    callback(null, ok);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language', 'Accept', 'X-Requested-With'],
+  optionsSuccessStatus: 204,
+  preflightContinue: false,
+}));
+
+// ================================================================================================
 // SECURITY & MIDDLEWARE
 // ================================================================================================
 
@@ -24,24 +45,6 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"]
     }
   }
-}));
-
-// CORS configuration
-const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['*'];
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language']
 }));
 
 // HTTP request logging
