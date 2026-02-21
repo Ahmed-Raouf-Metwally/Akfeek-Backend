@@ -280,8 +280,16 @@ async function createBooking(req, res, next) {
 
     const vehicleType = vehicle.vehicleModel?.type || 'SEDAN';
 
-    let flatbedFee = 0;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const workshopPlaceholders = ['string', 'uuid-الورشة', 'uuid-workshop'];
     if (workshopId) {
+      if (workshopPlaceholders.includes(workshopId) || !uuidRegex.test(workshopId)) {
+        throw new AppError(
+          'workshopId must be a real UUID from GET /api/workshops. If you are not booking at a workshop, omit workshopId and deliveryMethod.',
+          400,
+          'VALIDATION_ERROR'
+        );
+      }
       const workshop = await prisma.certifiedWorkshop.findUnique({ where: { id: workshopId } });
       if (!workshop) throw new AppError('Workshop not found', 404, 'NOT_FOUND');
       if (!workshop.isActive || !workshop.isVerified) {

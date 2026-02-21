@@ -125,6 +125,16 @@ router.get('/:id', vendorController.getVendorById);
 router.get('/:id/stats', vendorController.getVendorStats);
 
 /**
+ * GET /api/vendors/:id/reviews - List vendor reviews (تقييمات الفيندور)
+ */
+router.get('/:id/reviews', vendorController.getVendorReviews);
+
+/**
+ * POST /api/vendors/:id/reviews - Submit rating (1-5 stars) for vendor
+ */
+router.post('/:id/reviews', vendorController.submitVendorReview);
+
+/**
  * @swagger
  * /api/vendors:
  *   post:

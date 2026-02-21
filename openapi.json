@@ -3,7 +3,7 @@
   "info": {
     "title": "AutoService (أكفيك) API",
     "version": "1.0.0",
-    "description": "\n# AutoService API Documentation\n\nComprehensive car services platform supporting 4 service models:\n1. **Direct Booking** (Fixed Services) - Car Wash, Polishing\n2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement\n3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance\n4. **Ekfik Lifecycle** (Inspection Services) - Valet & Comprehensive Repair\n\n---\n\nمنصة شاملة لخدمات السيارات تدعم 4 نماذج خدمة:\n1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع\n2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر\n3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق\n4. **دورة الفحص** (خدمات الفحص) - الفحص الشامل والإصلاح\n\n---\n\n## Features / المميزات\n\n- ✅ Bilingual support (Arabic/English) - دعم اللغتين\n- ✅ Real-time updates via Socket.io - تحديثات فورية\n- ✅ Multiple payment gateways - بوابات دفع متعددة\n- ✅ Supply chain integration - تكامل سلسلة التوريد\n- ✅ Geolocation-based services - خدمات الموقع الجغرافي\n\n## Authentication / المصادقة\n\nAll protected endpoints require Bearer token in Authorization header:\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n      ",
+    "description": "\n# AutoService API Documentation\n\nComprehensive car services platform supporting 4 service models:\n1. **Direct Booking** (Fixed Services) - Car Wash, Polishing\n2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement\n3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance\n4. **Ekfik Lifecycle** (Inspection Services) - Valet & Comprehensive Repair\n\n---\n\nمنصة شاملة لخدمات السيارات تدعم 4 نماذج خدمة:\n1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع\n2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر\n3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق\n4. **دورة الفحص** (خدمات الفحص) - الفحص الشامل والإصلاح\n\n---\n\n## Features / المميزات\n\n- ✅ Bilingual support (Arabic/English) - دعم اللغتين\n- ✅ Real-time updates via Socket.io - تحديثات فورية\n- ✅ Multiple payment gateways - بوابات دفع متعددة\n- ✅ Supply chain integration - تكامل سلسلة التوريد\n- ✅ Geolocation-based services - خدمات الموقع الجغرافي\n\n## Authentication / المصادقة\n\nAll protected endpoints require Bearer token in Authorization header:\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n\n---\n\n## Testing Guide / دليل الاختبار\n\n**لتجربة الحجز وشراء المنتجات على الموقع:**\n\n1. **تسجيل الدخول** – POST `/api/auth/login`\n   - Body: `{ \"identifier\": \"your@email.com\", \"password\": \"YourPassword\" }`\n   - انسخ `data.token` من الرد واستخدمه في Authorize (Bearer).\n\n2. **الحجز** – POST `/api/bookings`\n   - بعد النقر على Authorize وأدخل: `Bearer <token>`\n   - Body: `customerId`, `vehicleId`, `scheduledDate`, (اختياري: `workshopId`, `deliveryMethod`, `services`, `products`).\n\n3. **شراء منتجات (سلة)** – أضف للسلّة ثم إتمام الطلب:\n   - POST `/api/cart/items` – Body: `{ \"autoPartId\": \"<id>\", \"quantity\": 1 }`\n   - POST `/api/cart/checkout` – Body: `shippingAddress`, `paymentMethod` (حسب الـ API).\n\n4. **شراء منتجات (طلب مباشر)** – POST `/api/marketplace-orders`\n   - Body: `{ \"items\": [{ \"autoPartId\": \"<id>\", \"quantity\": 1 }], \"shippingAddress\": { ... } }`\n\n5. **عرض طلباتي** – GET `/api/marketplace-orders/my-orders` أو GET `/api/bookings/my`\n\n**للاختبار من Swagger UI:** شغّل الباكند ثم افتح `http://localhost:3000/api-docs`، انقر Authorize وأدخل التوكن ثم جرّب النداءات أعلاه.\n\n---\n\n## Auto Parts → Order Flow / من عرض قطع الغيار لحد الطلب\n\n**الترتيب الكامل للـ endpoints:**\n\n| # | Method | Endpoint | الوصف |\n|---|--------|----------|--------|\n| 1 | GET | `/api/auto-part-categories` | فئات قطع الغيار |\n| 2 | GET | `/api/auto-parts` | قائمة القطع (query: page, limit, search, categoryId, vendorId) |\n| 3 | GET | `/api/auto-parts/{id}` | تفاصيل قطعة واحدة |\n| 4 | POST | `/api/auth/login` | تسجيل دخول → استخدم `data.token` في Authorize |\n| 5a | POST | `/api/cart/items` | إضافة للسلة `{ \"autoPartId\", \"quantity\" }` |\n| 5b | GET | `/api/cart` | عرض السلة |\n| 5c | POST | `/api/cart/checkout` | إنشاء الطلب من السلة `{ \"shippingAddress\", \"paymentMethod\" }` |\n| **أو** | POST | `/api/marketplace-orders` | طلب مباشر `{ \"items\": [{ \"autoPartId\", \"quantity\" }], \"shippingAddress\" }` |\n| 6 | GET | `/api/marketplace-orders/my-orders` | طلباتي |\n| 7 | GET | `/api/marketplace-orders/{id}` | تفاصيل طلب |\n\nملف تفصيلي: `docs/ENDPOINTS_AUTO_PARTS_TO_ORDER.md`\n\n---\n\n## Certified Workshops Flow / فلوه الورش المعتمدة للتيست\n\n**من الدخول → عرض الورش → الحجز → حجوزاتي:**\n\n| # | Method | Endpoint | الوصف |\n|---|--------|----------|--------|\n| 1 | POST | `/api/auth/login` | تسجيل دخول → استخدم `data.token` في Authorize |\n| 2 | GET | `/api/vehicles` | مركباتي (لاختيار `vehicleId`) |\n| 3 | GET | `/api/services` | الخدمات (لاختيار `serviceIds`) |\n| 4 | GET | `/api/workshops` | قائمة الورش (query: city, search, isActive, isVerified) |\n| 5 | GET | `/api/workshops/{id}` | تفاصيل ورشة |\n| 6 | POST | `/api/bookings` | إنشاء حجز: `vehicleId`, `scheduledDate`, `scheduledTime`, `serviceIds`, `workshopId`, `deliveryMethod` (SELF_DELIVERY أو FLATBED) |\n| 7 | GET | `/api/bookings/my` | حجوزاتي |\n| 8 | GET | `/api/bookings/{id}` | تفاصيل حجز |\n| + | GET | `/api/workshops/{id}/reviews` | تقييمات الورشة |\n| + | POST | `/api/workshops/{id}/reviews` | إضافة تقييم |\n\n**فيندور الورشة:** GET `/api/workshops/profile/me`, GET `/api/workshops/profile/me/bookings`\n\nملف تفصيلي: `docs/ENDPOINTS_WORKSHOPS_FLOW.md`\n\n---\n\n## Services → Booking Flow / اختبار الخدمات والحجز (Postman)\n\n**ترتيب الاختبار:** تسجيل الدخول → عرض الخدمات → مركباتي (أو إضافة مركبة) → إنشاء حجز → حجوزاتي.\n\n| # | Method | Endpoint | الوصف |\n|---|--------|----------|--------|\n| 1 | POST | `/api/auth/login` | Body: `{ \"identifier\": \"email\", \"password\" }` → انسخ `data.token`، استخدمه في Authorization: Bearer |\n| 2 | GET | `/api/services` | قائمة الخدمات (query: category, type, search) → خذ `id` لخدمة أو أكثر |\n| 3 | GET | `/api/services/{id}` | تفاصيل خدمة |\n| 4 | GET | `/api/services/{id}/available-slots?date=YYYY-MM-DD` | أوقات متاحة (اختياري) |\n| 5 | GET | `/api/vehicles` | مركباتي → خذ `vehicleId`؛ لو فاضي: POST `/api/vehicles` (body: vehicleModelId, plateNumber؛ الموديل من /vehicles/brands و /vehicles/brands/{id}/models) |\n| 6 | POST | `/api/bookings` | إنشاء حجز: `vehicleId`, `scheduledDate` (YYYY-MM-DD), `serviceIds` (مصفوفة IDs)، اختياري: `scheduledTime`, `workshopId`, `deliveryMethod`, `notes` |\n| 7 | GET | `/api/bookings/my` | حجوزاتي (query: page, limit, status) |\n| 8 | GET | `/api/bookings/{id}` | تفاصيل حجز |\n\nملف تفصيلي: `docs/ENDPOINTS_SERVICES_BOOKING_POSTMAN.md`\n      ",
     "contact": {
       "name": "AutoService API Support",
       "email": "support@autoservice.com",
@@ -614,10 +614,6 @@
     {
       "name": "Services",
       "description": "Service catalog - كتالوج الخدمات"
-    },
-    {
-      "name": "Products",
-      "description": "Product catalog (E-Commerce model) - كتالوج المنتجات"
     },
     {
       "name": "Bookings",
@@ -3447,7 +3443,8 @@
                 "REPAIR",
                 "EMERGENCY",
                 "INSPECTION",
-                "CUSTOMIZATION"
+                "CUSTOMIZATION",
+                "COMPREHENSIVE_CARE"
               ]
             }
           },
@@ -4988,6 +4985,79 @@
             "$ref": "#/components/responses/ForbiddenError"
           }
         }
+      },
+      "post": {
+        "summary": "Create user (Admin only) - e.g. vendor account",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password",
+                  "firstName",
+                  "lastName",
+                  "role"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "CUSTOMER",
+                      "TECHNICIAN",
+                      "SUPPLIER",
+                      "VENDOR",
+                      "ADMIN"
+                    ]
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "preferredLanguage": {
+                    "type": "string",
+                    "enum": [
+                      "AR",
+                      "EN"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "409": {
+            "description": "Email or phone already registered"
+          }
+        }
       }
     },
     "/api/users/{id}": {
@@ -5893,6 +5963,89 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/workshops/profile/me": {
+      "post": {
+        "summary": "Create my workshop (Vendor)",
+        "description": "الفيندور (نوع ورشة معتمدة) يضيف ورشته بنفسه. الورشة تُنشأ غير معتمدة حتى يتحقق منها الأدمن.\n",
+        "tags": [
+          "Certified Workshops"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "city",
+                  "address",
+                  "phone",
+                  "services"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Al-Salam Auto Center"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "locationUrl": {
+                    "type": "string",
+                    "description": "Google Maps URL to extract lat/lng"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "workingHours": {
+                    "type": "object"
+                  },
+                  "services": {
+                    "type": "string",
+                    "description": "JSON array of service types"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Workshop created (pending admin verification)"
+          },
+          "400": {
+            "description": "Already have a workshop or validation error"
+          },
+          "403": {
+            "description": "Not a certified workshop vendor"
           }
         }
       }

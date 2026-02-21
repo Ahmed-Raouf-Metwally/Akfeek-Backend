@@ -447,6 +447,95 @@ class VendorService {
       },
     };
   }
+
+  /**
+   * Submit or update customer review for a vendor (1-5 stars)
+   * @param {string} vendorId - Vendor profile ID
+   * @param {string} userId - Customer user ID
+   * @param {Object} data - { rating (1-5), comment?, orderId? }
+   * @returns {Object} Created/updated review and updated vendor average
+   */
+  async submitVendorReview(vendorId, userId, data) {
+    const { rating, comment, orderId } = data;
+    if (!rating || rating < 1 || rating > 5) {
+      throw new AppError('Rating must be between 1 and 5', 400, 'INVALID_RATING');
+    }
+
+    const vendor = await prisma.vendorProfile.findUnique({ where: { id: vendorId } });
+    if (!vendor) throw new AppError('Vendor not found', 404, 'VENDOR_NOT_FOUND');
+
+    const review = await prisma.vendorReview.upsert({
+      where: {
+        vendorId_userId: { vendorId, userId },
+      },
+      create: {
+        vendorId,
+        userId,
+        orderId: orderId || null,
+        rating: Number(rating),
+        comment: comment || null,
+      },
+      update: {
+        orderId: orderId || undefined,
+        rating: Number(rating),
+        comment: comment || null,
+      },
+      include: {
+        user: { select: { id: true, email: true, profile: { select: { firstName: true, lastName: true } } } },
+      },
+    });
+
+    const agg = await prisma.vendorReview.aggregate({
+      where: { vendorId },
+      _avg: { rating: true },
+      _count: true,
+    });
+
+    await prisma.vendorProfile.update({
+      where: { id: vendorId },
+      data: {
+        averageRating: agg._avg.rating ? Math.round(agg._avg.rating * 10) / 10 : 0,
+        totalReviews: agg._count,
+      },
+    });
+
+    logger.info(`Vendor review: ${review.id} for vendor ${vendorId} by user ${userId} (${rating}/5)`);
+    return { review, averageRating: agg._avg.rating ? Math.round(agg._avg.rating * 10) / 10 : 0, totalReviews: agg._count };
+  }
+
+  /**
+   * Get reviews for a vendor (paginated)
+   */
+  async getVendorReviews(vendorId, { page = 1, limit = 10 } = {}) {
+    const vendor = await prisma.vendorProfile.findUnique({ where: { id: vendorId } });
+    if (!vendor) throw new AppError('Vendor not found', 404, 'VENDOR_NOT_FOUND');
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [reviews, total] = await Promise.all([
+      prisma.vendorReview.findMany({
+        where: { vendorId },
+        skip,
+        take: Number(limit),
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { id: true, profile: { select: { firstName: true, lastName: true } } } },
+        },
+      }),
+      prisma.vendorReview.count({ where: { vendorId } }),
+    ]);
+
+    return {
+      reviews,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages: Math.ceil(total / Number(limit)) || 1,
+      },
+      averageRating: vendor.averageRating ?? 0,
+      totalReviews: vendor.totalReviews ?? 0,
+    };
+  }
 }
 
 module.exports = new VendorService();

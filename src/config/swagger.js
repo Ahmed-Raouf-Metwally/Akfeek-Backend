@@ -40,6 +40,94 @@ All protected endpoints require Bearer token in Authorization header:
 \`\`\`
 Authorization: Bearer <your_jwt_token>
 \`\`\`
+
+---
+
+## Testing Guide / دليل الاختبار
+
+**لتجربة الحجز وشراء المنتجات على الموقع:**
+
+1. **تسجيل الدخول** – POST \`/api/auth/login\`
+   - Body: \`{ "identifier": "your@email.com", "password": "YourPassword" }\`
+   - انسخ \`data.token\` من الرد واستخدمه في Authorize (Bearer).
+
+2. **الحجز** – POST \`/api/bookings\`
+   - بعد النقر على Authorize وأدخل: \`Bearer <token>\`
+   - Body: \`customerId\`, \`vehicleId\`, \`scheduledDate\`, (اختياري: \`workshopId\`, \`deliveryMethod\`, \`services\`, \`products\`).
+
+3. **شراء منتجات (سلة)** – أضف للسلّة ثم إتمام الطلب:
+   - POST \`/api/cart/items\` – Body: \`{ "autoPartId": "<id>", "quantity": 1 }\`
+   - POST \`/api/cart/checkout\` – Body: \`shippingAddress\`, \`paymentMethod\` (حسب الـ API).
+
+4. **شراء منتجات (طلب مباشر)** – POST \`/api/marketplace-orders\`
+   - Body: \`{ "items": [{ "autoPartId": "<id>", "quantity": 1 }], "shippingAddress": { ... } }\`
+
+5. **عرض طلباتي** – GET \`/api/marketplace-orders/my-orders\` أو GET \`/api/bookings/my\`
+
+**للاختبار من Swagger UI:** شغّل الباكند ثم افتح \`http://localhost:3000/api-docs\`، انقر Authorize وأدخل التوكن ثم جرّب النداءات أعلاه.
+
+---
+
+## Auto Parts → Order Flow / من عرض قطع الغيار لحد الطلب
+
+**الترتيب الكامل للـ endpoints:**
+
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|--------|
+| 1 | GET | \`/api/auto-part-categories\` | فئات قطع الغيار |
+| 2 | GET | \`/api/auto-parts\` | قائمة القطع (query: page, limit, search, categoryId, vendorId) |
+| 3 | GET | \`/api/auto-parts/{id}\` | تفاصيل قطعة واحدة |
+| 4 | POST | \`/api/auth/login\` | تسجيل دخول → استخدم \`data.token\` في Authorize |
+| 5a | POST | \`/api/cart/items\` | إضافة للسلة \`{ "autoPartId", "quantity" }\` |
+| 5b | GET | \`/api/cart\` | عرض السلة |
+| 5c | POST | \`/api/cart/checkout\` | إنشاء الطلب من السلة \`{ "shippingAddress", "paymentMethod" }\` |
+| **أو** | POST | \`/api/marketplace-orders\` | طلب مباشر \`{ "items": [{ "autoPartId", "quantity" }], "shippingAddress" }\` |
+| 6 | GET | \`/api/marketplace-orders/my-orders\` | طلباتي |
+| 7 | GET | \`/api/marketplace-orders/{id}\` | تفاصيل طلب |
+
+ملف تفصيلي: \`docs/ENDPOINTS_AUTO_PARTS_TO_ORDER.md\`
+
+---
+
+## Certified Workshops Flow / فلوه الورش المعتمدة للتيست
+
+**من الدخول → عرض الورش → الحجز → حجوزاتي:**
+
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|--------|
+| 1 | POST | \`/api/auth/login\` | تسجيل دخول → استخدم \`data.token\` في Authorize |
+| 2 | GET | \`/api/vehicles\` | مركباتي (لاختيار \`vehicleId\`) |
+| 3 | GET | \`/api/services\` | الخدمات (لاختيار \`serviceIds\`) |
+| 4 | GET | \`/api/workshops\` | قائمة الورش (query: city, search, isActive, isVerified) |
+| 5 | GET | \`/api/workshops/{id}\` | تفاصيل ورشة |
+| 6 | POST | \`/api/bookings\` | إنشاء حجز: \`vehicleId\`, \`scheduledDate\`, \`scheduledTime\`, \`serviceIds\`, \`workshopId\`, \`deliveryMethod\` (SELF_DELIVERY أو FLATBED) |
+| 7 | GET | \`/api/bookings/my\` | حجوزاتي |
+| 8 | GET | \`/api/bookings/{id}\` | تفاصيل حجز |
+| + | GET | \`/api/workshops/{id}/reviews\` | تقييمات الورشة |
+| + | POST | \`/api/workshops/{id}/reviews\` | إضافة تقييم |
+
+**فيندور الورشة:** GET \`/api/workshops/profile/me\`, GET \`/api/workshops/profile/me/bookings\`
+
+ملف تفصيلي: \`docs/ENDPOINTS_WORKSHOPS_FLOW.md\`
+
+---
+
+## Services → Booking Flow / اختبار الخدمات والحجز (Postman)
+
+**ترتيب الاختبار:** تسجيل الدخول → عرض الخدمات → مركباتي (أو إضافة مركبة) → إنشاء حجز → حجوزاتي.
+
+| # | Method | Endpoint | الوصف |
+|---|--------|----------|--------|
+| 1 | POST | \`/api/auth/login\` | Body: \`{ "identifier": "email", "password" }\` → انسخ \`data.token\`، استخدمه في Authorization: Bearer |
+| 2 | GET | \`/api/services\` | قائمة الخدمات (query: category, type, search) → خذ \`id\` لخدمة أو أكثر |
+| 3 | GET | \`/api/services/{id}\` | تفاصيل خدمة |
+| 4 | GET | \`/api/services/{id}/available-slots?date=YYYY-MM-DD\` | أوقات متاحة (اختياري) |
+| 5 | GET | \`/api/vehicles\` | مركباتي → خذ \`vehicleId\`؛ لو فاضي: POST \`/api/vehicles\` (body: vehicleModelId, plateNumber؛ الموديل من /vehicles/brands و /vehicles/brands/{id}/models) |
+| 6 | POST | \`/api/bookings\` | إنشاء حجز: \`vehicleId\`, \`scheduledDate\` (YYYY-MM-DD), \`serviceIds\` (مصفوفة IDs)، اختياري: \`scheduledTime\`, \`workshopId\`, \`deliveryMethod\`, \`notes\` |
+| 7 | GET | \`/api/bookings/my\` | حجوزاتي (query: page, limit, status) |
+| 8 | GET | \`/api/bookings/{id}\` | تفاصيل حجز |
+
+ملف تفصيلي: \`docs/ENDPOINTS_SERVICES_BOOKING_POSTMAN.md\`
       `,
             contact: {
                 name: 'AutoService API Support',

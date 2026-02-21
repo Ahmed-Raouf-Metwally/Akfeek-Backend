@@ -91,6 +91,7 @@ model User {
 
   // Workshop Reviews
   workshopReviews WorkshopReview[]
+  vendorReviewsGiven VendorReview[]
 
   // Feedback Module
   feedbacks         Feedback[]         @relation("UserFeedbacks")
@@ -446,10 +447,32 @@ model VendorProfile {
   bookingAutoParts BookingAutoPart[] // Bookings where this vendor supplied parts
   comprehensiveCareServices Service[] @relation("VendorComprehensiveCareServices") // خدمات العناية الشاملة
   workshop         CertifiedWorkshop? // فيندور الورش المعتمدة: ورشة واحدة مرتبطة به
+  reviews         VendorReview[] // تقييمات العملاء للفيندور (نجوم ١–٥)
 
   @@index([userId])
   @@index([status])
   @@index([isVerified])
+}
+
+/// تقييم الفيندور من العميل — نجوم ١–٥ لاختيار أفضل فيندور
+model VendorReview {
+  id        String  @id @default(uuid())
+  vendorId  String
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   String? // اختياري: تقييم بعد طلب معين
+  order     MarketplaceOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  rating    Int     @db.SmallInt // 1-5 stars
+  comment   String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([vendorId, userId]) // عميل واحد تقييم واحد لكل فيندور (يمكن تغييره لاحقاً إذا أردت عدة تقييمات)
+  @@index([vendorId])
+  @@index([userId])
 }
 
 model AutoPartCategory {
@@ -1597,8 +1620,9 @@ model MarketplaceOrder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items     MarketplaceOrderItem[]
-  feedbacks Feedback[]
+  items        MarketplaceOrderItem[]
+  feedbacks    Feedback[]
+  vendorReviews VendorReview[]
 
   @@index([customerId])
   @@index([status])

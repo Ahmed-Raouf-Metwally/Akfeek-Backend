@@ -230,6 +230,32 @@ class WorkshopService {
     }
 
     /**
+     * Create workshop by vendor (CERTIFIED_WORKSHOP) – يسمح للفيندور بإضافة ورشته بنفسه
+     * الورشة تُنشأ غير معتمدة (isVerified: false) حتى يتحقق منها الأدمن.
+     */
+    async createWorkshopByVendor(userId, data) {
+        const vendorService = require('./vendor.service');
+        let profile;
+        try {
+            profile = await vendorService.getVendorByUserId(userId);
+        } catch (e) {
+            if (e.statusCode) throw e;
+            throw new AppError('Vendor profile not found', 403, 'FORBIDDEN');
+        }
+        if (String(profile.vendorType) !== 'CERTIFIED_WORKSHOP') {
+            throw new AppError('Only certified workshop vendors can create a workshop', 403, 'FORBIDDEN');
+        }
+        const existing = await prisma.certifiedWorkshop.findUnique({
+            where: { vendorId: profile.id }
+        });
+        if (existing) {
+            throw new AppError('You already have a workshop linked to your account. Use update to modify it.', 400, 'ALREADY_EXISTS');
+        }
+        const payload = { ...data, vendorId: profile.id, isVerified: false };
+        return this.createWorkshop(payload);
+    }
+
+    /**
      * Create new certified workshop
      */
     async createWorkshop(data) {

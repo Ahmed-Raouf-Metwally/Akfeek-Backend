@@ -176,6 +176,55 @@ class VendorController {
   }
 
   /**
+   * Get vendor reviews (تقييمات الفيندور)
+   * GET /api/vendors/:id/reviews
+   */
+  async getVendorReviews(req, res, next) {
+    try {
+      const result = await vendorService.getVendorReviews(req.params.id, {
+        page: req.query.page,
+        limit: req.query.limit,
+      });
+
+      res.json({
+        success: true,
+        data: result.reviews,
+        pagination: result.pagination,
+        averageRating: result.averageRating,
+        totalReviews: result.totalReviews,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Submit or update my review for a vendor (نجوم ١–٥)
+   * POST /api/vendors/:id/reviews
+   */
+  async submitVendorReview(req, res, next) {
+    try {
+      const { rating, comment, orderId } = req.body;
+      const result = await vendorService.submitVendorReview(
+        req.params.id,
+        req.user.id,
+        { rating, comment, orderId }
+      );
+
+      res.json({
+        success: true,
+        message: 'Thank you for your rating',
+        messageAr: 'شكراً على تقييمك',
+        data: result.review,
+        averageRating: result.averageRating,
+        totalReviews: result.totalReviews,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Delete vendor (Admin only)
    * DELETE /api/vendors/:id
    */

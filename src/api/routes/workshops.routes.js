@@ -3,9 +3,28 @@ const router = express.Router();
 const workshopController = require('../controllers/workshop.controller');
 const workshopReviewController = require('../controllers/workshopReview.controller');
 const workshopImageController = require('../controllers/workshopImage.controller');
+const workshopService = require('../../services/workshop.service');
 const { upload } = require('../../utils/imageUpload');
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
+
+/** Resolve vendor's workshop id and set req.params.id for image controllers (reuse same logic as admin). */
+async function resolveVendorWorkshopId(req, res, next) {
+  try {
+    const workshop = await workshopService.getWorkshopByVendorUserId(req.user.id);
+    if (!workshop) {
+      return res.status(404).json({
+        success: false,
+        error: 'No workshop linked to your account',
+        errorAr: 'لا توجد ورشة مرتبطة بحسابك',
+      });
+    }
+    req.params.id = workshop.id;
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
 
 router.use(authMiddleware);
 
@@ -73,9 +92,52 @@ router.use(authMiddleware);
 router.get('/', workshopController.getAllWorkshops);
 
 // Vendor (CERTIFIED_WORKSHOP) – my workshop & bookings – must be before /:id
+/**
+ * @swagger
+ * /api/workshops/profile/me:
+ *   post:
+ *     summary: Create my workshop (Vendor)
+ *     description: |
+ *       الفيندور (نوع ورشة معتمدة) يضيف ورشته بنفسه. الورشة تُنشأ غير معتمدة حتى يتحقق منها الأدمن.
+ *     tags: [Certified Workshops]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, city, address, phone, services]
+ *             properties:
+ *               name: { type: string, example: Al-Salam Auto Center }
+ *               nameAr: { type: string }
+ *               description: { type: string }
+ *               address: { type: string }
+ *               city: { type: string }
+ *               phone: { type: string }
+ *               email: { type: string }
+ *               locationUrl: { type: string, description: Google Maps URL to extract lat/lng }
+ *               latitude: { type: number }
+ *               longitude: { type: number }
+ *               workingHours: { type: object }
+ *               services: { type: string, description: JSON array of service types }
+ *     responses:
+ *       201:
+ *         description: Workshop created (pending admin verification)
+ *       400:
+ *         description: Already have a workshop or validation error
+ *       403:
+ *         description: Not a certified workshop vendor
+ */
+router.post('/profile/me', requireRole('VENDOR'), workshopController.createMyWorkshop);
 router.get('/profile/me', requireRole('VENDOR'), workshopController.getMyWorkshop);
 router.put('/profile/me', requireRole('VENDOR'), workshopController.updateMyWorkshop);
 router.get('/profile/me/bookings', requireRole('VENDOR'), workshopController.getMyWorkshopBookings);
+router.post('/profile/me/logo', requireRole('VENDOR'), resolveVendorWorkshopId, upload.single('file'), workshopImageController.uploadLogo);
+router.post('/profile/me/images', requireRole('VENDOR'), resolveVendorWorkshopId, upload.array('files', 10), workshopImageController.uploadImages);
+router.delete('/profile/me/logo', requireRole('VENDOR'), resolveVendorWorkshopId, workshopImageController.deleteLogo);
+router.delete('/profile/me/images/:imageIndex', requireRole('VENDOR'), resolveVendorWorkshopId, workshopImageController.deleteImage);
 
 /**
  * @swagger
