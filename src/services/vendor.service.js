@@ -293,17 +293,41 @@ class VendorService {
       throw new AppError('Invalid status', 400, 'INVALID_STATUS');
     }
 
-    const updateData = { status };
-
     // Set isVerified and verifiedAt when approving
     if (status === 'ACTIVE') {
       updateData.isVerified = true;
       updateData.verifiedAt = new Date();
+    } else if (status === 'SUSPENDED' || status === 'REJECTED') {
+      updateData.isVerified = false;
     }
 
-    const vendor = await prisma.vendorProfile.update({
-      where: { id },
-      data: updateData,
+    const vendor = await prisma.$transaction(async (tx) => {
+      const updated = await tx.vendorProfile.update({
+        where: { id },
+        data: updateData,
+        include: { user: true }
+      });
+
+      // مزامنة الـ Role الخاص بالمستخدم
+      if (updated.user) {
+        let newRole = updated.user.role;
+        if (status === 'ACTIVE') {
+          newRole = 'VENDOR';
+        } else if (status === 'SUSPENDED' || status === 'REJECTED') {
+          // ترجيعه لمستخدم عادي لو تم إيقافه
+          newRole = 'CUSTOMER';
+        }
+
+        if (newRole !== updated.user.role) {
+          await tx.user.update({
+            where: { id: updated.userId },
+            data: { role: newRole }
+          });
+          logger.info(`User role updated to ${newRole} for userId=${updated.userId} due to vendor status change`);
+        }
+      }
+
+      return updated;
     });
 
     logger.info(`Vendor status updated: ${id} -> ${status}`);
@@ -317,36 +341,67 @@ class VendorService {
    */
   async getVendorStats(vendorId) {
     const vendor = await this.getVendorById(vendorId);
+    let extraStats = {};
 
-    const stats = await prisma.autoPart.groupBy({
-      by: ['isApproved', 'isActive'],
-      where: { vendorId },
-      _count: true,
-    });
+    // 1. قطع الغيار (Auto Parts)
+    if (vendor.vendorType === 'AUTO_PARTS' || !vendor.vendorType) {
+      const totalParts = await prisma.autoPart.count({ where: { vendorId } });
+      const activeParts = await prisma.autoPart.count({ where: { vendorId, isActive: true, isApproved: true } });
+      const pendingParts = await prisma.autoPart.count({ where: { vendorId, isApproved: false } });
+      extraStats = { totalParts, activeParts, pendingParts };
+    }
 
-    const totalParts = await prisma.autoPart.count({
-      where: { vendorId },
-    });
+    // 2. الحجوزات (للعناية الشاملة، الغسيل، والورش)
+    if (['COMPREHENSIVE_CARE', 'CAR_WASH', 'CERTIFIED_WORKSHOP'].includes(vendor.vendorType)) {
+      // البحث عن الحجوزات المرتبطة بخدمات هذا الفيندور
+      // ملاحظة: الورش مرتبطة مباشرة عبر workshopId، العناية والغسيل عبر خدماتهم
+      let bookingWhere = {};
 
-    const activeParts = await prisma.autoPart.count({
-      where: { vendorId, isActive: true, isApproved: true },
-    });
+      if (vendor.vendorType === 'CERTIFIED_WORKSHOP') {
+        const workshop = await prisma.certifiedWorkshop.findUnique({ where: { vendorId } });
+        bookingWhere = workshop ? { workshopId: workshop.id } : { id: 'none' };
+      } else {
+        bookingWhere = {
+          services: {
+            some: {
+              service: { vendorId: vendor.id }
+            }
+          }
+        };
+      }
 
-    const pendingParts = await prisma.autoPart.count({
-      where: { vendorId, isApproved: false },
-    });
+      const totalBookings = await prisma.booking.count({ where: bookingWhere });
+      const completedBookings = await prisma.booking.count({
+        where: { ...bookingWhere, status: 'COMPLETED' }
+      });
+      const pendingBookings = await prisma.booking.count({
+        where: { ...bookingWhere, status: 'PENDING' }
+      });
+
+      // حساب إجمالي الإيرادات من الحجوزات المكتملة
+      const revenue = await prisma.booking.aggregate({
+        where: { ...bookingWhere, status: 'COMPLETED' },
+        _sum: { totalPrice: true }
+      });
+
+      extraStats = {
+        totalBookings,
+        completedBookings,
+        pendingBookings,
+        revenue: Number(revenue._sum.totalPrice || 0)
+      };
+    }
 
     return {
       vendor: {
         id: vendor.id,
         businessName: vendor.businessName,
+        vendorType: vendor.vendorType,
         status: vendor.status,
         isVerified: vendor.isVerified,
       },
       stats: {
-        totalParts,
-        activeParts,
-        pendingParts,
+        ...extraStats,
         totalSales: vendor.totalSales,
         averageRating: vendor.averageRating,
         totalReviews: vendor.totalReviews,

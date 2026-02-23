@@ -131,12 +131,138 @@ router.get('/', workshopController.getAllWorkshops);
  *         description: Not a certified workshop vendor
  */
 router.post('/profile/me', requireRole('VENDOR'), workshopController.createMyWorkshop);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me:
+ *   get:
+ *     summary: Get my workshop profile
+ *     tags: [Certified Workshops]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Workshop profile retrieved
+ */
 router.get('/profile/me', requireRole('VENDOR'), workshopController.getMyWorkshop);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me:
+ *   put:
+ *     summary: Update my workshop profile
+ *     tags: [Certified Workshops]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: { type: string }
+ *               nameAr: { type: string }
+ *               description: { type: string }
+ *               address: { type: string }
+ *               city: { type: string }
+ *               phone: { type: string }
+ *               workingHours: { type: object }
+ *     responses:
+ *       200:
+ *         description: Workshop profile updated
+ */
 router.put('/profile/me', requireRole('VENDOR'), workshopController.updateMyWorkshop);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me/bookings:
+ *   get:
+ *     summary: Get my workshop bookings
+ *     tags: [Certified Workshops]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of workshop bookings
+ */
 router.get('/profile/me/bookings', requireRole('VENDOR'), workshopController.getMyWorkshopBookings);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me/logo:
+ *   post:
+ *     summary: Upload my workshop logo
+ *     tags: [Certified Workshops]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file: { type: string, format: binary }
+ *     responses:
+ *       200:
+ *         description: Logo uploaded
+ */
 router.post('/profile/me/logo', requireRole('VENDOR'), resolveVendorWorkshopId, upload.single('file'), workshopImageController.uploadLogo);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me/images:
+ *   post:
+ *     summary: Upload my workshop images
+ *     tags: [Certified Workshops]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               files: { type: array, items: { type: string, format: binary } }
+ *     responses:
+ *       200:
+ *         description: Images uploaded
+ */
 router.post('/profile/me/images', requireRole('VENDOR'), resolveVendorWorkshopId, upload.array('files', 10), workshopImageController.uploadImages);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me/logo:
+ *   delete:
+ *     summary: Delete my workshop logo
+ *     tags: [Certified Workshops]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logo deleted
+ */
 router.delete('/profile/me/logo', requireRole('VENDOR'), resolveVendorWorkshopId, workshopImageController.deleteLogo);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me/images/{imageIndex}:
+ *   delete:
+ *     summary: Delete my workshop image
+ *     tags: [Certified Workshops]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: imageIndex
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Image deleted
+ */
 router.delete('/profile/me/images/:imageIndex', requireRole('VENDOR'), resolveVendorWorkshopId, workshopImageController.deleteImage);
 
 /**

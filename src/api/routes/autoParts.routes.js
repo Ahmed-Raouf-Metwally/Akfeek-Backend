@@ -112,7 +112,29 @@ router.get('/:id', authMiddleware.optionalAuth, autoPartController.getPartById);
 router.use(authMiddleware);
 
 /**
- * POST /api/auto-parts/upload-image - Upload image file(s), returns URL(s)
+ * @swagger
+ * /api/auto-parts/upload-image:
+ *   post:
+ *     summary: Upload image file(s) for auto parts
+ *     description: Upload up to 10 image files. Returns an array of uploaded image URLs.
+ *     tags: [Auto Parts]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Images uploaded successfully
  */
 router.post('/upload-image', uploadAutoPartImage.array('files', 10), autoPartController.uploadImage);
 
@@ -265,7 +287,51 @@ router.delete('/:id', autoPartController.deletePart);
  *         description: Images added
  */
 router.post('/:id/images', autoPartController.addPartImages);
+
+/**
+ * @swagger
+ * /api/auto-parts/{id}/images/{imageId}:
+ *   delete:
+ *     summary: Remove an image from part
+ *     tags: [Auto Parts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: imageId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Image removed
+ */
 router.delete('/:id/images/:imageId', autoPartController.deletePartImage);
+
+/**
+ * @swagger
+ * /api/auto-parts/{id}/images/{imageId}/primary:
+ *   patch:
+ *     summary: Set image as primary for part
+ *     tags: [Auto Parts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: imageId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Primary image updated
+ */
 router.patch('/:id/images/:imageId/primary', autoPartController.setPrimaryPartImage);
 
 /**

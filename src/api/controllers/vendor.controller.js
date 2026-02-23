@@ -1,4 +1,5 @@
 const vendorService = require('../../services/vendor.service');
+const vendorCouponService = require('../../services/vendorCoupon.service');
 
 /**
  * Vendor Controller
@@ -55,6 +56,78 @@ class VendorController {
       res.json({
         success: true,
         data: vendor,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * List my coupons (كوبوناتي)
+   * GET /api/vendors/profile/me/coupons
+   */
+  async getMyCoupons(req, res, next) {
+    try {
+      const vendorId = await vendorCouponService.getVendorIdByUserId(req.user.id);
+      const list = await vendorCouponService.listByVendorId(vendorId, {
+        isActive: req.query.isActive,
+      });
+      res.json({ success: true, data: list });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Create coupon (فيندور يضيف كوبون)
+   * POST /api/vendors/profile/me/coupons
+   */
+  async createMyCoupon(req, res, next) {
+    try {
+      const vendorId = await vendorCouponService.getVendorIdByUserId(req.user.id);
+      const coupon = await vendorCouponService.create(vendorId, req.body);
+      res.status(201).json({
+        success: true,
+        message: 'Coupon created',
+        messageAr: 'تم إنشاء الكوبون',
+        data: coupon,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Update my coupon
+   * PATCH /api/vendors/profile/me/coupons/:id
+   */
+  async updateMyCoupon(req, res, next) {
+    try {
+      const vendorId = await vendorCouponService.getVendorIdByUserId(req.user.id);
+      const coupon = await vendorCouponService.update(req.params.id, vendorId, req.body);
+      res.json({
+        success: true,
+        message: 'Coupon updated',
+        messageAr: 'تم تحديث الكوبون',
+        data: coupon,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete my coupon
+   * DELETE /api/vendors/profile/me/coupons/:id
+   */
+  async deleteMyCoupon(req, res, next) {
+    try {
+      const vendorId = await vendorCouponService.getVendorIdByUserId(req.user.id);
+      await vendorCouponService.remove(req.params.id, vendorId);
+      res.json({
+        success: true,
+        message: 'Coupon deleted',
+        messageAr: 'تم حذف الكوبون',
       });
     } catch (error) {
       next(error);

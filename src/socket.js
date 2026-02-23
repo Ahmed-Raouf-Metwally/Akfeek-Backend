@@ -38,6 +38,22 @@ function init(server) {
             logger.info(`Customer left booking room: ${bookingId}`);
         });
 
+        // Customer joins technical support request room (تتبع الفني - طلب دعم فني)
+        socket.on('customer:join_tsr_request', (requestId) => {
+            socket.join(`tsr:${requestId}`);
+            logger.info(`Customer joined TSR tracking room: ${requestId}`);
+            socket.emit('customer:joined_tsr', {
+                requestId,
+                message: 'Successfully joined request tracking',
+                messageAr: 'تم الاتصال بتتبع الطلب'
+            });
+        });
+
+        socket.on('customer:leave_tsr_request', (requestId) => {
+            socket.leave(`tsr:${requestId}`);
+            logger.info(`Customer left TSR room: ${requestId}`);
+        });
+
         // Technician joins their own room
         socket.on('technician:join', (technicianId) => {
             socket.join(`technician:${technicianId}`);

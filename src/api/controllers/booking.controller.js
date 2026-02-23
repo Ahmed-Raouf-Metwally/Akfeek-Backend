@@ -1,5 +1,6 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const vendorCouponService = require('../../services/vendorCoupon.service');
 
 /**
  * Get all bookings (Admin). Paginated list with customer/vehicle summary.
@@ -231,7 +232,8 @@ async function createBooking(req, res, next) {
       serviceIds,
       services: servicesLegacy,
       addressId,
-      notes
+      notes,
+      couponCode
     } = req.body;
 
     const workType = bodyWorkType === 'REWORK' ? 'REWORK' : 'WORK';
@@ -282,6 +284,7 @@ async function createBooking(req, res, next) {
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const workshopPlaceholders = ['string', 'uuid-الورشة', 'uuid-workshop'];
+    let flatbedFee = 0;
     if (workshopId) {
       if (workshopPlaceholders.includes(workshopId) || !uuidRegex.test(workshopId)) {
         throw new AppError(
@@ -334,13 +337,47 @@ async function createBooking(req, res, next) {
       const totalPrice = unitPrice * quantity;
       subtotal += totalPrice;
       const estimatedMinutes = service.estimatedDuration != null ? Number(service.estimatedDuration) : null;
-      bookingServiceData.push({ serviceId, quantity, unitPrice, totalPrice, estimatedMinutes });
+      const vendorId = service.vendorId || null;
+      bookingServiceData.push({ serviceId, quantity, unitPrice, totalPrice, estimatedMinutes, vendorId });
     }
 
     const totalEstimatedMinutes = bookingServiceData.reduce((sum, s) => sum + (s.estimatedMinutes ?? 0), 0);
 
-    const tax = Math.round(subtotal * 0.15 * 100) / 100;
-    const totalPrice = subtotal + flatbedFee + tax;
+    // تطبيق كوبون الفيندور — الخصم على خدمات هذا الفيندور فقط
+    let discountAmount = 0;
+    let appliedCouponId = null;
+    const vendorIdsInBooking = [...new Set(bookingServiceData.map((s) => s.vendorId).filter(Boolean))];
+    if (couponCode && typeof couponCode === 'string' && couponCode.trim() && vendorIdsInBooking.length > 0) {
+      const codeNorm = couponCode.trim().toUpperCase();
+      const now = new Date();
+      const validCoupons = await prisma.vendorCoupon.findMany({
+        where: {
+          code: codeNorm,
+          isActive: true,
+          validFrom: { lte: now },
+          validUntil: { gte: now },
+          vendorId: { in: vendorIdsInBooking }
+        }
+      });
+      const validCouponsWithUses = validCoupons.filter((c) => c.maxUses == null || c.usedCount < c.maxUses);
+      const coupon = validCouponsWithUses.length === 1
+        ? validCouponsWithUses[0]
+        : validCouponsWithUses.find((c) => vendorIdsInBooking.includes(c.vendorId));
+      if (coupon) {
+        const vendorSubtotal = bookingServiceData
+          .filter((s) => s.vendorId === coupon.vendorId)
+          .reduce((sum, s) => sum + s.totalPrice, 0);
+        const { discountAmount: d } = vendorCouponService.computeDiscount(coupon, vendorSubtotal);
+        discountAmount = d;
+        appliedCouponId = coupon.id;
+      } else if (couponCode.trim()) {
+        throw new AppError('Invalid or expired coupon code for this booking', 400, 'INVALID_COUPON');
+      }
+    }
+
+    const afterDiscount = subtotal - discountAmount;
+    const tax = Math.round(afterDiscount * 0.15 * 100) / 100;
+    const totalPrice = afterDiscount + flatbedFee + tax;
 
     const booking = await prisma.booking.create({
       data: {
@@ -360,7 +397,8 @@ async function createBooking(req, res, next) {
         laborFee: 0,
         deliveryFee: flatbedFee,
         partsTotal: 0,
-        discount: 0,
+        discount: discountAmount,
+        couponId: appliedCouponId || null,
         tax,
         totalPrice,
         notes: notes || null,
@@ -407,6 +445,10 @@ async function createBooking(req, res, next) {
         reason: 'Booking created'
       }
     });
+
+    if (appliedCouponId) {
+      await vendorCouponService.incrementUsedCount(appliedCouponId).catch(() => { });
+    }
 
     res.status(201).json({
       success: true,

@@ -71,9 +71,89 @@ router.get('/', requireRole('ADMIN'), vendorController.getAllVendors);
 router.get('/profile/me', requireRole('VENDOR'), vendorController.getMyVendorProfile);
 
 /**
- * GET /api/vendors/profile/me/comprehensive-care-bookings - List bookings for vendor's comprehensive care services
+ * @swagger
+ * /api/vendors/profile/me/comprehensive-care-bookings:
+ *   get:
+ *     summary: Get comprehensive care service bookings for current vendor
+ *     tags: [Marketplace Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of bookings
  */
 router.get('/profile/me/comprehensive-care-bookings', requireRole('VENDOR'), vendorController.getMyComprehensiveCareBookings);
+
+/**
+ * @swagger
+ * /api/vendors/profile/me/coupons:
+ *   get:
+ *     summary: Get all coupons for current vendor
+ *     tags: [Marketplace Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of vendor coupons
+ *   post:
+ *     summary: Create new coupon for current vendor
+ *     tags: [Marketplace Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [code, discountType, discountValue]
+ *             properties:
+ *               code: { type: string }
+ *               discountType: { type: string, enum: [PERCENTAGE, FIXED] }
+ *               discountValue: { type: number }
+ *               minOrderValue: { type: number }
+ *               startDate: { type: string, format: date-time }
+ *               endDate: { type: string, format: date-time }
+ *               usageLimit: { type: integer }
+ *     responses:
+ *       201:
+ *         description: Coupon created
+ */
+router.get('/profile/me/coupons', requireRole('VENDOR'), vendorController.getMyCoupons);
+router.post('/profile/me/coupons', requireRole('VENDOR'), vendorController.createMyCoupon);
+
+/**
+ * @swagger
+ * /api/vendors/profile/me/coupons/{id}:
+ *   patch:
+ *     summary: Update vendor coupon
+ *     tags: [Marketplace Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Coupon updated
+ *   delete:
+ *     summary: Delete vendor coupon
+ *     tags: [Marketplace Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Coupon deleted
+ */
+router.patch('/profile/me/coupons/:id', requireRole('VENDOR'), vendorController.updateMyCoupon);
+router.delete('/profile/me/coupons/:id', requireRole('VENDOR'), vendorController.deleteMyCoupon);
 
 /**
  * @swagger
@@ -125,13 +205,46 @@ router.get('/:id', vendorController.getVendorById);
 router.get('/:id/stats', vendorController.getVendorStats);
 
 /**
- * GET /api/vendors/:id/reviews - List vendor reviews (تقييمات الفيندور)
+ * @swagger
+ * /api/vendors/{id}/reviews:
+ *   get:
+ *     summary: Get vendor reviews
+ *     tags: [Marketplace Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: List of vendor reviews
+ *   post:
+ *     summary: Submit a review for a vendor
+ *     tags: [Marketplace Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [rating, comment]
+ *             properties:
+ *               rating: { type: integer, minimum: 1, maximum: 5 }
+ *               comment: { type: string }
+ *     responses:
+ *       201:
+ *         description: Review submitted
  */
 router.get('/:id/reviews', vendorController.getVendorReviews);
-
-/**
- * POST /api/vendors/:id/reviews - Submit rating (1-5 stars) for vendor
- */
 router.post('/:id/reviews', vendorController.submitVendorReview);
 
 /**

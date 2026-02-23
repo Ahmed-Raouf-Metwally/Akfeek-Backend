@@ -19,8 +19,8 @@ exports.updateLocation = async (req, res, next) => {
         const result = await trackingService.updateTechnicianLocation(technicianId, locationData);
 
         // Emit Socket.io event to customer if on job
+        const io = socketIo.getIo();
         if (locationData.bookingId && result.eta) {
-            const io = socketIo.getIo();
             io.to(`booking:${locationData.bookingId}`).emit('technician:location_update', {
                 bookingId: locationData.bookingId,
                 location: {
@@ -31,6 +31,19 @@ exports.updateLocation = async (req, res, next) => {
                     timestamp: new Date()
                 },
                 eta: result.eta
+            });
+        }
+        // طلب دعم فني: بث موقع الفني للعميل المتتبع
+        if (locationData.technicalSupportRequestId) {
+            io.to(`tsr:${locationData.technicalSupportRequestId}`).emit('technician:location_update', {
+                requestId: locationData.technicalSupportRequestId,
+                location: {
+                    latitude: locationData.latitude,
+                    longitude: locationData.longitude,
+                    heading: locationData.heading,
+                    speed: locationData.speed,
+                    timestamp: new Date()
+                }
             });
         }
 

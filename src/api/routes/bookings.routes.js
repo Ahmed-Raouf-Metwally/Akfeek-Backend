@@ -4,21 +4,87 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
 const bookingController = require('../controllers/booking.controller');
 
+/**
+ * @swagger
+ * tags:
+ *   name: Bookings
+ *   description: Booking management (All 4 models) - إدارة الحجوزات
+ */
+
 router.use(authMiddleware);
 
 /**
- * GET /api/bookings - List all bookings (Admin). Paginated.
- * Query: page, limit, status
+ * @swagger
+ * /api/bookings:
+ *   get:
+ *     summary: List all bookings (Admin)
+ *     description: Retrieve a paginated list of all bookings in the system.
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 10 }
+ *         description: Items per page
+ *       - in: query
+ *         name: status
+ *         schema: { type: string }
+ *         description: Filter by status
+ *     responses:
+ *       200:
+ *         description: List of bookings
  */
 router.get('/', requireRole('ADMIN'), bookingController.getAllBookings);
 
 /**
- * GET /api/bookings/my - Current user's bookings (customer: my appointments). Query: page, limit, status
+ * @swagger
+ * /api/bookings/my:
+ *   get:
+ *     summary: Get my bookings
+ *     description: Retrieve bookings for the authenticated customer.
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 10 }
+ *       - in: query
+ *         name: status
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: List of user bookings
  */
 router.get('/my', bookingController.getMyBookings);
 
 /**
- * GET /api/bookings/:id - Get one booking by id (Admin or owner).
+ * @swagger
+ * /api/bookings/{id}:
+ *   get:
+ *     summary: Get booking by ID
+ *     description: Retrieve details of a specific booking.
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Booking details
+ *       404:
+ *         description: Booking not found
  */
 router.get('/:id', bookingController.getBookingById);
 
@@ -37,7 +103,7 @@ router.get('/:id', bookingController.getBookingById);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [customerId, vehicleId, scheduledDate]
+ *             required: [vehicleId, scheduledDate]
  *             properties:
  *               customerId:
  *                 type: string
@@ -56,11 +122,11 @@ router.get('/:id', bookingController.getBookingById);
  *                 type: string
  *                 enum: [FLATBED, SELF_DELIVERY]
  *                 description: Required if workshopId is provided
- *               services:
+ *               serviceIds:
  *                 type: array
  *                 items:
  *                   type: string
- *               products:
+ *               productIds:
  *                 type: array
  *                 items:
  *                   type: string
@@ -76,9 +142,46 @@ router.get('/:id', bookingController.getBookingById);
  */
 router.post('/', bookingController.createBooking);
 
-// Real-time tracking endpoints (for customers)
+/**
+ * @swagger
+ * /api/bookings/{bookingId}/track:
+ *   get:
+ *     summary: Get tracking info for booking
+ *     description: Retrieve current location of assigned technician.
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: bookingId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Tracking information
+ */
 const trackingController = require('../controllers/tracking.controller');
 router.get('/:bookingId/track', trackingController.getTrackingInfo);
+
+/**
+ * @swagger
+ * /api/bookings/{bookingId}/location-history:
+ *   get:
+ *     summary: Get location history for booking
+ *     description: Retrieve polyline/history of technician movement.
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: bookingId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Location history
+ */
 router.get('/:bookingId/location-history', trackingController.getLocationHistory);
 
 module.exports = router;
+
