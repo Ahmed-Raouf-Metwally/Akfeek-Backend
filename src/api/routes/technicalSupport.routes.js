@@ -4,13 +4,6 @@ const technicalSupportController = require('../controllers/technicalSupport.cont
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
 
-/**
- * @swagger
- * tags:
- *   name: Technical Support Request
- *   description: طلب دعم فني - تقديم طلب وعرضه، أدمن يعين الفني
- */
-
 router.use(authMiddleware);
 
 // ---------- Customer endpoints ----------
@@ -23,7 +16,7 @@ router.use(authMiddleware);
  *       المستخدم يقدم طلب دعم فني يتضمن:
  *       الرقم التسلسلي للسيارة، رقم اللوحة، هل يوجد تأمين واسم شركة التأمين،
  *       عنوان التسليم، اختياري إذن إصلاح/وثيقة نجم/تقرير مرور، أضرار الحادث، صور السيارة (اختياري).
- *     tags: [Technical Support Request]
+ *     tags: [📱 Customer | Technical Support]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -62,7 +55,7 @@ router.post('/', technicalSupportController.create);
  * /api/technical-support-requests/my:
  *   get:
  *     summary: Get my technical support requests
- *     tags: [Technical Support Request]
+ *     tags: [📱 Customer | Technical Support]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -87,7 +80,7 @@ router.get('/my', technicalSupportController.getMyRequests);
  * /api/technical-support-requests/admin/list:
  *   get:
  *     summary: "[Admin] List all technical support requests"
- *     tags: [Technical Support Request]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -112,7 +105,7 @@ router.get('/admin/list', requireRole('ADMIN'), technicalSupportController.admin
  *   post:
  *     summary: "[Admin] Assign technician to request"
  *     description: الأدمن يحدد الفني الذي سيراجع العميل
- *     tags: [Technical Support Request]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -144,7 +137,7 @@ router.post('/admin/:id/assign', requireRole('ADMIN'), technicalSupportControlle
  * /api/technical-support-requests/admin/{id}/status:
  *   patch:
  *     summary: "[Admin] Update request status"
- *     tags: [Technical Support Request]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -171,7 +164,7 @@ router.patch('/admin/:id/status', requireRole('ADMIN'), technicalSupportControll
  * /api/technical-support-requests/technicians:
  *   get:
  *     summary: "[Admin] List technicians for assign dropdown"
- *     tags: [Technical Support Request]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -186,7 +179,7 @@ router.get('/technicians', requireRole('ADMIN'), technicalSupportController.getT
  *   get:
  *     summary: Get tracking info (technician location) for customer
  *     description: العميل يتابع موقع الفني. ثم يتصل بالسوكيت وغرفة tsr لاستقبال التحديثات اللحظية.
- *     tags: [Technical Support Request]
+ *     tags: [📱 Customer | Technical Support]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -205,7 +198,7 @@ router.get('/:id/track', technicalSupportController.getTrack);
  * /api/technical-support-requests/{id}:
  *   get:
  *     summary: Get request by ID (owner or admin)
- *     tags: [Technical Support Request]
+ *     tags: [📱 Customer | Technical Support]
  *     security:
  *       - bearerAuth: []
  *     parameters:

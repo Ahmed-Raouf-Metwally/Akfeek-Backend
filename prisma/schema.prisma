@@ -185,16 +185,16 @@ model Address {
 // ================================================================================================
 
 enum VehicleType {
-  SEDAN // سيدان - Standard sedan cars
-  HATCHBACK // هاتشباك - Hatchback cars
-  COUPE // كوبيه - Coupe cars
-  SMALL_SUV // دفع رباعي صغير - Compact SUV
-  LARGE_SEDAN // سيدان كبيرة - Full-size sedan
-  SUV // دفع رباعي - Sport Utility Vehicle
-  CROSSOVER // كروس أوفر - Crossover SUV
-  TRUCK // شاحنة/بيك أب - Pickup truck
-  VAN // فان - Van
-  BUS // باص - Bus
+  SEDAN
+  HATCHBACK
+  COUPE
+  SMALL_SUV
+  LARGE_SEDAN
+  SUV
+  CROSSOVER
+  TRUCK
+  MOTORCYCLE
+  HEAVY_EQUIPMENT
 }
 
 // New: Separate brand and model tables for better data management
@@ -401,6 +401,7 @@ enum VendorType {
   COMPREHENSIVE_CARE // فيندور العناية الشاملة
   CERTIFIED_WORKSHOP // فيندور الورش المعتمدة
   CAR_WASH // فيندور خدمة الغسيل
+  ADHMN_AKFEEK // أضمن أكفيك
 }
 
 model VendorProfile {
@@ -509,25 +510,23 @@ model VendorReview {
 }
 
 model AutoPartCategory {
-  id            String             @id @default(uuid())
-  name          String             @unique
+  id            String      @id @default(uuid())
+  name          String      @unique
   nameAr        String?
-  description   String?            @db.Text
-  descriptionAr String?            @db.Text
+  description   String?     @db.Text
+  descriptionAr String?     @db.Text
   icon          String?
   imageUrl      String?
-  parentId      String?
-  parent        AutoPartCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children      AutoPartCategory[] @relation("CategoryHierarchy")
-  isActive      Boolean            @default(true)
-  sortOrder     Int                @default(0)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  vehicleType   VehicleType @default(SEDAN)
+  isActive      Boolean     @default(true)
+  sortOrder     Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   parts AutoPart[]
 
-  @@index([parentId])
   @@index([isActive])
+  @@index([vehicleType])
 }
 
 model AutoPart {

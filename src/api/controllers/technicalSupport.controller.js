@@ -119,6 +119,25 @@ class TechnicalSupportController {
     }
   }
 
+  /** Technician: list technical support requests assigned to me (طلبات الدعم الفني المعينة لي) */
+  async getMyAssignedRequests(req, res, next) {
+    try {
+      const { page, limit, status } = req.query;
+      const result = await technicalSupportService.getAssignedToTechnician(req.user.id, {
+        page: parseInt(page) || 1,
+        limit: parseInt(limit) || 10,
+        status: status || undefined
+      });
+      res.json({
+        success: true,
+        data: result.data,
+        pagination: result.pagination
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   /** Admin: list technicians (for assign dropdown) */
   async getTechnicians(req, res, next) {
     try {

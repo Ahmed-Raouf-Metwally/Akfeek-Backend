@@ -13,10 +13,11 @@ class VendorService {
    * @returns {Array} List of vendors
    */
   async getAllVendors(filters = {}) {
-    const { status, search, isVerified } = filters;
+    const { status, search, isVerified, vendorType } = filters;
 
     const where = {
       ...(status && { status }),
+      ...(vendorType && { vendorType }),
       ...(isVerified !== undefined && { isVerified: isVerified === 'true' }),
     };
 
@@ -167,7 +168,7 @@ class VendorService {
       );
     }
 
-    // Check if user exists and has VENDOR role
+    // Check if user exists
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -176,42 +177,46 @@ class VendorService {
       throw new AppError('User not found', 404, 'USER_NOT_FOUND');
     }
 
-    if (user.role !== 'VENDOR') {
-      throw new AppError(
-        'User must have VENDOR role',
-        400,
-        'INVALID_USER_ROLE'
-      );
-    }
+    const vendor = await prisma.$transaction(async (tx) => {
+      // 1. Upgrade user role to VENDOR if not already
+      if (user.role !== 'VENDOR') {
+        await tx.user.update({
+          where: { id: userId },
+          data: { role: 'VENDOR' }
+        });
+        logger.info(`User role upgraded to VENDOR for userId=${userId}`);
+      }
 
-    const vendor = await prisma.vendorProfile.create({
-      data: {
-        userId,
-        ...(vendorType && { vendorType: ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH'].includes(vendorType) ? vendorType : 'AUTO_PARTS' }),
-        businessName,
-        businessNameAr,
-        description,
-        descriptionAr,
-        commercialLicense,
-        taxNumber,
-        contactPhone,
-        contactEmail,
-        address,
-        city,
-        country: country || 'SA',
-        logo,
-        banner,
-        status: status || 'PENDING_APPROVAL',
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            phone: true,
+      // 2. Create vendor profile
+      return await tx.vendorProfile.create({
+        data: {
+          userId,
+          ...(vendorType && { vendorType: ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'ADHMN_AKFEEK'].includes(vendorType) ? vendorType : 'AUTO_PARTS' }),
+          businessName,
+          businessNameAr,
+          description,
+          descriptionAr,
+          commercialLicense,
+          taxNumber,
+          contactPhone,
+          contactEmail,
+          address,
+          city,
+          country: country || 'SA',
+          logo,
+          banner,
+          status: status || 'PENDING_APPROVAL',
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+            },
           },
         },
-      },
+      });
     });
 
     logger.info(`Vendor profile created: ${vendor.businessName} (${vendor.id})`);
@@ -245,7 +250,7 @@ class VendorService {
       vendorType,
     } = data;
 
-    const validVendorTypes = ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH'];
+    const validVendorTypes = ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'ADHMN_AKFEEK'];
     const vendor = await prisma.vendorProfile.update({
       where: { id },
       data: {
@@ -292,6 +297,8 @@ class VendorService {
     if (!validStatuses.includes(status)) {
       throw new AppError('Invalid status', 400, 'INVALID_STATUS');
     }
+
+    const updateData = { status };
 
     // Set isVerified and verifiedAt when approving
     if (status === 'ACTIVE') {
@@ -590,6 +597,110 @@ class VendorService {
       averageRating: vendor.averageRating ?? 0,
       totalReviews: vendor.totalReviews ?? 0,
     };
+  }
+  /**
+   * Get all comprehensive care providers (merged from Certified Workshops and VendorProfiles)
+   */
+  async getComprehensiveCareProviders(filters = {}) {
+    const { city, search } = filters;
+
+    // 1. Get Comprehensive Care Vendors
+    const vendorWhere = {
+      vendorType: 'COMPREHENSIVE_CARE',
+      status: 'ACTIVE'
+    };
+    if (city) vendorWhere.city = city;
+
+    const searchTerm = typeof search === 'string' ? search.trim() : '';
+    if (searchTerm) {
+      vendorWhere.OR = [
+        { businessName: { contains: searchTerm } },
+        { businessNameAr: { contains: searchTerm } }
+      ];
+    }
+
+    const careVendors = await prisma.vendorProfile.findMany({
+      where: vendorWhere,
+      select: {
+        id: true,
+        businessName: true,
+        businessNameAr: true,
+        city: true,
+        contactPhone: true,
+        logo: true,
+        isVerified: true,
+        averageRating: true,
+        totalReviews: true,
+        vendorType: true
+      }
+    });
+
+    // 2. Get Certified Workshops with "care/comprehensive" services
+    const workshopWhere = {
+      isActive: true,
+      isVerified: true,
+      OR: [
+        { services: { contains: 'comprehensive' } },
+        { services: { contains: 'عناية' } },
+        { services: { contains: 'شاملة' } },
+        { services: { contains: 'care' } }
+      ]
+    };
+    if (city) workshopWhere.city = city;
+    if (searchTerm) {
+      workshopWhere.OR.push(
+        { name: { contains: searchTerm } },
+        { nameAr: { contains: searchTerm } }
+      );
+    }
+
+    const careWorkshops = await prisma.certifiedWorkshop.findMany({
+      where: workshopWhere,
+      select: {
+        id: true,
+        name: true,
+        nameAr: true,
+        city: true,
+        phone: true,
+        logo: true,
+        isVerified: true,
+        averageRating: true,
+        totalReviews: true,
+        services: true
+      }
+    });
+
+    // 3. Normalize and Merge
+    const normalizedVendors = careVendors.map(v => ({
+      id: v.id,
+      name: v.businessName,
+      nameAr: v.businessNameAr,
+      city: v.city,
+      phone: v.contactPhone,
+      logo: v.logo,
+      isVerified: v.isVerified,
+      averageRating: v.averageRating,
+      totalReviews: v.totalReviews,
+      type: 'VENDOR',
+      category: 'COMPREHENSIVE_CARE'
+    }));
+
+    const normalizedWorkshops = careWorkshops.map(w => ({
+      id: w.id,
+      name: w.name,
+      nameAr: w.nameAr,
+      city: w.city,
+      phone: w.phone,
+      logo: w.logo,
+      isVerified: w.isVerified,
+      averageRating: w.averageRating,
+      totalReviews: w.totalReviews,
+      type: 'WORKSHOP',
+      category: 'CERTIFIED_WORKSHOP',
+      services: w.services
+    }));
+
+    return [...normalizedVendors, ...normalizedWorkshops].sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
   }
 }
 

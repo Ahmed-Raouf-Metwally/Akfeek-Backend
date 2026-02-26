@@ -14,7 +14,7 @@ router.use(authMiddleware);
  * /api/services/upload-image:
  *   post:
  *     summary: Upload service image
- *     tags: [Services]
+ *     tags: [⚙️ Admin | Services]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -39,7 +39,7 @@ router.post('/upload-image', requireRole(['ADMIN', 'VENDOR']), uploadServiceImag
  *   get:
  *     summary: Get all services
  *     description: Retrieve a list of all available services with filtering
- *     tags: [Services]
+ *     tags: [📱 Customer | Services]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -69,7 +69,7 @@ router.get('/', serviceController.getAllServices);
  *   get:
  *     summary: Get available time slots for a service
  *     description: Returns available time slots for Comprehensive Care booking (no double-book).
- *     tags: [Services]
+ *     tags: [🏪 Vendor | Comprehensive Care]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -97,7 +97,7 @@ router.get('/:id/available-slots', serviceController.getAvailableSlots);
  * /api/services/{id}:
  *   get:
  *     summary: Get service details
- *     tags: [Services]
+ *     tags: [📱 Customer | Services]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -120,7 +120,7 @@ router.get('/:id', serviceController.getServiceById);
  * /api/services:
  *   post:
  *     summary: Create new service (Admin)
- *     tags: [Services]
+ *     tags: [⚙️ Admin | Services]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -164,7 +164,7 @@ router.post('/', requireRole(['ADMIN', 'VENDOR']), serviceController.createServi
  * /api/services/{id}:
  *   put:
  *     summary: Update service (Admin)
- *     tags: [Services]
+ *     tags: [⚙️ Admin | Services]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -194,7 +194,7 @@ router.put('/:id', requireRole(['ADMIN', 'VENDOR']), serviceController.updateSer
  * /api/services/{id}:
  *   delete:
  *     summary: Delete/Deactivate service (Admin)
- *     tags: [Services]
+ *     tags: [⚙️ Admin | Services]
  *     security:
  *       - bearerAuth: []
  *     parameters:

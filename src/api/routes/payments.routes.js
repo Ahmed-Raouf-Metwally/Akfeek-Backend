@@ -3,13 +3,6 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/auth.middleware');
 const paymentController = require('../controllers/payment.controller');
 
-/**
- * @swagger
- * tags:
- *   name: Payments
- *   description: Payment processing - معالجة الدفع
- */
-
 router.use(authMiddleware);
 
 /**
@@ -17,7 +10,7 @@ router.use(authMiddleware);
  * /api/payments:
  *   get:
  *     summary: List my payments
- *     tags: [Payments]
+ *     tags: [📱 Customer | Payments]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -31,7 +24,7 @@ router.get('/', paymentController.list);
  * /api/payments/{id}:
  *   get:
  *     summary: Get payment by ID
- *     tags: [Payments]
+ *     tags: [📱 Customer | Payments]
  *     security:
  *       - bearerAuth: []
  *     parameters:

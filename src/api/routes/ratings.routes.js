@@ -4,13 +4,6 @@ const ratingController = require('../controllers/rating.controller');
 const authenticate = require('../middlewares/auth.middleware');
 const authorize = require('../middlewares/role.middleware');
 
-/**
- * @swagger
- * tags:
- *   name: Ratings
- *   description: Reviews & ratings - التقييمات والمراجعات
- */
-
 router.use(authenticate);
 
 /**
@@ -18,7 +11,7 @@ router.use(authenticate);
  * /api/ratings:
  *   get:
  *     summary: List all ratings (Admin)
- *     tags: [Ratings]
+ *     tags: [📱 Customer | Ratings]
  *     security:
  *       - bearerAuth: []
  *     responses:

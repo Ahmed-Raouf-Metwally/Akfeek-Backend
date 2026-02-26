@@ -3,13 +3,6 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/auth.middleware');
 const walletController = require('../controllers/wallet.controller');
 
-/**
- * @swagger
- * tags:
- *   name: Wallets
- *   description: Wallet & transactions - المحفظة والمعاملات
- */
-
 router.use(authMiddleware);
 
 /**
@@ -17,7 +10,7 @@ router.use(authMiddleware);
  * /api/wallets:
  *   get:
  *     summary: Get my wallet details
- *     tags: [Wallets]
+ *     tags: [📱 Customer | Wallet]
  *     security:
  *       - bearerAuth: []
  *     responses:

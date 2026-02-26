@@ -12,11 +12,12 @@ class VendorController {
    */
   async getAllVendors(req, res, next) {
     try {
-      const { status, search, isVerified } = req.query;
+      const { status, search, isVerified, vendorType } = req.query;
       const vendors = await vendorService.getAllVendors({
         status,
         search,
         isVerified,
+        vendorType,
       });
 
       res.json({
@@ -38,7 +39,7 @@ class VendorController {
 
       res.json({
         success: true,
-        data:vendor,
+        data: vendor,
       });
     } catch (error) {
       next(error);
@@ -135,6 +136,23 @@ class VendorController {
   }
 
   /**
+   * Get all coupons (Admin)
+   * GET /api/vendors/coupons
+   */
+  async getAllCoupons(req, res, next) {
+    try {
+      const list = await vendorCouponService.listAllCoupons({
+        isActive: req.query.isActive,
+        vendorId: req.query.vendorId,
+        search: req.query.search,
+      });
+      res.json({ success: true, data: list });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get comprehensive care bookings for current vendor (مواعيد الحجوزات)
    * GET /api/vendors/profile/me/comprehensive-care-bookings
    */
@@ -163,8 +181,8 @@ class VendorController {
   async createVendor(req, res, next) {
     try {
       // If admin, use userId from request body; otherwise use authenticated user's ID
-      const userId = req.user.role === 'ADMIN' && req.body.userId 
-        ? req.body.userId 
+      const userId = req.user.role === 'ADMIN' && req.body.userId
+        ? req.body.userId
         : req.user.id;
 
       const vendor = await vendorService.createVendor(userId, req.body);

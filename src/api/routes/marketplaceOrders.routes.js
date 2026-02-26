@@ -11,7 +11,7 @@ router.use(authMiddleware);
  * /api/marketplace-orders:
  *   post:
  *     summary: Create new order
- *     tags: [Marketplace Orders]
+ *     tags: [📱 Customer | Marketplace]
  *     requestBody:
  *       required: true
  *       content:
@@ -47,7 +47,7 @@ router.post('/', orderController.createOrder);
  * /api/marketplace-orders/my-orders:
  *   get:
  *     summary: Get my orders (Customer)
- *     tags: [Marketplace Orders]
+ *     tags: [📱 Customer | Marketplace]
  *     responses:
  *       200:
  *         description: List of own orders
@@ -59,7 +59,7 @@ router.get('/my-orders', orderController.getMyOrders);
  * /api/marketplace-orders/vendor-orders:
  *   get:
  *     summary: Get received orders (Vendor)
- *     tags: [Marketplace Orders]
+ *     tags: [📱 Customer | Marketplace]
  *     responses:
  *       200:
  *         description: List of orders containing vendor items
@@ -71,7 +71,7 @@ router.get('/vendor-orders', requireRole('VENDOR'), orderController.getVendorOrd
  * /api/marketplace-orders:
  *   get:
  *     summary: Get all orders (Admin)
- *     tags: [Marketplace Orders]
+ *     tags: [📱 Customer | Marketplace]
  *     responses:
  *       200:
  *         description: List of all orders
@@ -83,7 +83,7 @@ router.get('/', requireRole('ADMIN'), orderController.getAllOrders);
  * /api/marketplace-orders/{id}:
  *   get:
  *     summary: Get order details
- *     tags: [Marketplace Orders]
+ *     tags: [📱 Customer | Marketplace]
  *     parameters:
  *       - in: path
  *         name: id
@@ -98,10 +98,54 @@ router.get('/:id', orderController.getOrderById);
 
 /**
  * @swagger
+ * /api/marketplace-orders/{id}:
+ *   put:
+ *     summary: Update order details (Customer/Admin)
+ *     description: Update shipping address, contact info or items before payment/processing.
+ *     tags: [📱 Customer | Marketplace]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               shippingAddress:
+ *                 type: object
+ *                 properties:
+ *                   address: { type: string }
+ *                   city: { type: string }
+ *                   name: { type: string }
+ *                   phone: { type: string }
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     autoPartId: { type: string }
+ *                     quantity: { type: integer }
+ *               notes: { type: string }
+ *     responses:
+ *       200:
+ *         description: Order updated
+ */
+router.put('/:id', orderController.updateOrder);
+
+
+/**
+ * @swagger
  * /api/marketplace-orders/{id}/status:
  *   put:
  *     summary: Update global order status (Admin)
- *     tags: [Marketplace Orders]
+ *     tags: [📱 Customer | Marketplace]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -131,7 +175,7 @@ router.put('/:id/status', requireRole('ADMIN'), orderController.updateOrderStatu
  * /api/marketplace-orders/{id}/items/{itemId}/status:
  *   put:
  *     summary: Update item status (Vendor)
- *     tags: [Marketplace Orders]
+ *     tags: [📱 Customer | Marketplace]
  *     security:
  *       - bearerAuth: []
  *     parameters:

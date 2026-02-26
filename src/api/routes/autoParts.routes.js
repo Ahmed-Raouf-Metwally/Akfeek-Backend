@@ -10,7 +10,7 @@ const requireRole = require('../middlewares/role.middleware');
  * /api/auto-parts:
  *   get:
  *     summary: Get all auto parts with filters
- *     tags: [Auto Parts]
+ *     tags: [📱 Customer | Marketplace]
  *     parameters:
  *       - in: query
  *         name: search
@@ -50,7 +50,7 @@ router.get('/', authMiddleware.optionalAuth, autoPartController.getAllParts);
  * /api/auto-parts/vendor/{vendorId}:
  *   get:
  *     summary: Get parts by vendor
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     parameters:
  *       - in: path
  *         name: vendorId
@@ -68,7 +68,7 @@ router.get('/vendor/:vendorId', autoPartController.getPartsByVendor);
  * /api/auto-parts/vehicle/{vehicleModelId}:
  *   get:
  *     summary: Get parts compatible with vehicle
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     parameters:
  *       - in: path
  *         name: vehicleModelId
@@ -86,7 +86,7 @@ router.get('/vehicle/:vehicleModelId', autoPartController.getPartsByVehicle);
  * /api/auto-parts/{id}:
  *   get:
  *     summary: Get part details
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     parameters:
  *       - in: path
  *         name: id
@@ -117,7 +117,7 @@ router.use(authMiddleware);
  *   post:
  *     summary: Upload image file(s) for auto parts
  *     description: Upload up to 10 image files. Returns an array of uploaded image URLs.
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -143,7 +143,7 @@ router.post('/upload-image', uploadAutoPartImage.array('files', 10), autoPartCon
  * /api/auto-parts:
  *   post:
  *     summary: Create new auto part
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -178,7 +178,7 @@ router.post('/', autoPartController.createPart);
  * /api/auto-parts/{id}:
  *   put:
  *     summary: Update auto part
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -211,7 +211,7 @@ router.put('/:id', autoPartController.updatePart);
  * /api/auto-parts/{id}/approve:
  *   put:
  *     summary: Approve or reject part (Admin only)
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -241,7 +241,7 @@ router.put('/:id/approve', requireRole('ADMIN'), autoPartController.updatePartAp
  * /api/auto-parts/{id}:
  *   delete:
  *     summary: Delete part
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -261,7 +261,7 @@ router.delete('/:id', autoPartController.deletePart);
  * /api/auto-parts/{id}/images:
  *   post:
  *     summary: Add images to part
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -293,7 +293,7 @@ router.post('/:id/images', autoPartController.addPartImages);
  * /api/auto-parts/{id}/images/{imageId}:
  *   delete:
  *     summary: Remove an image from part
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -316,7 +316,7 @@ router.delete('/:id/images/:imageId', autoPartController.deletePartImage);
  * /api/auto-parts/{id}/images/{imageId}/primary:
  *   patch:
  *     summary: Set image as primary for part
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -339,7 +339,7 @@ router.patch('/:id/images/:imageId/primary', autoPartController.setPrimaryPartIm
  * /api/auto-parts/{id}/stock:
  *   put:
  *     summary: Update part stock quantity
- *     tags: [Auto Parts]
+ *     tags: [🏪 Vendor | Spare Parts]
  *     security:
  *       - bearerAuth: []
  *     parameters:

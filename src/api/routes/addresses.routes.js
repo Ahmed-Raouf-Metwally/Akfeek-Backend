@@ -3,13 +3,6 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/auth.middleware');
 const addressController = require('../controllers/address.controller');
 
-/**
- * @swagger
- * tags:
- *   name: Addresses
- *   description: Address management - إدارة العناوين
- */
-
 router.use(authMiddleware);
 
 /**
@@ -17,7 +10,7 @@ router.use(authMiddleware);
  * /api/addresses:
  *   get:
  *     summary: Get my addresses
- *     tags: [Addresses]
+ *     tags: [📱 Customer | Addresses]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -31,7 +24,7 @@ router.use(authMiddleware);
  *                 $ref: '#/components/schemas/Address'
  *   post:
  *     summary: Create new address
- *     tags: [Addresses]
+ *     tags: [📱 Customer | Addresses]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -56,7 +49,7 @@ router.post('/', addressController.create);
  * /api/addresses/{id}:
  *   get:
  *     summary: Get address by ID
- *     tags: [Addresses]
+ *     tags: [📱 Customer | Addresses]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -75,7 +68,7 @@ router.post('/', addressController.create);
  *               $ref: '#/components/schemas/Address'
  *   put:
  *     summary: Update address
- *     tags: [Addresses]
+ *     tags: [📱 Customer | Addresses]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -96,7 +89,7 @@ router.post('/', addressController.create);
  *         description: Address updated
  *   delete:
  *     summary: Delete address
- *     tags: [Addresses]
+ *     tags: [📱 Customer | Addresses]
  *     security:
  *       - bearerAuth: []
  *     parameters:

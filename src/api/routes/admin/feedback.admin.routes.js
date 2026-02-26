@@ -4,13 +4,6 @@ const feedbackController = require('../../controllers/feedback.controller');
 const authMiddleware = require('../../middlewares/auth.middleware');
 const roleMiddleware = require('../../middlewares/role.middleware');
 
-/**
- * @swagger
- * tags:
- *   name: Admin Feedback
- *   description: Administrative operations for Managing complaints and suggestions
- */
-
 // All admin feedback routes require ADMIN role
 router.use(authMiddleware);
 router.use(roleMiddleware(['ADMIN']));
@@ -21,7 +14,7 @@ router.use(roleMiddleware(['ADMIN']));
  *   get:
  *     summary: List all feedbacks (Admin)
  *     description: Advanced filtering, search, and pagination for admin dashboard.
- *     tags: [Admin Feedback]
+ *     tags: [⚙️ Admin | Feedback]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -47,7 +40,7 @@ router.get('/:id', feedbackController.getFeedbackDetail);
  *   patch:
  *     summary: Update feedback status
  *     description: Change status (e.g. to RESOLVED). Includes automatic HandledBy assignment.
- *     tags: [Admin Feedback]
+ *     tags: [⚙️ Admin | Feedback]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -63,7 +56,7 @@ router.patch('/:id/priority', feedbackController.updatePriority);
  *   post:
  *     summary: Reply to a feedback
  *     description: Post a reply to the customer's complaint or suggestion.
- *     tags: [Admin Feedback]
+ *     tags: [⚙️ Admin | Feedback]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -78,7 +71,7 @@ router.post('/:id/reply', feedbackController.replyToFeedback);
  *   delete:
  *     summary: Soft delete feedback
  *     description: Mark feedback as deleted without removing from database.
- *     tags: [Admin Feedback]
+ *     tags: [⚙️ Admin | Feedback]
  *     security:
  *       - bearerAuth: []
  *     responses:

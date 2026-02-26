@@ -11,8 +11,8 @@ const registerVendorSchema = z.object({
 
     // ✅ نوع الفيندور — يحدد طبيعة عمله في المنصة
     vendorType: z.enum(
-        ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH'],
-        { errorMap: () => ({ message: 'vendorType must be one of: AUTO_PARTS, COMPREHENSIVE_CARE, CERTIFIED_WORKSHOP, CAR_WASH' }) }
+        ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'ADHMN_AKFEEK'],
+        { errorMap: () => ({ message: 'vendorType must be one of: AUTO_PARTS, COMPREHENSIVE_CARE, CERTIFIED_WORKSHOP, CAR_WASH, ADHMN_AKFEEK' }) }
     ).default('AUTO_PARTS'),
 
     // Address & Registration

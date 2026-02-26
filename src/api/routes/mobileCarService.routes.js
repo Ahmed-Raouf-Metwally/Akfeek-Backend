@@ -4,20 +4,13 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
 const controller = require('../controllers/mobileCarService.controller');
 
-/**
- * @swagger
- * tags:
- *   name: Mobile Car Service
- *   description: Mobile Car Service (Maintanence/Oil Change) - خدمات الموبايل سيرفس
- */
-
 // Public: parent service and sub-services (no auth required for catalog)
 /**
  * @swagger
  * /api/mobile-car-service:
  *   get:
  *     summary: Get Mobile Car Service details
- *     tags: [Mobile Car Service]
+ *     tags: [📱 Customer | Mobile Car Service]
  *     responses:
  *       200:
  *         description: Service details
@@ -29,7 +22,7 @@ router.get('/', controller.getParentService);
  * /api/mobile-car-service/sub-services:
  *   get:
  *     summary: Get sub-services for Mobile Car Service
- *     tags: [Mobile Car Service]
+ *     tags: [📱 Customer | Mobile Car Service]
  *     responses:
  *       200:
  *         description: List of sub-services
@@ -41,7 +34,7 @@ router.get('/sub-services', controller.getSubServices);
  * /api/mobile-car-service/compatible-parts:
  *   get:
  *     summary: Get compatible spare parts for a vehicle
- *     tags: [Mobile Car Service]
+ *     tags: [📱 Customer | Mobile Car Service]
  *     parameters:
  *       - in: query
  *         name: vehicleId
@@ -59,7 +52,7 @@ router.get('/compatible-parts', controller.getCompatibleSpareParts);
  * /api/mobile-car-service/recommended-parts:
  *   get:
  *     summary: Get recommended spare parts for a service
- *     tags: [Mobile Car Service]
+ *     tags: [📱 Customer | Mobile Car Service]
  *     parameters:
  *       - in: query
  *         name: serviceId
@@ -78,7 +71,7 @@ router.get('/recommended-parts', controller.getRecommendedSpareParts);
  * /api/mobile-car-service/bookings:
  *   post:
  *     summary: Create mobile car service booking
- *     tags: [Mobile Car Service]
+ *     tags: [📱 Customer | Mobile Car Service]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -100,7 +93,7 @@ router.post('/bookings', authMiddleware, requireRole(['CUSTOMER']), controller.c
  * /api/mobile-car-service/bookings/{id}:
  *   get:
  *     summary: Get mobile service booking details
- *     tags: [Mobile Car Service]
+ *     tags: [📱 Customer | Mobile Car Service]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -121,7 +114,7 @@ router.get('/bookings/:id', authMiddleware, controller.getBookingById);
  * /api/mobile-car-service/bookings/{id}/status:
  *   patch:
  *     summary: Update mobile service booking status
- *     tags: [Mobile Car Service]
+ *     tags: [📱 Customer | Mobile Car Service]
  *     security:
  *       - bearerAuth: []
  *     parameters:

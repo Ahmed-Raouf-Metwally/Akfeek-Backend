@@ -35,7 +35,7 @@ router.use(authMiddleware);
  *   get:
  *     summary: Get all certified workshops
  *     description: Retrieve a list of active and verified workshops with optional filtering
- *     tags: [Certified Workshops]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -99,7 +99,7 @@ router.get('/', workshopController.getAllWorkshops);
  *     summary: Create my workshop (Vendor)
  *     description: |
  *       الفيندور (نوع ورشة معتمدة) يضيف ورشته بنفسه. الورشة تُنشأ غير معتمدة حتى يتحقق منها الأدمن.
- *     tags: [Certified Workshops]
+ *     tags: [🏪 Vendor | Workshop]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -137,7 +137,7 @@ router.post('/profile/me', requireRole('VENDOR'), workshopController.createMyWor
  * /api/workshops/profile/me:
  *   get:
  *     summary: Get my workshop profile
- *     tags: [Certified Workshops]
+ *     tags: [🏪 Vendor | Workshop]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -151,7 +151,7 @@ router.get('/profile/me', requireRole('VENDOR'), workshopController.getMyWorksho
  * /api/workshops/profile/me:
  *   put:
  *     summary: Update my workshop profile
- *     tags: [Certified Workshops]
+ *     tags: [🏪 Vendor | Workshop]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -179,7 +179,7 @@ router.put('/profile/me', requireRole('VENDOR'), workshopController.updateMyWork
  * /api/workshops/profile/me/bookings:
  *   get:
  *     summary: Get my workshop bookings
- *     tags: [Certified Workshops]
+ *     tags: [🏪 Vendor | Workshop]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -193,7 +193,7 @@ router.get('/profile/me/bookings', requireRole('VENDOR'), workshopController.get
  * /api/workshops/profile/me/logo:
  *   post:
  *     summary: Upload my workshop logo
- *     tags: [Certified Workshops]
+ *     tags: [🏪 Vendor | Workshop]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -215,7 +215,7 @@ router.post('/profile/me/logo', requireRole('VENDOR'), resolveVendorWorkshopId, 
  * /api/workshops/profile/me/images:
  *   post:
  *     summary: Upload my workshop images
- *     tags: [Certified Workshops]
+ *     tags: [🏪 Vendor | Workshop]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -237,7 +237,7 @@ router.post('/profile/me/images', requireRole('VENDOR'), resolveVendorWorkshopId
  * /api/workshops/profile/me/logo:
  *   delete:
  *     summary: Delete my workshop logo
- *     tags: [Certified Workshops]
+ *     tags: [🏪 Vendor | Workshop]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -251,7 +251,7 @@ router.delete('/profile/me/logo', requireRole('VENDOR'), resolveVendorWorkshopId
  * /api/workshops/profile/me/images/{imageIndex}:
  *   delete:
  *     summary: Delete my workshop image
- *     tags: [Certified Workshops]
+ *     tags: [🏪 Vendor | Workshop]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -271,7 +271,7 @@ router.delete('/profile/me/images/:imageIndex', requireRole('VENDOR'), resolveVe
  *   get:
  *     summary: Get workshop details by ID
  *     description: Retrieve detailed information about a specific certified workshop
- *     tags: [Certified Workshops]
+ *     tags: [⚙️ Admin | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -328,7 +328,7 @@ router.get('/:id', workshopController.getWorkshopById);
  *   get:
  *     summary: Get all workshops (Admin)
  *     description: Retrieve all workshops without filtering (Admin only)
- *     tags: [Certified Workshops - Admin]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -364,7 +364,7 @@ router.get('/admin/all', requireRole('ADMIN'), workshopController.getAllWorkshop
  *   post:
  *     summary: Create new certified workshop (Admin)
  *     description: Add a new certified workshop to the system
- *     tags: [Certified Workshops - Admin]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -445,7 +445,7 @@ router.post('/admin/workshops', requireRole('ADMIN'), workshopController.createW
  *   put:
  *     summary: Update workshop (Admin)
  *     description: Update workshop information
- *     tags: [Certified Workshops - Admin]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -493,7 +493,7 @@ router.put('/admin/workshops/:id', requireRole('ADMIN'), workshopController.upda
  *   patch:
  *     summary: Verify/Unverify workshop (Admin)
  *     description: Toggle workshop verification status
- *     tags: [Certified Workshops - Admin]
+ *     tags: [⚙️ Admin | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -529,7 +529,7 @@ router.patch('/admin/workshops/:id/verify', requireRole('ADMIN'), workshopContro
  *   delete:
  *     summary: Delete workshop (Admin)
  *     description: Delete a certified workshop (only if no active bookings)
- *     tags: [Certified Workshops - Admin]
+ *     tags: [⚙️ Admin | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -560,7 +560,7 @@ router.delete('/admin/workshops/:id', requireRole('ADMIN'), workshopController.d
  *   post:
  *     summary: Create a review for a workshop
  *     description: Submit a review and rating for a workshop (requires completed booking for verified reviews)
- *     tags: [Workshop Reviews]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -608,7 +608,7 @@ router.post('/:id/reviews', workshopReviewController.createReview);
  *   get:
  *     summary: Get workshop reviews
  *     description: Retrieve all approved reviews for a workshop
- *     tags: [Workshop Reviews]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -649,7 +649,7 @@ router.get('/:id/reviews', workshopReviewController.getWorkshopReviews);
  *   get:
  *     summary: Get review statistics
  *     description: Get rating distribution and statistics for a workshop
- *     tags: [Workshop Reviews]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -670,7 +670,7 @@ router.get('/:id/reviews/stats', workshopReviewController.getReviewStats);
  *   get:
  *     summary: Get workshop reviews (Admin)
  *     description: Retrieve all reviews including unapproved ones
- *     tags: [Workshop Reviews - Admin]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -705,7 +705,7 @@ router.get('/admin/:id/reviews', requireRole('ADMIN'), workshopReviewController.
  *   patch:
  *     summary: Update review approval status
  *     description: Approve or hide a review
- *     tags: [Workshop Reviews - Admin]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -736,7 +736,7 @@ router.patch('/admin/reviews/:id/approve', requireRole('ADMIN'), workshopReviewC
  *   post:
  *     summary: Add workshop response to review
  *     description: Add an official response from the workshop to a review
- *     tags: [Workshop Reviews - Admin]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -768,7 +768,7 @@ router.post('/admin/reviews/:id/response', requireRole('ADMIN'), workshopReviewC
  *   delete:
  *     summary: Delete a review
  *     description: Permanently delete a review
- *     tags: [Workshop Reviews - Admin]
+ *     tags: [⚙️ Admin | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -793,7 +793,7 @@ router.delete('/admin/reviews/:id', requireRole('ADMIN'), workshopReviewControll
  *   post:
  *     summary: Upload workshop logo
  *     description: Upload a logo image for a workshop (Admin only)
- *     tags: [Workshop Images - Admin]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -826,7 +826,7 @@ router.post('/:id/logo', requireRole('ADMIN'), upload.single('file'), workshopIm
  *   post:
  *     summary: Upload workshop images
  *     description: Upload multiple images for a workshop (max 10 total, Admin only)
- *     tags: [Workshop Images - Admin]
+ *     tags: [📱 Customer | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -861,7 +861,7 @@ router.post('/:id/images', requireRole('ADMIN'), upload.array('files', 10), work
  *   delete:
  *     summary: Delete workshop image
  *     description: Delete a specific image by index (Admin only)
- *     tags: [Workshop Images - Admin]
+ *     tags: [⚙️ Admin | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -889,7 +889,7 @@ router.delete('/:id/images/:imageIndex', requireRole('ADMIN'), workshopImageCont
  *   delete:
  *     summary: Delete workshop logo
  *     description: Delete the workshop logo (Admin only)
- *     tags: [Workshop Images - Admin]
+ *     tags: [⚙️ Admin | Workshops]
  *     security:
  *       - bearerAuth: []
  *     parameters:

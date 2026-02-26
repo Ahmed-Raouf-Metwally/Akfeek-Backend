@@ -4,13 +4,6 @@ const dashboardController = require('../controllers/dashboard.controller');
 const authenticate = require('../middlewares/auth.middleware');
 const authorize = require('../middlewares/role.middleware');
 
-/**
- * @swagger
- * tags:
- *   name: Admin Dashboard
- *   description: High-level system statistics and overview - نظرة عامة وإحصائيات النظام
- */
-
 router.use(authenticate);
 
 /**
@@ -19,7 +12,7 @@ router.use(authenticate);
  *   get:
  *     summary: Get dashboard statistics overview
  *     description: Retrieve key metrics like total users, bookings, revenue, etc.
- *     tags: [Admin Dashboard]
+ *     tags: [⚙️ Admin | Dashboard]
  *     security:
  *       - bearerAuth: []
  *     responses:

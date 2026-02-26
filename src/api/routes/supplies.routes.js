@@ -4,13 +4,6 @@ const supplyController = require('../controllers/supply.controller');
 const authenticate = require('../middlewares/auth.middleware');
 const authorize = require('../middlewares/role.middleware');
 
-/**
- * @swagger
- * tags:
- *   name: Supply Requests
- *   description: Spare parts supply chain - سلسلة توريد قطع الغيار
- */
-
 router.use(authenticate);
 
 /**
@@ -18,7 +11,7 @@ router.use(authenticate);
  * /api/supplies:
  *   get:
  *     summary: List all supply requests
- *     tags: [Supply Requests]
+ *     tags: [🏪 Vendor | Supply Requests]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -37,7 +30,7 @@ router.get('/', authorize('ADMIN', 'SUPPLIER', 'TECHNICIAN'), supplyController.l
  * /api/supplies/{id}:
  *   get:
  *     summary: Get supply request by ID
- *     tags: [Supply Requests]
+ *     tags: [🏪 Vendor | Supply Requests]
  *     security:
  *       - bearerAuth: []
  *     parameters:

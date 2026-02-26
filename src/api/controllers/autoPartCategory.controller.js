@@ -11,10 +11,10 @@ class AutoPartCategoryController {
    */
   async getAllCategories(req, res, next) {
     try {
-      const { isActive, parentId } = req.query;
+      const { isActive, vehicleType } = req.query;
       const categories = await autoPartCategoryService.getAllCategories({
         isActive,
-        parentId,
+        vehicleType,
       });
 
       res.json({
@@ -32,7 +32,8 @@ class AutoPartCategoryController {
    */
   async getCategoryTree(req, res, next) {
     try {
-      const tree = await autoPartCategoryService.getCategoryTree();
+      const { vehicleType } = req.query;
+      const tree = await autoPartCategoryService.getCategoryTree({ vehicleType });
 
       res.json({
         success: true,

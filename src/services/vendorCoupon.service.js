@@ -212,9 +212,35 @@ async function incrementUsedCount(couponId) {
   });
 }
 
+/**
+ * List all coupons (Admin)
+ */
+async function listAllCoupons(options = {}) {
+  const { isActive, vendorId, search } = options;
+  const where = {};
+  if (isActive !== undefined) where.isActive = isActive === true || isActive === 'true';
+  if (vendorId) where.vendorId = vendorId;
+  if (search) {
+    where.OR = [
+      { code: { contains: search.toUpperCase() } },
+      { vendor: { businessName: { contains: search } } },
+      { vendor: { businessNameAr: { contains: search } } }
+    ];
+  }
+
+  return prisma.vendorCoupon.findMany({
+    where,
+    include: {
+      vendor: { select: { id: true, businessName: true, businessNameAr: true } }
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 module.exports = {
   getVendorIdByUserId,
   listByVendorId,
+  listAllCoupons,
   create,
   update,
   remove,

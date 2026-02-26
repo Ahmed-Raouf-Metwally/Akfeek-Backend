@@ -3,6 +3,7 @@ const router = express.Router();
 const userController = require('../controllers/user.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
+const { upload: uploadAvatar } = require('../../utils/avatarUpload');
 
 // All routes require authentication
 router.use(authMiddleware);
@@ -16,7 +17,7 @@ router.use(authMiddleware);
  *       Get authenticated user's profile information
  *       
  *       الحصول على معلومات الملف الشخصي للمستخدم
- *     tags: [Users]
+ *     tags: [📱 Customer | Profile]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -36,7 +37,7 @@ router.get('/profile', userController.getProfile);
  *       Update current user's profile information
  *       
  *       تحديث معلومات الملف الشخصي
- *     tags: [Users]
+ *     tags: [📱 Customer | Profile]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -68,6 +69,8 @@ router.get('/profile', userController.getProfile);
  *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.put('/profile', userController.updateProfile);
+router.put('/password', userController.changePassword);
+router.post('/avatar', uploadAvatar.single('avatar'), userController.uploadAvatar);
 
 /**
  * @swagger
@@ -78,7 +81,7 @@ router.put('/profile', userController.updateProfile);
  *       Update technician-specific profile fields
  *       
  *       تحديث بيانات الفني
- *     tags: [Users]
+ *     tags: [🔧 Technician | My Jobs]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -114,7 +117,7 @@ router.put('/technician-profile', userController.updateTechnicianProfile);
  *       Update supplier-specific profile fields
  *       
  *       تحديث بيانات المورد
- *     tags: [Users]
+ *     tags: [🏪 Vendor | Onboarding]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -144,7 +147,7 @@ router.put('/supplier-profile', userController.updateSupplierProfile);
  *       Update user's preferred language
  *       
  *       تحديث اللغة المفضلة
- *     tags: [Users]
+ *     tags: [📱 Customer | Profile]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -176,7 +179,7 @@ router.put('/language', userController.updateLanguage);
  *       Get paginated list of all users with filters
  *       
  *       الحصول على قائمة المستخدمين (للمشرف فقط)
- *     tags: [Users]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -208,7 +211,7 @@ router.get('/', requireRole('ADMIN'), userController.getAllUsers);
  * /api/users:
  *   post:
  *     summary: Create user (Admin only) - e.g. vendor account
- *     tags: [Users]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -241,7 +244,7 @@ router.post('/', requireRole('ADMIN'), userController.createUser);
  * /api/users/{id}:
  *   get:
  *     summary: Get user by ID (Admin only)
- *     tags: [Users]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -263,7 +266,7 @@ router.get('/:id', requireRole('ADMIN'), userController.getUserById);
  * /api/users/{id}/status:
  *   patch:
  *     summary: Update user status (Admin only)
- *     tags: [Users]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -295,7 +298,7 @@ router.patch('/:id/status', requireRole('ADMIN'), userController.updateUserStatu
  * /api/users/{id}:
  *   put:
  *     summary: Update user (Admin only)
- *     tags: [Users]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -334,7 +337,7 @@ router.put('/:id', requireRole('ADMIN'), userController.updateUserByAdmin);
  * /api/users/{id}:
  *   delete:
  *     summary: Delete user (Admin only)
- *     tags: [Users]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:

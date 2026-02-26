@@ -1288,7 +1288,6 @@ async function main() {
           create: {
             name: child.name,
             nameAr: child.nameAr,
-            parentId: parent.id,
             imageUrl: child.icon,
           }
         });
@@ -1823,6 +1822,39 @@ async function main() {
     workshopCount++;
   }
   console.log(`✅ Created ${workshopCount} certified workshops\n`);
+
+  // ============================================
+  // System Settings (VAT, Platform Commission)
+  // ============================================
+  console.log('⚙️ Seeding system settings (VAT, commission)...');
+  const settingsToUpsert = [
+    {
+      key: 'VAT_RATE',
+      value: '14.5',
+      type: 'NUMBER',
+      description: 'VAT % (e.g. 14.5 for Saudi Arabia). Stored as percentage.',
+      descriptionAr: 'نسبة ضريبة القيمة المضافة بالمئة (مثلاً 14.5 للسعودية)',
+      category: 'PRICING',
+      isEditable: true
+    },
+    {
+      key: 'PLATFORM_COMMISSION_PERCENT',
+      value: '10',
+      type: 'NUMBER',
+      description: 'Platform commission percent (0-100) applied to service subtotal before VAT',
+      descriptionAr: 'نسبة عمولة التطبيق من مبلغ الخدمة قبل الضريبة',
+      category: 'PRICING',
+      isEditable: true
+    }
+  ];
+  for (const s of settingsToUpsert) {
+    await prisma.systemSettings.upsert({
+      where: { key: s.key },
+      update: { value: s.value, type: s.type, description: s.description, descriptionAr: s.descriptionAr, category: s.category, isEditable: s.isEditable },
+      create: s
+    });
+  }
+  console.log('✅ System settings (VAT_RATE, PLATFORM_COMMISSION_PERCENT) seeded.\n');
 
   // ============================================
   console.log('✅ Comprehensive database seeding completed successfully! 🎉\n');

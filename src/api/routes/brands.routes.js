@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const brandController = require('../controllers/brand.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
@@ -9,24 +9,24 @@ const roleMiddleware = require('../middlewares/role.middleware');
  * /api/brands:
  *   get:
  *     summary: Get all vehicle brands
- *     description: Retrieve a list of all vehicle brands (Toyota, BMW, etc.) with optional filters - احصل على قائمة بجميع ماركات المركبات
- *     tags: [Vehicle Brands]
+ *     description: Retrieve a list of all vehicle brands (Toyota, BMW, etc.) with optional filters - ???? ??? ????? ????? ?????? ????????
+ *     tags: [🔓 Brands & Models]
  *     parameters:
  *       - in: query
  *         name: includeModels
  *         schema:
  *           type: boolean
  *           default: false
- *         description: Include models for each brand - تضمين موديلات كل ماركة
+ *         description: Include models for each brand - ????? ??????? ?? ?????
  *       - in: query
  *         name: activeOnly
  *         schema:
  *           type: boolean
  *           default: true
- *         description: Only return active brands - عرض الماركات النشطة فقط
+ *         description: Only return active brands - ??? ???????? ?????? ???
  *     responses:
  *       200:
- *         description: Successfully retrieved brands - تم جلب الماركات بنجاح
+ *         description: Successfully retrieved brands - ?? ??? ???????? ?????
  *         content:
  *           application/json:
  *             schema:
@@ -48,7 +48,7 @@ const roleMiddleware = require('../middlewares/role.middleware');
  *                         example: "Toyota"
  *                       nameAr:
  *                         type: string
- *                         example: "تويوتا"
+ *                         example: "??????"
  *                       logo:
  *                         type: string
  *                         nullable: true
@@ -76,20 +76,20 @@ router.get('/', brandController.getAllBrands);
  * /api/brands/{id}:
  *   get:
  *     summary: Get brand by ID
- *     description: Retrieve a specific brand with all its models - احصل على ماركة محددة مع جميع موديلاتها
- *     tags: [Vehicle Brands]
+ *     description: Retrieve a specific brand with all its models - ???? ??? ????? ????? ?? ???? ?????????
+ *     tags: [🔓 Brands & Models]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Brand ID - معرف الماركة
+ *         description: Brand ID - ???? ???????
  *     responses:
  *       200:
- *         description: Brand found - تم العثور على الماركة
+ *         description: Brand found - ?? ?????? ??? ???????
  *       404:
- *         description: Brand not found - الماركة غير موجودة
+ *         description: Brand not found - ??????? ??? ??????
  *         content:
  *           application/json:
  *             schema:
@@ -103,7 +103,7 @@ router.get('/', brandController.getAllBrands);
  *                   example: "Brand not found"
  *                 errorAr:
  *                   type: string
- *                   example: "الماركة غير موجودة"
+ *                   example: "??????? ??? ??????"
  *                 code:
  *                   type: string
  *                   example: "BRAND_NOT_FOUND"
@@ -118,8 +118,8 @@ router.use(authMiddleware);
  * /api/brands:
  *   post:
  *     summary: Create new brand (Admin only)
- *     description: Create a new vehicle brand - إنشاء ماركة مركبة جديدة
- *     tags: [Vehicle Brands]
+ *     description: Create a new vehicle brand - ????? ????? ????? ?????
+ *     tags: [⚙️ Admin | Brands & Models]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -134,19 +134,19 @@ router.use(authMiddleware);
  *               name:
  *                 type: string
  *                 example: "Tesla"
- *                 description: Brand name - اسم الماركة
+ *                 description: Brand name - ??? ???????
  *               nameAr:
  *                 type: string
- *                 example: "تسلا"
- *                 description: Arabic brand name - اسم الماركة بالعربية
+ *                 example: "????"
+ *                 description: Arabic brand name - ??? ??????? ????????
  *               logo:
  *                 type: string
  *                 nullable: true
  *                 example: "https://example.com/tesla-logo.png"
- *                 description: Brand logo URL - رابط شعار الماركة
+ *                 description: Brand logo URL - ???? ???? ???????
  *     responses:
  *       201:
- *         description: Brand created successfully - تم إنشاء الماركة بنجاح
+ *         description: Brand created successfully - ?? ????? ??????? ?????
  *         content:
  *           application/json:
  *             schema:
@@ -162,15 +162,15 @@ router.use(authMiddleware);
  *                   example: "Brand created successfully"
  *                 messageAr:
  *                   type: string
- *                   example: "تم إنشاء الماركة بنجاح"
+ *                   example: "?? ????? ??????? ?????"
  *       400:
- *         description: Validation error - خطأ في التحقق
+ *         description: Validation error - ??? ?? ??????
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
  *         $ref: '#/components/responses/ForbiddenError'
  *       409:
- *         description: Brand already exists - الماركة موجودة بالفعل
+ *         description: Brand already exists - ??????? ?????? ??????
  */
 router.post('/',
     roleMiddleware(['ADMIN']),
@@ -182,8 +182,8 @@ router.post('/',
  * /api/brands/{id}:
  *   patch:
  *     summary: Update brand (Admin only)
- *     description: Update an existing brand - تحديث ماركة موجودة
- *     tags: [Vehicle Brands]
+ *     description: Update an existing brand - ????? ????? ??????
+ *     tags: [⚙️ Admin | Brands & Models]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -192,7 +192,7 @@ router.post('/',
  *         required: true
  *         schema:
  *           type: string
- *         description: Brand ID - معرف الماركة
+ *         description: Brand ID - ???? ???????
  *     requestBody:
  *       required: true
  *       content:
@@ -211,11 +211,11 @@ router.post('/',
  *                 type: boolean
  *     responses:
  *       200:
- *         description: Brand updated successfully - تم تحديث الماركة بنجاح
+ *         description: Brand updated successfully - ?? ????? ??????? ?????
  *       404:
- *         description: Brand not found - الماركة غير موجودة
+ *         description: Brand not found - ??????? ??? ??????
  *       409:
- *         description: Brand name already exists - اسم الماركة موجود بالفعل
+ *         description: Brand name already exists - ??? ??????? ????? ??????
  */
 router.patch('/:id',
     roleMiddleware(['ADMIN']),
@@ -227,8 +227,8 @@ router.patch('/:id',
  * /api/brands/{id}:
  *   delete:
  *     summary: Delete brand (Admin only)
- *     description: Delete a brand (soft delete by default) - حذف ماركة (حفظ افتراضي)
- *     tags: [Vehicle Brands]
+ *     description: Delete a brand (soft delete by default) - ??? ????? (??? ???????)
+ *     tags: [⚙️ Admin | Brands & Models]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -237,18 +237,18 @@ router.patch('/:id',
  *         required: true
  *         schema:
  *           type: string
- *         description: Brand ID - معرف الماركة
+ *         description: Brand ID - ???? ???????
  *       - in: query
  *         name: hardDelete
  *         schema:
  *           type: boolean
  *           default: false
- *         description: Permanently delete brand and all models - حذف نهائي للماركة وجميع الموديلات
+ *         description: Permanently delete brand and all models - ??? ????? ??????? ????? ?????????
  *     responses:
  *       200:
- *         description: Brand deleted/deactivated - تم حذف/تعطيل الماركة
+ *         description: Brand deleted/deactivated - ?? ???/????? ???????
  *       404:
- *         description: Brand not found - الماركة غير موجودة
+ *         description: Brand not found - ??????? ??? ??????
  */
 router.delete('/:id',
     roleMiddleware(['ADMIN']),

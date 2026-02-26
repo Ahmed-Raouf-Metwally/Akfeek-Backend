@@ -4,13 +4,6 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
 const bookingController = require('../controllers/booking.controller');
 
-/**
- * @swagger
- * tags:
- *   name: Bookings
- *   description: Booking management (All 4 models) - إدارة الحجوزات
- */
-
 router.use(authMiddleware);
 
 /**
@@ -19,7 +12,7 @@ router.use(authMiddleware);
  *   get:
  *     summary: List all bookings (Admin)
  *     description: Retrieve a paginated list of all bookings in the system.
- *     tags: [Bookings]
+ *     tags: [📱 Customer | Bookings]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -47,7 +40,7 @@ router.get('/', requireRole('ADMIN'), bookingController.getAllBookings);
  *   get:
  *     summary: Get my bookings
  *     description: Retrieve bookings for the authenticated customer.
- *     tags: [Bookings]
+ *     tags: [📱 Customer | Bookings]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -72,7 +65,7 @@ router.get('/my', bookingController.getMyBookings);
  *   get:
  *     summary: Get booking by ID
  *     description: Retrieve details of a specific booking.
- *     tags: [Bookings]
+ *     tags: [📱 Customer | Bookings]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -94,7 +87,7 @@ router.get('/:id', bookingController.getBookingById);
  *   post:
  *     summary: Create new booking
  *     description: Create a new booking with optional workshop and delivery method
- *     tags: [Bookings]
+ *     tags: [📱 Customer | Bookings]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -148,7 +141,7 @@ router.post('/', bookingController.createBooking);
  *   get:
  *     summary: Get tracking info for booking
  *     description: Retrieve current location of assigned technician.
- *     tags: [Bookings]
+ *     tags: [📱 Customer | Bookings]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -160,6 +153,41 @@ router.post('/', bookingController.createBooking);
  *       200:
  *         description: Tracking information
  */
+/**
+ * @swagger
+ * /api/bookings/{id}/status:
+ *   patch:
+ *     summary: Update booking status
+ *     description: Update booking status. Auto-creates invoice when status is COMPLETED or DELIVERED.
+ *     tags: [⚙️ Admin | Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, DELIVERED, CANCELLED, TECHNICIAN_EN_ROUTE, ARRIVED, IN_SERVICE]
+ *               notes:
+ *                 type: string
+ *               technicianId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Status updated. Invoice auto-created if COMPLETED/DELIVERED.
+ */
+router.patch('/:id/status', requireRole('ADMIN', 'TECHNICIAN'), bookingController.updateBookingStatus);
+
 const trackingController = require('../controllers/tracking.controller');
 router.get('/:bookingId/track', trackingController.getTrackingInfo);
 
@@ -169,7 +197,7 @@ router.get('/:bookingId/track', trackingController.getTrackingInfo);
  *   get:
  *     summary: Get location history for booking
  *     description: Retrieve polyline/history of technician movement.
- *     tags: [Bookings]
+ *     tags: [📱 Customer | Bookings]
  *     security:
  *       - bearerAuth: []
  *     parameters:

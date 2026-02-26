@@ -4,13 +4,6 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
 const broadcastController = require('../controllers/broadcast.controller');
 
-/**
- * @swagger
- * tags:
- *   name: Broadcasts
- *   description: Emergency job broadcasts (Indrive model) - بث وظائف الطوارئ
- */
-
 router.use(authMiddleware);
 
 /**
@@ -18,7 +11,7 @@ router.use(authMiddleware);
  * /api/broadcasts:
  *   get:
  *     summary: List all active broadcasts (Admin)
- *     tags: [Broadcasts]
+ *     tags: [📱 Customer | Emergency Broadcasts]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -32,7 +25,7 @@ router.get('/', requireRole('ADMIN'), broadcastController.getAllBroadcasts);
  * /api/broadcasts/{id}:
  *   get:
  *     summary: Get broadcast by ID (Admin)
- *     tags: [Broadcasts]
+ *     tags: [📱 Customer | Emergency Broadcasts]
  *     security:
  *       - bearerAuth: []
  *     parameters:

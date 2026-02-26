@@ -1,6 +1,91 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
 const vendorCouponService = require('../../services/vendorCoupon.service');
+const { getVatRate } = require('../../utils/pricing');
+const { emitNotification } = require('../../socket');
+
+// Statuses that are considered "final" — auto-create invoice when reached
+const INVOICE_TRIGGER_STATUSES = ['COMPLETED', 'DELIVERED'];
+
+// Statuses that mark booking as done (set completedAt)
+const DONE_STATUSES = ['COMPLETED', 'DELIVERED', 'CANCELLED'];
+
+/**
+ * Auto-create an Invoice for a completed booking (idempotent — skips if already exists)
+ */
+async function _autoCreateInvoice(booking) {
+  // Skip if invoice already exists
+  const existing = await prisma.invoice.findUnique({ where: { bookingId: booking.id } });
+  if (existing) return existing;
+
+  const subtotal = Number(booking.subtotal) || 0;
+  const discount = Number(booking.discount) || 0;
+  const tax = Number(booking.tax) || 0;
+  const flatbedFee = Number(booking.flatbedFee) || 0;
+  const totalAmount = Number(booking.totalPrice) || subtotal - discount + tax + flatbedFee;
+
+  const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+  // Build line items from booking services
+  const bookingServices = await prisma.bookingService.findMany({
+    where: { bookingId: booking.id },
+    include: { service: { select: { name: true, nameAr: true } } },
+  });
+
+  const lineItems = bookingServices.map((bs) => ({
+    description: bs.service?.name || 'Service',
+    descriptionAr: bs.service?.nameAr || 'خدمة',
+    itemType: 'SERVICE',
+    quantity: bs.quantity || 1,
+    unitPrice: Number(bs.unitPrice),
+    totalPrice: Number(bs.totalPrice),
+  }));
+
+  if (flatbedFee > 0) {
+    lineItems.push({
+      description: 'Flatbed Delivery Fee',
+      descriptionAr: 'رسوم النقل بالسطحة',
+      itemType: 'DELIVERY',
+      quantity: 1,
+      unitPrice: flatbedFee,
+      totalPrice: flatbedFee,
+    });
+  }
+
+  const invoice = await prisma.invoice.create({
+    data: {
+      invoiceNumber,
+      bookingId: booking.id,
+      customerId: booking.customerId,
+      subtotal,
+      tax,
+      discount,
+      totalAmount,
+      paidAmount: 0,
+      status: 'ISSUED',
+      issuedAt: new Date(),
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      lineItems: { create: lineItems },
+    },
+  });
+
+  // Notify customer
+  try {
+    const notification = await prisma.notification.create({
+      data: {
+        userId: booking.customerId,
+        type: 'BOOKING_CONFIRMED',
+        title: 'Invoice Issued',
+        titleAr: 'تم إصدار الفاتورة',
+        message: `Invoice ${invoiceNumber} has been issued for your booking. Total: ${totalAmount} SAR`,
+        messageAr: `تم إصدار الفاتورة ${invoiceNumber} لحجزك. الإجمالي: ${totalAmount} ريال`,
+      },
+    });
+    emitNotification(booking.customerId, notification);
+  } catch (_) { /* non-critical */ }
+
+  return invoice;
+}
 
 /**
  * Get all bookings (Admin). Paginated list with customer/vehicle summary.
@@ -376,7 +461,8 @@ async function createBooking(req, res, next) {
     }
 
     const afterDiscount = subtotal - discountAmount;
-    const tax = Math.round(afterDiscount * 0.15 * 100) / 100;
+    const vatRate = await getVatRate();
+    const tax = Math.round(afterDiscount * vatRate * 100) / 100;
     const totalPrice = afterDiscount + flatbedFee + tax;
 
     const booking = await prisma.booking.create({
@@ -527,4 +613,183 @@ async function getMyBookings(req, res, next) {
   }
 }
 
-module.exports = { getAllBookings, getBookingById, createBooking, getMyBookings };
+/**
+ * Get bookings assigned to current technician (فني اكفيك - حجوزاتي المعينة لي)
+ * GET /api/technician/bookings
+ */
+async function getMyAssignedBookings(req, res, next) {
+  try {
+    const technicianId = req.user.id;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const status = req.query.status || null;
+    const skip = (page - 1) * limit;
+
+    const where = { technicianId };
+    if (status) where.status = status;
+
+    const [items, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ scheduledDate: 'desc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          bookingNumber: true,
+          customerId: true,
+          vehicleId: true,
+          scheduledDate: true,
+          scheduledTime: true,
+          status: true,
+          totalPrice: true,
+          pickupAddress: true,
+          destinationAddress: true,
+          createdAt: true,
+          customer: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              profile: { select: { firstName: true, lastName: true } },
+            },
+          },
+          vehicle: {
+            select: {
+              id: true,
+              plateNumber: true,
+              vehicleModel: {
+                select: {
+                  name: true,
+                  year: true,
+                  brand: { select: { name: true, nameAr: true } },
+                },
+              },
+            },
+          },
+          services: {
+            include: {
+              service: { select: { id: true, name: true, nameAr: true } },
+            },
+          },
+        },
+      }),
+      prisma.booking.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    res.json({
+      success: true,
+      data: items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Update booking status (Admin / Technician)
+ * PATCH /api/bookings/:id/status
+ * Body: { status, notes?, technicianId? }
+ */
+async function updateBookingStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { status, notes, technicianId } = req.body;
+    const actor = req.user;
+
+    const VALID_STATUSES = [
+      'PENDING', 'CONFIRMED', 'BROADCASTING', 'OFFERS_RECEIVED', 'TECHNICIAN_ASSIGNED',
+      'PICKUP_SCHEDULED', 'IN_TRANSIT_PICKUP', 'INSPECTING', 'QUOTE_PENDING',
+      'QUOTE_APPROVED', 'QUOTE_REJECTED', 'IN_PROGRESS', 'PARTS_NEEDED',
+      'PARTS_ORDERED', 'PARTS_DELIVERED', 'COMPLETED', 'READY_FOR_DELIVERY',
+      'IN_TRANSIT_DELIVERY', 'DELIVERED', 'TECHNICIAN_EN_ROUTE', 'ON_THE_WAY',
+      'ARRIVED', 'IN_SERVICE', 'CANCELLED', 'REFUNDED',
+    ];
+
+    if (!status || !VALID_STATUSES.includes(status)) {
+      throw new AppError(`Invalid status. Allowed: ${VALID_STATUSES.join(', ')}`, 400, 'VALIDATION_ERROR');
+    }
+
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { services: { include: { service: true } } },
+    });
+    if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+
+    // Only admin or the assigned technician can update
+    if (actor.role !== 'ADMIN' && booking.technicianId !== actor.id) {
+      throw new AppError('Not authorized to update this booking', 403, 'FORBIDDEN');
+    }
+
+    const updateData = { status };
+    if (notes) updateData.internalNotes = notes;
+    if (technicianId && actor.role === 'ADMIN') updateData.technicianId = technicianId;
+    if (DONE_STATUSES.includes(status)) updateData.completedAt = new Date();
+
+    const [updatedBooking] = await prisma.$transaction([
+      prisma.booking.update({ where: { id }, data: updateData }),
+      prisma.bookingStatusHistory.create({
+        data: {
+          bookingId: id,
+          status,
+          notes: notes || null,
+          changedById: actor.id,
+        },
+      }),
+    ]);
+
+    // Auto-create invoice when booking reaches a final completed state
+    let invoice = null;
+    if (INVOICE_TRIGGER_STATUSES.includes(status)) {
+      invoice = await _autoCreateInvoice({ ...booking, ...updateData });
+    }
+
+    // Notify customer of status change
+    try {
+      const STATUS_LABELS = {
+        CONFIRMED: { en: 'Booking Confirmed', ar: 'تم تأكيد الحجز' },
+        IN_PROGRESS: { en: 'Work Started', ar: 'بدأ العمل' },
+        COMPLETED: { en: 'Service Completed', ar: 'اكتملت الخدمة' },
+        CANCELLED: { en: 'Booking Cancelled', ar: 'تم إلغاء الحجز' },
+        TECHNICIAN_EN_ROUTE: { en: 'Technician On The Way', ar: 'الفني في الطريق إليك' },
+        ARRIVED: { en: 'Technician Arrived', ar: 'وصل الفني' },
+      };
+      const label = STATUS_LABELS[status];
+      if (label) {
+        const notification = await prisma.notification.create({
+          data: {
+            userId: booking.customerId,
+            type: 'STATUS_UPDATE',
+            title: label.en,
+            titleAr: label.ar,
+            message: `Your booking #${booking.bookingNumber} status updated to: ${status}`,
+            messageAr: `تم تحديث حجزك #${booking.bookingNumber} إلى: ${status}`,
+            bookingId: id,
+          },
+        });
+        emitNotification(booking.customerId, notification);
+      }
+    } catch (_) { /* non-critical */ }
+
+    res.json({
+      success: true,
+      message: `Booking status updated to ${status}`,
+      data: {
+        booking: updatedBooking,
+        invoice: invoice || undefined,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { getAllBookings, getBookingById, createBooking, getMyBookings, getMyAssignedBookings, updateBookingStatus };

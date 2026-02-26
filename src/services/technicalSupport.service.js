@@ -309,6 +309,45 @@ class TechnicalSupportService {
   }
 
   /**
+   * Technician: list technical support requests assigned to me (طلبات الدعم الفني المعينة لي)
+   */
+  async getAssignedToTechnician(technicianId, options = {}) {
+    const page = Math.max(1, parseInt(options.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(options.limit) || 10));
+    const status = options.status || undefined;
+    const skip = (page - 1) * limit;
+
+    const where = { technicianId };
+    if (status) where.status = status;
+
+    const [data, total] = await Promise.all([
+      prisma.technicalSupportRequest.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              profile: { select: { firstName: true, lastName: true } },
+            },
+          },
+        },
+      }),
+      prisma.technicalSupportRequest.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    return {
+      data,
+      pagination: { page, limit, total, totalPages },
+    };
+  }
+
+  /**
    * List technicians (for admin assign dropdown/list)
    */
   async getTechnicians() {

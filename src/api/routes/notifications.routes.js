@@ -4,13 +4,6 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
 const notificationController = require('../controllers/notification.controller');
 
-/**
- * @swagger
- * tags:
- *   name: Notifications
- *   description: Push notifications - الإشعارات
- */
-
 router.use(authMiddleware);
 
 /**
@@ -18,7 +11,7 @@ router.use(authMiddleware);
  * /api/notifications:
  *   get:
  *     summary: Get my notifications
- *     tags: [Notifications]
+ *     tags: [📱 Customer | Notifications]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -32,7 +25,7 @@ router.get('/', notificationController.getMyNotifications);
  * /api/notifications/read-all:
  *   patch:
  *     summary: Mark all my notifications as read
- *     tags: [Notifications]
+ *     tags: [📱 Customer | Notifications]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -46,7 +39,7 @@ router.patch('/read-all', notificationController.markAllAsRead);
  * /api/notifications/{id}:
  *   get:
  *     summary: Get notification by ID
- *     tags: [Notifications]
+ *     tags: [📱 Customer | Notifications]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -65,7 +58,7 @@ router.get('/:id', notificationController.getById);
  * /api/notifications/{id}/read:
  *   patch:
  *     summary: Mark a single notification as read
- *     tags: [Notifications]
+ *     tags: [📱 Customer | Notifications]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -84,7 +77,7 @@ router.patch('/:id/read', notificationController.markAsRead);
  * /api/notifications/admin/all:
  *   get:
  *     summary: Get all system notifications (Admin)
- *     tags: [Notifications]
+ *     tags: [⚙️ Admin | Users]
  *     security:
  *       - bearerAuth: []
  *     responses:

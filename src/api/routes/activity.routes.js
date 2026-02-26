@@ -4,13 +4,6 @@ const activityController = require('../controllers/activity.controller');
 const authenticate = require('../middlewares/auth.middleware');
 const authorize = require('../middlewares/role.middleware');
 
-/**
- * @swagger
- * tags:
- *   name: Admin Activity Logs
- *   description: System activity and audit logs for administrators - سجلات نشاط النظام للمسؤولين
- */
-
 // All routes require authentication and Admin role
 router.use(authenticate);
 router.use(authorize('ADMIN'));
@@ -20,7 +13,7 @@ router.use(authorize('ADMIN'));
  * /api/activity:
  *   get:
  *     summary: Get all activity logs (Admin)
- *     tags: [Admin Activity Logs]
+ *     tags: [⚙️ Admin | Activity Logs]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -38,7 +31,7 @@ router.use(authorize('ADMIN'));
  *         description: List of activity logs
  *   post:
  *     summary: Create manual activity log (Admin)
- *     tags: [Admin Activity Logs]
+ *     tags: [⚙️ Admin | Activity Logs]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
