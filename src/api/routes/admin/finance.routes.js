@@ -14,7 +14,7 @@ router.use(roleMiddleware(['ADMIN']));
  * /api/admin/finance/wallets:
  *   get:
  *     summary: Get all wallets with pagination and search
- *     tags: [Wallets]
+ *     tags: [⚙️ Admin | Finance]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -64,7 +64,7 @@ router.get('/wallets', controller.getAllWallets);
  * /api/admin/finance/wallet/credit:
  *   post:
  *     summary: Credit a user's wallet
- *     tags: [Wallets]
+ *     tags: [⚙️ Admin | Finance]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -94,7 +94,7 @@ router.post('/wallet/credit', controller.creditWallet);
  * /api/admin/finance/wallet/debit:
  *   post:
  *     summary: Debit a user's wallet
- *     tags: [Wallets]
+ *     tags: [⚙️ Admin | Finance]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -124,7 +124,7 @@ router.post('/wallet/debit', controller.debitWallet);
  * /api/admin/finance/wallet/{walletId}/transactions:
  *   get:
  *     summary: Get wallet transactions history
- *     tags: [Wallets]
+ *     tags: [⚙️ Admin | Finance]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -175,7 +175,7 @@ router.get('/wallet/:walletId/transactions', controller.getWalletTransactions);
  * /api/admin/finance/points/audit:
  *   get:
  *     summary: Get points audit log
- *     tags: [Wallets]
+ *     tags: [⚙️ Admin | Finance]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -207,7 +207,7 @@ router.get('/points/audit', controller.getPointsAudit);
  * /api/admin/finance/points/adjust:
  *   post:
  *     summary: Adjust user points (Credit/Debit)
- *     tags: [Wallets]
+ *     tags: [⚙️ Admin | Finance]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -238,7 +238,7 @@ router.post('/points/adjust', controller.adjustPoints);
  * /api/admin/finance/points/settings:
  *   get:
  *     summary: Get points conversion rate settings
- *     tags: [Wallets]
+ *     tags: [⚙️ Admin | Finance]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -266,7 +266,7 @@ router.get('/points/settings', controller.getPointsSettings);
  * /api/admin/finance/points/settings:
  *   post:
  *     summary: Update points conversion rate settings
- *     tags: [Wallets]
+ *     tags: [⚙️ Admin | Finance]
  *     security:
  *       - bearerAuth: []
  *     requestBody:

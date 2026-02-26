@@ -5,18 +5,11 @@ const authMiddleware = require('../middlewares/auth.middleware');
 
 /**
  * @swagger
- * tags:
- *   name: Technician Towing
- *   description: Technician towing service endpoints - خدمة السحب للفنيين
- */
-
-/**
- * @swagger
  * /api/technician/towing/broadcasts:
  *   get:
  *     summary: Get active towing broadcasts
  *     description: Get all active towing requests that the technician can bid on
- *     tags: [Technician Towing]
+ *     tags: [🔧 Technician | Towing Jobs]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -82,7 +75,7 @@ router.get('/broadcasts', authMiddleware, technicianTowingController.getBroadcas
  * /api/technician/towing/broadcasts/{broadcastId}/offer:
  *   post:
  *     summary: Submit offer for towing request
- *     tags: [Technician Towing]
+ *     tags: [🔧 Technician | Towing Jobs]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -155,7 +148,7 @@ router.post('/broadcasts/:broadcastId/offer', authMiddleware, technicianTowingCo
  * /api/technician/towing/jobs:
  *   get:
  *     summary: Get assigned towing jobs
- *     tags: [Technician Towing]
+ *     tags: [🔧 Technician | Towing Jobs]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -204,7 +197,7 @@ router.get('/jobs', authMiddleware, technicianTowingController.getJobs);
  *   patch:
  *     summary: Update job status
  *     description: Update the status of an assigned towing job
- *     tags: [Technician Towing]
+ *     tags: [🔧 Technician | Towing Jobs]
  *     security:
  *       - bearerAuth: []
  *     parameters:

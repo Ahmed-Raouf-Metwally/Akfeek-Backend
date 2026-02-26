@@ -23,6 +23,7 @@ const towingRoutes = require('./towing.routes');
 const technicianTowingRoutes = require('./technicianTowing.routes');
 const feedbackRoutes = require('./feedback.routes');
 const feedbackAdminRoutes = require('./admin/feedback.admin.routes');
+const technicalSupportRoutes = require('./technicalSupport.routes');
 
 // Auto Parts Marketplace routes
 const vendorRoutes = require('./vendors.routes');
@@ -68,6 +69,10 @@ router.use('/technician/carwash', technicianCarWashRoutes);
 const mobileCarServiceRoutes = require('./mobileCarService.routes');
 router.use('/mobile-car-service', mobileCarServiceRoutes);
 
+// Comprehensive Care Service (العناية الشاملة)
+const comprehensiveCareRoutes = require('./comprehensiveCare.routes');
+router.use('/comprehensive-care', comprehensiveCareRoutes);
+
 // Protected routes (authentication required)
 // These will have auth middleware applied in individual route files
 router.use('/users', userRoutes);
@@ -84,11 +89,17 @@ router.use('/ratings', ratingRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/addresses', addressRoutes);
 router.use('/feedback', feedbackRoutes);
+router.use('/technical-support-requests', technicalSupportRoutes);
 router.use('/activity', require('./activity.routes'));
 
 // Tracking routes (real-time location)
 const trackingRoutes = require('./tracking.routes');
 router.use('/technician/tracking', trackingRoutes);
+
+// فني اكفيك (خدمات عامة): حجوزاتي المعينة لي + طلبات الدعم الفني المعينة لي
+const technicianRoutes = require('./technician.routes');
+router.use('/technician', technicianRoutes);
+
 // Note: Customer tracking endpoints (/api/bookings/:id/track) are in bookings.routes.js
 
 // Vendor Onboarding Routes

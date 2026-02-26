@@ -10,7 +10,7 @@ router.use(authMiddleware);
  * /api/cart:
  *   get:
  *     summary: Get my cart (with items)
- *     tags: [Cart]
+ *     tags: [📱 Customer | Marketplace]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -24,7 +24,7 @@ router.get('/', cartController.getCart);
  * /api/cart/checkout:
  *   post:
  *     summary: Create order from cart (Customer)
- *     tags: [Cart]
+ *     tags: [📱 Customer | Marketplace]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -53,7 +53,7 @@ router.post('/checkout', cartController.checkout);
  * /api/cart/items:
  *   post:
  *     summary: Add auto part to cart
- *     tags: [Cart]
+ *     tags: [📱 Customer | Marketplace]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -77,7 +77,7 @@ router.post('/items', cartController.addItem);
  * /api/cart/items/{id}:
  *   patch:
  *     summary: Update cart item quantity
- *     tags: [Cart]
+ *     tags: [📱 Customer | Marketplace]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -98,7 +98,7 @@ router.post('/items', cartController.addItem);
  *         description: Cart updated
  *   delete:
  *     summary: Remove item from cart
- *     tags: [Cart]
+ *     tags: [📱 Customer | Marketplace]
  *     security:
  *       - bearerAuth: []
  *     parameters:

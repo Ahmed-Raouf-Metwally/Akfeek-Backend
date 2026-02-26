@@ -9,7 +9,28 @@ const { upload: uploadServiceImage } = require('../../utils/serviceImageUpload')
 // For now, allow authenticated users to view
 router.use(authMiddleware);
 
-// Upload service image (must be before /:id)
+/**
+ * @swagger
+ * /api/services/upload-image:
+ *   post:
+ *     summary: Upload service image
+ *     tags: [⚙️ Admin | Services]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ */
 router.post('/upload-image', requireRole(['ADMIN', 'VENDOR']), uploadServiceImage.single('file'), serviceController.uploadImage);
 
 /**
@@ -18,7 +39,7 @@ router.post('/upload-image', requireRole(['ADMIN', 'VENDOR']), uploadServiceImag
  *   get:
  *     summary: Get all services
  *     description: Retrieve a list of all available services with filtering
- *     tags: [Services]
+ *     tags: [📱 Customer | Services]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -43,17 +64,40 @@ router.post('/upload-image', requireRole(['ADMIN', 'VENDOR']), uploadServiceImag
 router.get('/', serviceController.getAllServices);
 
 /**
- * GET /api/services/:id/available-slots?date=YYYY-MM-DD
- * Returns available time slots for Comprehensive Care booking (no double-book).
+ * @swagger
+ * /api/services/{id}/available-slots:
+ *   get:
+ *     summary: Get available time slots for a service
+ *     description: Returns available time slots for Comprehensive Care booking (no double-book).
+ *     tags: [🏪 Vendor | Comprehensive Care]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         example: "2024-02-23"
+ *     responses:
+ *       200:
+ *         description: List of available slots
  */
 router.get('/:id/available-slots', serviceController.getAvailableSlots);
+
 
 /**
  * @swagger
  * /api/services/{id}:
  *   get:
  *     summary: Get service details
- *     tags: [Services]
+ *     tags: [📱 Customer | Services]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -76,7 +120,7 @@ router.get('/:id', serviceController.getServiceById);
  * /api/services:
  *   post:
  *     summary: Create new service (Admin)
- *     tags: [Services]
+ *     tags: [⚙️ Admin | Services]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -120,7 +164,7 @@ router.post('/', requireRole(['ADMIN', 'VENDOR']), serviceController.createServi
  * /api/services/{id}:
  *   put:
  *     summary: Update service (Admin)
- *     tags: [Services]
+ *     tags: [⚙️ Admin | Services]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -150,7 +194,7 @@ router.put('/:id', requireRole(['ADMIN', 'VENDOR']), serviceController.updateSer
  * /api/services/{id}:
  *   delete:
  *     summary: Delete/Deactivate service (Admin)
- *     tags: [Services]
+ *     tags: [⚙️ Admin | Services]
  *     security:
  *       - bearerAuth: []
  *     parameters:

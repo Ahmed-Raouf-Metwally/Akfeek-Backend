@@ -6,17 +6,10 @@ const router = express.Router();
 
 /**
  * @swagger
- * tags:
- *   name: Vendor Onboarding
- *   description: Vendor registration and approval workflow
- */
-
-/**
- * @swagger
  * /api/vendor-onboarding/register:
  *   post:
  *     summary: Register a new vendor (Public)
- *     tags: [Vendor Onboarding]
+ *     tags: [🏪 Vendor | Onboarding]
  *     requestBody:
  *       required: true
  *       content:
@@ -77,7 +70,7 @@ router.post('/register', authMiddleware, vendorController.register);
  * /api/vendor-onboarding/admin/list:
  *   get:
  *     summary: List all vendor applications (Admin)
- *     tags: [Vendor Onboarding]
+ *     tags: [🏪 Vendor | Onboarding]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -97,7 +90,7 @@ router.get('/admin/list', vendorController.listVendors);
  * /api/vendor-onboarding/admin/{id}/status:
  *   patch:
  *     summary: Update vendor application status (Admin)
- *     tags: [Vendor Onboarding]
+ *     tags: [🏪 Vendor | Onboarding]
  *     security:
  *       - bearerAuth: []
  *     parameters:
