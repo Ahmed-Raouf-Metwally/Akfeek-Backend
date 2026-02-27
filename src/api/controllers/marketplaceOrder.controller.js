@@ -63,3 +63,11 @@ exports.updateOrderItemStatus = async (req, res, next) => {
     next(error);
   }
 };
+exports.updateOrder = async (req, res, next) => {
+  try {
+    const order = await orderService.updateOrder(req.params.id, req.user.id, req.body, req.user);
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    next(error);
+  }
+};

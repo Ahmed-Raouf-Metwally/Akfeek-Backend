@@ -6,34 +6,6 @@ const { AppError } = require('../middlewares/error.middleware');
  * CRUD for user addresses
  */
 class AddressController {
-  /**
-   * @swagger
-   * /api/addresses:
-   *   get:
-   *     summary: Get user addresses - جلب عناوين المستخدم
-   *     description: Retrieve all addresses for the authenticated user
-   *     tags: [Addresses]
-   *     security:
-   *       - bearerAuth: []
-   *     responses:
-   *       200:
-   *         description: List of user addresses
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                 message:
-   *                   type: string
-   *                 data:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/Address'
-   *       401:
-   *         description: Unauthorized - Authentication required
-   */
   async getMyAddresses(req, res, next) {
     try {
       const userId = req.user.id;
@@ -49,42 +21,6 @@ class AddressController {
     }
   }
 
-  /**
-   * @swagger
-   * /api/addresses/{id}:
-   *   get:
-   *     summary: Get address by ID - جلب عنوان بالمعرف
-   *     description: Retrieve a specific address by ID (must belong to authenticated user)
-   *     tags: [Addresses]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: Address ID
-   *     responses:
-   *       200:
-   *         description: Address details
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                 message:
-   *                   type: string
-   *                 data:
-   *                   $ref: '#/components/schemas/Address'
-   *       404:
-   *         description: Address not found
-   *       401:
-   *         description: Unauthorized
-   */
   async getById(req, res, next) {
     try {
       const { id } = req.params;
@@ -104,42 +40,6 @@ class AddressController {
     }
   }
 
-  /**
-   * @swagger
-   * /api/addresses:
-   *   post:
-   *     summary: Create address - إضافة عنوان جديد
-   *     description: Create a new address for the authenticated user
-   *     tags: [Addresses]
-   *     security:
-   *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/AddressInput'
-   *     responses:
-   *       201:
-   *         description: Address created successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                 message:
-   *                   type: string
-   *                 messageAr:
-   *                   type: string
-   *                 data:
-   *                   $ref: '#/components/schemas/Address'
-   *       400:
-   *         description: Validation error - Missing required fields
-   *       401:
-   *         description: Unauthorized
-   */
   async create(req, res, next) {
     try {
       const userId = req.user.id;
@@ -188,50 +88,6 @@ class AddressController {
     }
   }
 
-  /**
-   * @swagger
-   * /api/addresses/{id}:
-   *   put:
-   *     summary: Update address - تعديل عنوان
-   *     description: Update an existing address (must belong to authenticated user)
-   *     tags: [Addresses]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: Address ID
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/AddressInput'
-   *     responses:
-   *       200:
-   *         description: Address updated successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                 message:
-   *                   type: string
-   *                 messageAr:
-   *                   type: string
-   *                 data:
-   *                   $ref: '#/components/schemas/Address'
-   *       404:
-   *         description: Address not found
-   *       401:
-   *         description: Unauthorized
-   */
   async update(req, res, next) {
     try {
       const { id } = req.params;
@@ -275,44 +131,6 @@ class AddressController {
     }
   }
 
-  /**
-   * @swagger
-   * /api/addresses/{id}:
-   *   delete:
-   *     summary: Delete address - حذف عنوان
-   *     description: Delete an address (must belong to authenticated user)
-   *     tags: [Addresses]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: Address ID
-   *     responses:
-   *       200:
-   *         description: Address deleted successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                 message:
-   *                   type: string
-   *                 messageAr:
-   *                   type: string
-   *                 data:
-   *                   type: object
-   *       404:
-   *         description: Address not found
-   *       401:
-   *         description: Unauthorized
-   */
   async delete(req, res, next) {
     try {
       const { id } = req.params;

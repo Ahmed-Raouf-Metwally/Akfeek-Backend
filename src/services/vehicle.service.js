@@ -60,7 +60,7 @@ class VehicleService {
             name: true,
             nameAr: true,
             year: true,
-            size: true,
+            type: true,
             brand: {
               select: {
                 id: true,
@@ -116,13 +116,26 @@ class VehicleService {
       fullPlateNumber = `${letters} ${plateDigits}${region}`.trim();
     }
 
+    // Hint when placeholder value is sent (e.g. from Swagger/Postman example)
+    if (vehicleModelId === 'string' || vehicleModelId === 'uuid-الموديل') {
+      throw new AppError(
+        'vehicleModelId must be a real UUID from the API. Use GET /api/vehicles/brands then GET /api/vehicles/brands/:brandId/models to get a valid model id.',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
     // Check if vehicle model exists
     const model = await prisma.vehicleModel.findUnique({
       where: { id: vehicleModelId }
     });
 
     if (!model) {
-      throw new AppError('Invalid vehicle model ID', 400, 'VALIDATION_ERROR');
+      throw new AppError(
+        'Invalid vehicle model ID. Get a valid id from GET /api/vehicles/brands then GET /api/vehicles/brands/:brandId/models',
+        400,
+        'VALIDATION_ERROR'
+      );
     }
 
     // Check for duplicate plate number
@@ -167,7 +180,7 @@ class VehicleService {
             name: true,
             nameAr: true,
             year: true,
-            size: true,
+            type: true,
             brand: {
               select: {
                 id: true,
@@ -238,7 +251,7 @@ class VehicleService {
             name: true,
             nameAr: true,
             year: true,
-            size: true,
+            type: true,
             brand: {
               select: {
                 id: true,

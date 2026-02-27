@@ -1,4 +1,5 @@
 const authService = require('../../services/auth.service');
+const prisma = require('../../utils/database/prisma');
 
 /**
  * Authentication Controller
@@ -100,6 +101,14 @@ class AuthController {
       }
 
       const user = await authService.getUserById(req.user.id);
+
+      if (user.role === 'VENDOR') {
+        const profile = await prisma.vendorProfile.findUnique({
+          where: { userId: req.user.id },
+          select: { vendorType: true },
+        });
+        user.vendorType = profile?.vendorType != null ? String(profile.vendorType) : 'AUTO_PARTS';
+      }
 
       res.json({
         success: true,

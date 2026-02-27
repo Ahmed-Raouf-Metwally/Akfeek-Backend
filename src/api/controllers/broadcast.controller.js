@@ -10,10 +10,12 @@ async function getAllBroadcasts(req, res, next) {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
     const status = req.query.status || null;
+    const type = req.query.type || null; // 'towing' = طلبات الونش فقط
     const skip = (page - 1) * limit;
 
     const where = {};
     if (status) where.status = status;
+    if (type === 'towing') where.description = { contains: 'Towing Request' };
 
     const [items, total] = await Promise.all([
       prisma.jobBroadcast.findMany({
@@ -42,6 +44,13 @@ async function getAllBroadcasts(req, res, next) {
               bookingNumber: true,
               status: true,
               totalPrice: true,
+              pickupLat: true,
+              pickupLng: true,
+              pickupAddress: true,
+              destinationLat: true,
+              destinationLng: true,
+              destinationAddress: true,
+              metadata: true,
             },
           },
           customer: {
@@ -64,11 +73,11 @@ async function getAllBroadcasts(req, res, next) {
                 select: {
                   id: true,
                   email: true,
+                  phone: true,
                   profile: { select: { firstName: true, lastName: true } },
                 },
               },
             },
-            take: 5,
             orderBy: { createdAt: 'desc' },
           },
           _count: {
@@ -113,6 +122,14 @@ async function getBroadcastById(req, res, next) {
             id: true,
             bookingNumber: true,
             status: true,
+            totalPrice: true,
+            pickupLat: true,
+            pickupLng: true,
+            pickupAddress: true,
+            destinationLat: true,
+            destinationLng: true,
+            destinationAddress: true,
+            metadata: true,
             customer: {
               select: {
                 id: true,
@@ -150,6 +167,7 @@ async function getBroadcastById(req, res, next) {
               select: {
                 id: true,
                 email: true,
+                phone: true,
                 profile: { select: { firstName: true, lastName: true } },
               },
             },

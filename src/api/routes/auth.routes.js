@@ -14,7 +14,7 @@ const {
  *       Create a new user account (Customer, Technician, or Supplier)
  *       
  *       إنشاء حساب مستخدم جديد (عميل، فني، أو مورد)
- *     tags: [Authentication]
+ *     tags: [🔓 Auth]
  *     security: []
  *     requestBody:
  *       required: true
@@ -117,7 +117,7 @@ router.post('/register', authController.register);
  *       Authenticate user with email/phone and password, return JWT token
  *       
  *       مصادقة المستخدم بالبريد الإلكتروني/الهاتف وكلمة المرور، وإرجاع رمز JWT
- *     tags: [Authentication]
+ *     tags: [🔓 Auth]
  *     security: []
  *     requestBody:
  *       required: true
@@ -173,7 +173,7 @@ router.post('/login', authController.login);
  *       Send OTP code to user's phone number for verification
  *       
  *       إرسال رمز OTP إلى رقم هاتف المستخدم للتحقق
- *     tags: [Authentication]
+ *     tags: [🔓 Auth]
  *     requestBody:
  *       required: true
  *       content:
@@ -205,7 +205,7 @@ router.post('/send-otp', authController.sendOTP);
  *       Verify phone number with OTP code
  *       
  *       التحقق من رقم الهاتف برمز OTP
- *     tags: [Authentication]
+ *     tags: [🔓 Auth]
  *     requestBody:
  *       required: true
  *       content:
@@ -243,7 +243,7 @@ router.post('/verify-otp', authController.verifyOTP);
  *       Get authenticated user's profile information
  *       
  *       الحصول على معلومات ملف المستخدم المصادق عليه
- *     tags: [Authentication]
+ *     tags: [🔓 Auth]
  *     security:
  *       - bearerAuth: []
  *     responses:
