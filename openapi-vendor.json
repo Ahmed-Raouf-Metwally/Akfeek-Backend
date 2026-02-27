@@ -1,0 +1,2625 @@
+{
+  "openapi": "3.0.0",
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development — بيئة التطوير"
+    },
+    {
+      "url": "https://akfeek-backend.developteam.site",
+      "description": "Production — بيئة الإنتاج"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token — أدخل التوكن بعد كلمة Bearer مثال: `Bearer eyJhbGci...`"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "string",
+            "example": "Error message"
+          },
+          "errorAr": {
+            "type": "string",
+            "example": "رسالة الخطأ"
+          },
+          "code": {
+            "type": "string",
+            "example": "VALIDATION_ERROR"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "Success": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Operation successful"
+          },
+          "messageAr": {
+            "type": "string",
+            "example": "تمت العملية بنجاح"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "example": 100
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 10
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string",
+            "example": "Home"
+          },
+          "labelAr": {
+            "type": "string",
+            "nullable": true,
+            "example": "المنزل"
+          },
+          "street": {
+            "type": "string",
+            "example": "King Fahd Road"
+          },
+          "streetAr": {
+            "type": "string",
+            "nullable": true,
+            "example": "طريق الملك فهد"
+          },
+          "city": {
+            "type": "string",
+            "example": "Riyadh"
+          },
+          "cityAr": {
+            "type": "string",
+            "nullable": true,
+            "example": "الرياض"
+          },
+          "state": {
+            "type": "string",
+            "nullable": true
+          },
+          "stateAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "postalCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "12345"
+          },
+          "country": {
+            "type": "string",
+            "example": "SA",
+            "default": "SA"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "example": 24.7136
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "example": 46.6753
+          },
+          "isDefault": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AddressInput": {
+        "type": "object",
+        "required": [
+          "label",
+          "street",
+          "city",
+          "latitude",
+          "longitude"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Home"
+          },
+          "labelAr": {
+            "type": "string",
+            "example": "المنزل"
+          },
+          "street": {
+            "type": "string",
+            "example": "King Fahd Road"
+          },
+          "streetAr": {
+            "type": "string",
+            "example": "طريق الملك فهد"
+          },
+          "city": {
+            "type": "string",
+            "example": "Riyadh"
+          },
+          "cityAr": {
+            "type": "string",
+            "example": "الرياض"
+          },
+          "state": {
+            "type": "string"
+          },
+          "stateAr": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string",
+            "example": "12345"
+          },
+          "country": {
+            "type": "string",
+            "example": "SA",
+            "default": "SA"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "example": 24.7136
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "example": 46.6753
+          },
+          "isDefault": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "Feedback": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "COMPLAINT",
+              "SUGGESTION"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "DELIVERY",
+              "PAYMENT",
+              "PRODUCT",
+              "UI_UX",
+              "OTHER"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isAnonymous": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VendorProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "businessName": {
+            "type": "string"
+          },
+          "businessNameAr": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "descriptionAr": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_APPROVAL",
+              "ACTIVE",
+              "SUSPENDED",
+              "REJECTED"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "logo": {
+            "type": "string"
+          },
+          "contactEmail": {
+            "type": "string"
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AutoPartCategory": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "SEDAN",
+              "HATCHBACK",
+              "COUPE",
+              "SMALL_SUV",
+              "LARGE_SEDAN",
+              "SUV",
+              "CROSSOVER",
+              "TRUCK",
+              "MOTORCYCLE",
+              "HEAVY_EQUIPMENT"
+            ]
+          },
+          "icon": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AutoPart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vendorId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "price": {
+            "type": "number"
+          },
+          "stockQuantity": {
+            "type": "integer"
+          },
+          "isApproved": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutoPartImage"
+            }
+          }
+        }
+      },
+      "AutoPartImage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AutoPartCompatibility": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "autoPartId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vehicleModelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "yearRange": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "LanguageHeader": {
+        "name": "Accept-Language",
+        "in": "header",
+        "description": "اللغة المفضلة | Preferred language",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "ar",
+            "en"
+          ],
+          "default": "ar"
+        }
+      },
+      "PageParam": {
+        "name": "page",
+        "in": "query",
+        "description": "رقم الصفحة | Page number",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "LimitParam": {
+        "name": "limit",
+        "in": "query",
+        "description": "عدد العناصر في الصفحة | Items per page",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "مطلوب مصادقة | Authentication required",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Authentication required",
+              "errorAr": "مطلوب مصادقة",
+              "code": "UNAUTHORIZED"
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "تم رفض الوصول | Access denied",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Access denied",
+              "errorAr": "تم رفض الوصول",
+              "code": "FORBIDDEN"
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "المورد غير موجود | Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Resource not found",
+              "errorAr": "المورد غير موجود",
+              "code": "NOT_FOUND"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "خطأ في التحقق من البيانات | Validation error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Validation failed",
+              "errorAr": "فشل التحقق",
+              "code": "VALIDATION_ERROR",
+              "details": {
+                "field": "Invalid value"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "info": {
+    "title": "🏪 Akfeek — Vendor / Workshop Portal",
+    "version": "1.0.0",
+    "description": "\n# بوابة أكفيك — الفيندور والورش\n\n**لمطور بوابة الفيندور فقط** — هذه الوثيقة تحتوي على كل الـ endpoints الخاصة بالفيندور وصاحب الورشة.\n\n## أنواع الفيندور\n\n| النوع | الوصف |\n|---|---|\n| **WORKSHOP** | صاحب ورشة معتمدة |\n| **SPARE_PARTS_VENDOR** | بائع قطع غيار |\n| **COMPREHENSIVE_CARE** | مزود خدمة عناية شاملة |\n\n## رحلة الفيندور\n\n| الخطوة | Endpoint |\n|---|---|\n| 1. تسجيل | `POST /api/vendor-onboarding/register` |\n| 2. دخول | `POST /api/auth/login` (role: SUPPLIER) |\n| 3. ملف الورشة | `GET /api/workshops/profile/me` |\n| 4. حجوزاتي | `GET /api/workshops/profile/me/bookings` |\n| 5. قطع الغيار | `GET /api/auto-parts/vendor/my-parts` |\n| 6. طلباتي | `GET /api/marketplace-orders/vendor` |\n  ",
+    "contact": {
+      "name": "Akfeek API Support",
+      "email": "support@akfeek.com"
+    }
+  },
+  "tags": [
+    {
+      "name": "🔓 Auth",
+      "description": "تسجيل الدخول والتسجيل والـ OTP — مشترك لجميع أنواع المستخدمين | Login, register, OTP — shared for all user types"
+    },
+    {
+      "name": "🔓 Brands & Models",
+      "description": "ماركات وموديلات السيارات (بيانات عامة لا تحتاج توكن) | Vehicle brands & models — public data, no auth required"
+    },
+    {
+      "name": "🏪 Vendor | Onboarding",
+      "description": "تسجيل وتوثيق الفيندور الجديد | New vendor registration & verification"
+    },
+    {
+      "name": "🏪 Vendor | Workshop",
+      "description": "إدارة ملف الورشة وخدماتها وصورها والكوبونات | Workshop profile, services, images & coupons management"
+    },
+    {
+      "name": "🏪 Vendor | Spare Parts",
+      "description": "إدارة قطع الغيار في المتجر | Spare parts inventory management"
+    },
+    {
+      "name": "🏪 Vendor | Orders",
+      "description": "طلبات العملاء لقطع الغيار | Customer spare parts orders"
+    },
+    {
+      "name": "🏪 Vendor | Supply Requests",
+      "description": "طلبات التوريد من الفيندور | Supply requests from vendor"
+    },
+    {
+      "name": "🏪 Vendor | Comprehensive Care",
+      "description": "خدمات العناية الشاملة المقدمة من الفيندور | Comprehensive care services offered by vendor"
+    }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register new user",
+        "description": "Create a new user account (Customer, Technician, or Supplier)\n\nإنشاء حساب مستخدم جديد (عميل، فني، أو مورد)\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password",
+                  "role",
+                  "firstName",
+                  "lastName"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "ahmed@example.com",
+                    "description": "User email - البريد الإلكتروني"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "example": "+966501234567",
+                    "description": "Phone number with country code - رقم الهاتف مع رمز الدولة"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "example": "StrongPass123!",
+                    "description": "Password (min 8 chars) - كلمة المرور (8 أحرف على الأقل)"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "CUSTOMER",
+                      "TECHNICIAN",
+                      "SUPPLIER"
+                    ],
+                    "example": "CUSTOMER",
+                    "description": "User role - دور المستخدم"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "example": "Ahmed",
+                    "description": "First name - الاسم الأول"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "example": "Al-Mutairi",
+                    "description": "Last name - اسم العائلة"
+                  },
+                  "preferredLanguage": {
+                    "type": "string",
+                    "enum": [
+                      "AR",
+                      "EN"
+                    ],
+                    "default": "AR",
+                    "example": "AR",
+                    "description": "Preferred language - اللغة المفضلة"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully - تم التسجيل بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Registration successful"
+                    },
+                    "messageAr": {
+                      "type": "string",
+                      "example": "تم التسجيل بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string"
+                            },
+                            "profile": {
+                              "type": "object"
+                            }
+                          }
+                        },
+                        "token": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "409": {
+            "description": "Email or phone already exists - البريد الإلكتروني أو الهاتف موجود بالفعل",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "User login",
+        "description": "Authenticate user with email/phone and password, return JWT token\n\nمصادقة المستخدم بالبريد الإلكتروني/الهاتف وكلمة المرور، وإرجاع رمز JWT\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "identifier",
+                  "password"
+                ],
+                "properties": {
+                  "identifier": {
+                    "type": "string",
+                    "example": "ahmed@example.com",
+                    "description": "Email or phone number - البريد الإلكتروني أو رقم الهاتف"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "StrongPass123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful - تم تسجيل الدخول بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object"
+                        },
+                        "token": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials - بيانات اعتماد غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/send-otp": {
+      "post": {
+        "summary": "Send OTP to phone",
+        "description": "Send OTP code to user's phone number for verification\n\nإرسال رمز OTP إلى رقم هاتف المستخدم للتحقق\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "+966501234567"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent successfully - تم إرسال OTP بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify-otp": {
+      "post": {
+        "summary": "Verify OTP",
+        "description": "Verify phone number with OTP code\n\nالتحقق من رقم الهاتف برمز OTP\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "code"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "+966501234567"
+                  },
+                  "code": {
+                    "type": "string",
+                    "example": "123456"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified - تم التحقق من OTP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid OTP - رمز OTP غير صحيح"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Get current user",
+        "description": "Get authenticated user's profile information\n\nالحصول على معلومات ملف المستخدم المصادق عليه\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved - تم استرجاع ملف المستخدم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/auto-parts": {
+      "post": {
+        "summary": "Create new auto part",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "sku",
+                  "price",
+                  "categoryId"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "sku": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "stockQuantity": {
+                    "type": "integer"
+                  },
+                  "categoryId": {
+                    "type": "string"
+                  },
+                  "vendorId": {
+                    "type": "string",
+                    "description": "Only Admin can set this manually"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Part created"
+          }
+        }
+      }
+    },
+    "/api/auto-parts/vendor/{vendorId}": {
+      "get": {
+        "summary": "Get parts by vendor",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vendorId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of vendor parts"
+          }
+        }
+      }
+    },
+    "/api/auto-parts/vehicle/{vehicleModelId}": {
+      "get": {
+        "summary": "Get parts compatible with vehicle",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vehicleModelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of compatible parts"
+          }
+        }
+      }
+    },
+    "/api/auto-parts/{id}": {
+      "get": {
+        "summary": "Get part details",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Part details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AutoPart"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update auto part",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "stockQuantity": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Part updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete part",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Part deleted"
+          }
+        }
+      }
+    },
+    "/api/auto-parts/upload-image": {
+      "post": {
+        "summary": "Upload image file(s) for auto parts",
+        "description": "Upload up to 10 image files. Returns an array of uploaded image URLs.",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Images uploaded successfully"
+          }
+        }
+      }
+    },
+    "/api/auto-parts/{id}/approve": {
+      "put": {
+        "summary": "Approve or reject part (Admin only)",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "isApproved"
+                ],
+                "properties": {
+                  "isApproved": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Approval status updated"
+          }
+        }
+      }
+    },
+    "/api/auto-parts/{id}/images": {
+      "post": {
+        "summary": "Add images to part",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "images"
+                ],
+                "properties": {
+                  "images": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Images added"
+          }
+        }
+      }
+    },
+    "/api/auto-parts/{id}/images/{imageId}": {
+      "delete": {
+        "summary": "Remove an image from part",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "imageId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image removed"
+          }
+        }
+      }
+    },
+    "/api/auto-parts/{id}/images/{imageId}/primary": {
+      "patch": {
+        "summary": "Set image as primary for part",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "imageId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Primary image updated"
+          }
+        }
+      }
+    },
+    "/api/auto-parts/{id}/stock": {
+      "put": {
+        "summary": "Update part stock quantity",
+        "tags": [
+          "🏪 Vendor | Spare Parts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "stockQuantity"
+                ],
+                "properties": {
+                  "stockQuantity": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stock updated"
+          }
+        }
+      }
+    },
+    "/api/brands": {
+      "get": {
+        "summary": "Get all vehicle brands",
+        "description": "Retrieve a list of all vehicle brands (Toyota, BMW, etc.) with optional filters - ???? ??? ????? ????? ?????? ????????",
+        "tags": [
+          "🔓 Brands & Models"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "includeModels",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Include models for each brand - ????? ??????? ?? ?????"
+          },
+          {
+            "in": "query",
+            "name": "activeOnly",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "description": "Only return active brands - ??? ???????? ?????? ???"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved brands - ?? ??? ???????? ?????",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "example": "uuid-here"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Toyota"
+                          },
+                          "nameAr": {
+                            "type": "string",
+                            "example": "??????"
+                          },
+                          "logo": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "https://example.com/toyota-logo.png"
+                          },
+                          "isActive": {
+                            "type": "boolean",
+                            "example": true
+                          },
+                          "_count": {
+                            "type": "object",
+                            "properties": {
+                              "models": {
+                                "type": "integer",
+                                "example": 5
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/brands/{id}": {
+      "get": {
+        "summary": "Get brand by ID",
+        "description": "Retrieve a specific brand with all its models - ???? ??? ????? ????? ?? ???? ?????????",
+        "tags": [
+          "🔓 Brands & Models"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID - ???? ???????"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brand found - ?? ?????? ??? ???????"
+          },
+          "404": {
+            "description": "Brand not found - ??????? ??? ??????",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Brand not found"
+                    },
+                    "errorAr": {
+                      "type": "string",
+                      "example": "??????? ??? ??????"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "BRAND_NOT_FOUND"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models": {
+      "get": {
+        "summary": "Get all vehicle models",
+        "description": "Retrieve vehicle models with optional filters - ???? ??? ??????? ???????? ?? ????? ????????",
+        "tags": [
+          "🔓 Brands & Models"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brandId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by brand ID - ????? ??? ???? ???????"
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by year - ????? ??? ?????",
+            "example": 2023
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SMALL",
+                "MEDIUM",
+                "LARGE",
+                "EXTRA_LARGE"
+              ]
+            },
+            "description": "Filter by size - ????? ??? ?????"
+          },
+          {
+            "in": "query",
+            "name": "activeOnly",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "description": "Only active models - ????????? ?????? ???"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved models - ?? ??? ????????? ?????",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "brandId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Camry"
+                          },
+                          "nameAr": {
+                            "type": "string",
+                            "example": "?????"
+                          },
+                          "year": {
+                            "type": "integer",
+                            "example": 2023
+                          },
+                          "size": {
+                            "type": "string",
+                            "enum": [
+                              "SMALL",
+                              "MEDIUM",
+                              "LARGE",
+                              "EXTRA_LARGE"
+                            ],
+                            "example": "MEDIUM"
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "brand": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "example": "Toyota"
+                              },
+                              "nameAr": {
+                                "type": "string",
+                                "example": "??????"
+                              }
+                            }
+                          },
+                          "_count": {
+                            "type": "object",
+                            "properties": {
+                              "userVehicles": {
+                                "type": "integer",
+                                "example": 5
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "filters": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/{id}": {
+      "get": {
+        "summary": "Get model by ID",
+        "description": "Retrieve a specific vehicle model - ???? ??? ????? ????",
+        "tags": [
+          "🔓 Brands & Models"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Model ID - ???? ???????"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Model found - ?? ?????? ??? ???????"
+          },
+          "404": {
+            "description": "Model not found - ??????? ??? ?????"
+          }
+        }
+      }
+    },
+    "/api/services/{id}/available-slots": {
+      "get": {
+        "summary": "Get available time slots for a service",
+        "description": "Returns available time slots for Comprehensive Care booking (no double-book).",
+        "tags": [
+          "🏪 Vendor | Comprehensive Care"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2024-02-23"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of available slots"
+          }
+        }
+      }
+    },
+    "/api/supplies": {
+      "get": {
+        "summary": "List all supply requests",
+        "tags": [
+          "🏪 Vendor | Supply Requests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of supply requests"
+          }
+        }
+      }
+    },
+    "/api/supplies/{id}": {
+      "get": {
+        "summary": "Get supply request by ID",
+        "tags": [
+          "🏪 Vendor | Supply Requests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Supply request details"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/users/supplier-profile": {
+      "put": {
+        "summary": "Update supplier profile",
+        "description": "Update supplier-specific profile fields\n\nتحديث بيانات المورد\n",
+        "tags": [
+          "🏪 Vendor | Onboarding"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "businessName": {
+                    "type": "string"
+                  },
+                  "businessNameAr": {
+                    "type": "string"
+                  },
+                  "businessLicense": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Supplier profile updated"
+          }
+        }
+      }
+    },
+    "/api/vendors/coupons": {
+      "get": {
+        "summary": "Get all vendor coupons (Admin Only)",
+        "description": "Retrieve all coupons across all vendors with optional filtering.",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "isActive",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "vendorId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all coupons"
+          }
+        }
+      }
+    },
+    "/api/vendors/profile/me/comprehensive-care-bookings": {
+      "get": {
+        "summary": "Get comprehensive care service bookings for current vendor",
+        "tags": [
+          "🏪 Vendor | Comprehensive Care"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of bookings"
+          }
+        }
+      }
+    },
+    "/api/vendors/profile/me/coupons": {
+      "get": {
+        "summary": "Get all coupons for current vendor",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of vendor coupons"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create new coupon for current vendor",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "discountType",
+                  "discountValue"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "discountType": {
+                    "type": "string",
+                    "enum": [
+                      "PERCENTAGE",
+                      "FIXED"
+                    ]
+                  },
+                  "discountValue": {
+                    "type": "number"
+                  },
+                  "minOrderValue": {
+                    "type": "number"
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "endDate": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "usageLimit": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Coupon created"
+          }
+        }
+      }
+    },
+    "/api/vendors/profile/me/coupons/{id}": {
+      "patch": {
+        "summary": "Update vendor coupon",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Coupon updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete vendor coupon",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Coupon deleted"
+          }
+        }
+      }
+    },
+    "/api/workshops/profile/me": {
+      "post": {
+        "summary": "Create my workshop (Vendor)",
+        "description": "الفيندور (نوع ورشة معتمدة) يضيف ورشته بنفسه. الورشة تُنشأ غير معتمدة حتى يتحقق منها الأدمن.\n",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "city",
+                  "address",
+                  "phone",
+                  "services"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Al-Salam Auto Center"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "locationUrl": {
+                    "type": "string",
+                    "description": "Google Maps URL to extract lat/lng"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "workingHours": {
+                    "type": "object"
+                  },
+                  "services": {
+                    "type": "string",
+                    "description": "JSON array of service types"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Workshop created (pending admin verification)"
+          },
+          "400": {
+            "description": "Already have a workshop or validation error"
+          },
+          "403": {
+            "description": "Not a certified workshop vendor"
+          }
+        }
+      },
+      "get": {
+        "summary": "Get my workshop profile",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workshop profile retrieved"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update my workshop profile",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "workingHours": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Workshop profile updated"
+          }
+        }
+      }
+    },
+    "/api/workshops/profile/me/bookings": {
+      "get": {
+        "summary": "Get my workshop bookings",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of workshop bookings"
+          }
+        }
+      }
+    },
+    "/api/workshops/profile/me/logo": {
+      "post": {
+        "summary": "Upload my workshop logo",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logo uploaded"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete my workshop logo",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logo deleted"
+          }
+        }
+      }
+    },
+    "/api/workshops/profile/me/images": {
+      "post": {
+        "summary": "Upload my workshop images",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Images uploaded"
+          }
+        }
+      }
+    },
+    "/api/workshops/profile/me/images/{imageIndex}": {
+      "delete": {
+        "summary": "Delete my workshop image",
+        "tags": [
+          "🏪 Vendor | Workshop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "imageIndex",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image deleted"
+          }
+        }
+      }
+    },
+    "/api/vendor-onboarding/register": {
+      "post": {
+        "summary": "Register a new vendor (Public)",
+        "tags": [
+          "🏪 Vendor | Onboarding"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "legalName",
+                  "supplierType",
+                  "country",
+                  "city",
+                  "addressLine1",
+                  "nationalAddress",
+                  "postalCode",
+                  "commercialRegNo",
+                  "companyEmail",
+                  "companyPhone",
+                  "contactPersonName",
+                  "contactPersonTitle",
+                  "contactPersonMobile",
+                  "mainService",
+                  "servicesOffered",
+                  "coverageRegion",
+                  "operatingModel",
+                  "coverageCities",
+                  "payoutMethod"
+                ],
+                "properties": {
+                  "legalName": {
+                    "type": "string",
+                    "example": "Al-Futtaim Motors"
+                  },
+                  "tradeName": {
+                    "type": "string",
+                    "example": "Toyota Saudi"
+                  },
+                  "supplierType": {
+                    "type": "string",
+                    "example": "CORPORATE"
+                  },
+                  "country": {
+                    "type": "string",
+                    "example": "Saudi Arabia"
+                  },
+                  "city": {
+                    "type": "string",
+                    "example": "Riyadh"
+                  },
+                  "addressLine1": {
+                    "type": "string",
+                    "example": "King Fahd Branch Rd, Al Murabbah"
+                  },
+                  "nationalAddress": {
+                    "type": "string",
+                    "example": "1234-5678-9012"
+                  },
+                  "postalCode": {
+                    "type": "string",
+                    "example": "12613"
+                  },
+                  "commercialRegNo": {
+                    "type": "string",
+                    "example": "1010123456"
+                  },
+                  "vatRegistered": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "vatNumber": {
+                    "type": "string",
+                    "example": "310123456700003"
+                  },
+                  "eInvoicingCapable": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "website": {
+                    "type": "string",
+                    "example": "https://toyota.com.sa"
+                  },
+                  "companyEmail": {
+                    "type": "string",
+                    "example": "info@toyota.sa"
+                  },
+                  "companyPhone": {
+                    "type": "string",
+                    "example": "+966112345678"
+                  },
+                  "contactPersonName": {
+                    "type": "string",
+                    "example": "Ahmad Mohammed"
+                  },
+                  "contactPersonTitle": {
+                    "type": "string",
+                    "example": "Operations Manager"
+                  },
+                  "contactPersonMobile": {
+                    "type": "string",
+                    "example": "+966501234567"
+                  },
+                  "mainService": {
+                    "type": "string",
+                    "example": "Mechanical Repair"
+                  },
+                  "subService": {
+                    "type": "string",
+                    "example": "Engine Tuning"
+                  },
+                  "servicesOffered": {
+                    "type": "string",
+                    "example": "Full engine diagnostic and repair services."
+                  },
+                  "coverageRegion": {
+                    "type": "string",
+                    "example": "Central Region"
+                  },
+                  "operatingModel": {
+                    "type": "string",
+                    "enum": [
+                      "MARKETPLACE"
+                    ],
+                    "example": "MARKETPLACE"
+                  },
+                  "support24_7": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "emergencyResponse": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "coverageCities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": [
+                      "Riyadh",
+                      "Jeddah"
+                    ]
+                  },
+                  "yearsOfExperience": {
+                    "type": "integer",
+                    "example": 15
+                  },
+                  "employeesBand": {
+                    "type": "string",
+                    "example": "50-100"
+                  },
+                  "monthlyCapacityBand": {
+                    "type": "string",
+                    "example": "500+ vehicles"
+                  },
+                  "fleetCount": {
+                    "type": "integer",
+                    "example": 10
+                  },
+                  "paymentTerms": {
+                    "type": "string",
+                    "example": "Net 30"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "example": "SAR"
+                  },
+                  "priceListProvided": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "discountPercent": {
+                    "type": "number",
+                    "example": 10.5
+                  },
+                  "payoutMethod": {
+                    "type": "string",
+                    "example": "BANK_TRANSFER"
+                  },
+                  "bankName": {
+                    "type": "string",
+                    "example": "Al Rajhi Bank"
+                  },
+                  "iban": {
+                    "type": "string",
+                    "example": "SA1234567890123456789012"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Application submitted"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "409": {
+            "description": "CR number or Email already exists"
+          }
+        }
+      }
+    },
+    "/api/vendor-onboarding/admin/list": {
+      "get": {
+        "summary": "List all vendor applications (Admin)",
+        "tags": [
+          "🏪 Vendor | Onboarding"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "SUSPENDED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of vendor applications"
+          }
+        }
+      }
+    },
+    "/api/vendor-onboarding/admin/{id}/status": {
+      "patch": {
+        "summary": "Update vendor application status (Admin)",
+        "tags": [
+          "🏪 Vendor | Onboarding"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "APPROVED",
+                      "REJECTED",
+                      "SUSPENDED"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          }
+        }
+      }
+    }
+  }
+}

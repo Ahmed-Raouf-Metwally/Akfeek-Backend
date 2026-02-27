@@ -6,12 +6,17 @@ const logger = require('./utils/logger/logger');
 const prisma = require('./utils/database/prisma');
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Create HTTP server
 const server = createServer(app);
 
 // Initialize Socket.io
 socketIo.init(server);
+
+// Initialize Cron Jobs
+const { initCronJobs } = require('./utils/cron');
+initCronJobs();
 
 // Test database connection
 async function testDatabaseConnection() {
@@ -29,8 +34,8 @@ async function startServer() {
   try {
     await testDatabaseConnection();
 
-    server.listen(PORT, () => {
-      logger.info(`🚀 Server running on port ${PORT}`);
+    server.listen(PORT, HOST, () => {
+      logger.info(`🚀 Server running on http://${HOST}:${PORT}`);
       logger.info(`📡 Socket.io enabled`);
       logger.info(`📚 API Docs: http://localhost:${PORT}/api-docs`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV}`);

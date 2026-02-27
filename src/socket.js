@@ -55,9 +55,32 @@ function init(server) {
             logger.info(`Technician left room: ${technicianId}`);
         });
 
+        // Feedback Chat: Join ticket room
+        socket.on('feedback:join', (feedbackId) => {
+            socket.join(`feedback:${feedbackId}`);
+            logger.info(`User joined feedback ticket room: ${feedbackId}`);
+
+            socket.emit('feedback:joined', {
+                feedbackId,
+                message: 'Connected to feedback ticket real-time support'
+            });
+        });
+
+        // Feedback Chat: Leave ticket room
+        socket.on('feedback:leave', (feedbackId) => {
+            socket.leave(`feedback:${feedbackId}`);
+            logger.info(`User left feedback ticket room: ${feedbackId}`);
+        });
+
         // Handle disconnect
         socket.on('disconnect', () => {
             logger.info(`Socket disconnected: ${socket.id}`);
+        });
+
+        // User joins personal notification room
+        socket.on('user:join', (userId) => {
+            socket.join(`user:${userId}`);
+            logger.info(`User joined notification room: ${userId}`);
         });
 
         // Handle errors
@@ -79,6 +102,20 @@ function getIo() {
         throw new Error('Socket.io not initialized. Call init() first.');
     }
     return io;
+}
+
+/**
+ * Emit notification to specific user
+ * @param {string} userId - User ID
+ * @param {object} notification - Notification data
+ */
+function emitNotification(userId, notification) {
+    if (!io) {
+        // logger.warn('Socket.io not initialized - cannot emit notification');
+        return;
+    }
+    io.to(`user:${userId}`).emit('notification:new', notification);
+    logger.debug(`Emitted notification to user: ${userId}`);
 }
 
 /**
@@ -126,10 +163,27 @@ function emitTechnicianArrival(bookingId, location) {
     logger.info(`Technician arrived at ${location} for booking: ${bookingId}`);
 }
 
+/**
+ * Emit new reply to feedback ticket subscribers
+ * @param {string} feedbackId - Feedback ID
+ * @param {object} replyData - Reply details
+ */
+function emitFeedbackReply(feedbackId, replyData) {
+    if (!io) {
+        logger.warn('Socket.io not initialized - cannot emit feedback reply');
+        return;
+    }
+
+    io.to(`feedback:${feedbackId}`).emit('feedback:new_reply', replyData);
+    logger.debug(`Emitted new reply for feedback: ${feedbackId}`);
+}
+
 module.exports = {
     init,
     getIo,
+    emitNotification,
     emitLocationUpdate,
     emitBookingStatusChange,
-    emitTechnicianArrival
+    emitTechnicianArrival,
+    emitFeedbackReply
 };

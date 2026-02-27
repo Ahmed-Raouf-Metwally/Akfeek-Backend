@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
@@ -205,6 +205,39 @@ router.get('/', requireRole('ADMIN'), userController.getAllUsers);
 
 /**
  * @swagger
+ * /api/users:
+ *   post:
+ *     summary: Create user (Admin only) - e.g. vendor account
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, firstName, lastName, role]
+ *             properties:
+ *               email: { type: string }
+ *               password: { type: string }
+ *               firstName: { type: string }
+ *               lastName: { type: string }
+ *               role: { type: string, enum: [CUSTOMER, TECHNICIAN, SUPPLIER, VENDOR, ADMIN] }
+ *               phone: { type: string }
+ *               preferredLanguage: { type: string, enum: [AR, EN] }
+ *     responses:
+ *       201:
+ *         description: User created
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Email or phone already registered
+ */
+router.post('/', requireRole('ADMIN'), userController.createUser);
+
+/**
+ * @swagger
  * /api/users/{id}:
  *   get:
  *     summary: Get user by ID (Admin only)
@@ -256,6 +289,45 @@ router.get('/:id', requireRole('ADMIN'), userController.getUserById);
  *         description: Status updated
  */
 router.patch('/:id/status', requireRole('ADMIN'), userController.updateUserStatus);
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   put:
+ *     summary: Update user (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               bio:
+ *                 type: string
+ *               bioAr:
+ *                 type: string
+ *               avatar:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User updated
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.put('/:id', requireRole('ADMIN'), userController.updateUserByAdmin);
 
 /**
  * @swagger

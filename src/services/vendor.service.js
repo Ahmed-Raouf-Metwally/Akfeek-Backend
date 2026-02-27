@@ -38,6 +38,12 @@ class VendorService {
             email: true,
             phone: true,
             status: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
         _count: {
@@ -145,6 +151,7 @@ class VendorService {
       logo,
       banner,
       status,
+      vendorType,
     } = data;
 
     // Check if user already has a vendor profile
@@ -180,6 +187,7 @@ class VendorService {
     const vendor = await prisma.vendorProfile.create({
       data: {
         userId,
+        ...(vendorType && { vendorType: ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH'].includes(vendorType) ? vendorType : 'AUTO_PARTS' }),
         businessName,
         businessNameAr,
         description,
@@ -234,8 +242,10 @@ class VendorService {
       country,
       logo,
       banner,
+      vendorType,
     } = data;
 
+    const validVendorTypes = ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH'];
     const vendor = await prisma.vendorProfile.update({
       where: { id },
       data: {
@@ -252,6 +262,7 @@ class VendorService {
         ...(country !== undefined && { country }),
         ...(logo !== undefined && { logo }),
         ...(banner !== undefined && { banner }),
+        ...(vendorType !== undefined && validVendorTypes.includes(vendorType) && { vendorType }),
       },
       include: {
         user: {
@@ -366,6 +377,75 @@ class VendorService {
     });
 
     logger.info(`Vendor deleted (soft): ${id}`);
+  }
+
+  /**
+   * Get bookings for comprehensive care vendor (حجوزات العناية الشاملة)
+   * Bookings where at least one BookingService has service.vendorId = this vendor
+   * @param {string} userId - Vendor user ID
+   * @param {Object} query - page, limit, status
+   * @returns {{ list: Array, pagination: Object }}
+   */
+  async getComprehensiveCareBookings(userId, query = {}) {
+    const profile = await this.getVendorByUserId(userId);
+    const page = Math.max(1, parseInt(query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(query.limit) || 10));
+    const skip = (page - 1) * limit;
+    const status = query.status || undefined;
+
+    const where = {
+      services: {
+        some: {
+          service: {
+            vendorId: profile.id,
+          },
+        },
+      },
+      ...(status && { status }),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ scheduledDate: 'desc' }, { createdAt: 'desc' }],
+        include: {
+          customer: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              profile: { select: { firstName: true, lastName: true } },
+            },
+          },
+          vehicle: {
+            select: {
+              id: true,
+              plateNumber: true,
+              vehicleModel: {
+                select: { name: true, year: true, brand: { select: { name: true } } },
+              },
+            },
+          },
+          services: {
+            where: { service: { vendorId: profile.id } },
+            include: { service: { select: { id: true, name: true, nameAr: true } } },
+          },
+        },
+      }),
+      prisma.booking.count({ where }),
+    ]);
+
+    return {
+      list: items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
   }
 }
 

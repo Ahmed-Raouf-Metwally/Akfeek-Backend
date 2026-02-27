@@ -1,12 +1,16 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/service.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
+const { upload: uploadServiceImage } = require('../../utils/serviceImageUpload');
 
 // Public access for listing services (or auth required if business rule dictates)
 // For now, allow authenticated users to view
 router.use(authMiddleware);
+
+// Upload service image (must be before /:id)
+router.post('/upload-image', requireRole(['ADMIN', 'VENDOR']), uploadServiceImage.single('file'), serviceController.uploadImage);
 
 /**
  * @swagger
@@ -22,7 +26,7 @@ router.use(authMiddleware);
  *         name: category
  *         schema:
  *           type: string
- *           enum: [CLEANING, MAINTENANCE, REPAIR, EMERGENCY, INSPECTION, CUSTOMIZATION]
+ *           enum: [CLEANING, MAINTENANCE, REPAIR, EMERGENCY, INSPECTION, CUSTOMIZATION, COMPREHENSIVE_CARE]
  *       - in: query
  *         name: type
  *         schema:
@@ -37,6 +41,12 @@ router.use(authMiddleware);
  *         description: List of services retrieved
  */
 router.get('/', serviceController.getAllServices);
+
+/**
+ * GET /api/services/:id/available-slots?date=YYYY-MM-DD
+ * Returns available time slots for Comprehensive Care booking (no double-book).
+ */
+router.get('/:id/available-slots', serviceController.getAvailableSlots);
 
 /**
  * @swagger
@@ -102,7 +112,8 @@ router.get('/:id', serviceController.getServiceById);
  *       201:
  *         description: Service created
  */
-router.post('/', requireRole('ADMIN'), serviceController.createService);
+// Admin or Vendor (Vendor can only create COMPREHENSIVE_CARE – enforced in service)
+router.post('/', requireRole(['ADMIN', 'VENDOR']), serviceController.createService);
 
 /**
  * @swagger
@@ -132,7 +143,7 @@ router.post('/', requireRole('ADMIN'), serviceController.createService);
  *       200:
  *         description: Service updated
  */
-router.put('/:id', requireRole('ADMIN'), serviceController.updateService);
+router.put('/:id', requireRole(['ADMIN', 'VENDOR']), serviceController.updateService);
 
 /**
  * @swagger
@@ -152,6 +163,6 @@ router.put('/:id', requireRole('ADMIN'), serviceController.updateService);
  *       200:
  *         description: Service deleted
  */
-router.delete('/:id', requireRole('ADMIN'), serviceController.deleteService);
+router.delete('/:id', requireRole(['ADMIN', 'VENDOR']), serviceController.deleteService);
 
 module.exports = router;

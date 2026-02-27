@@ -11,6 +11,9 @@
         "prisma:migrate:prod": "prisma migrate deploy",
         "prisma:studio": "prisma studio",
         "prisma:seed": "node prisma/seed.js",
+        "prisma:seed:care": "node prisma/seed-comprehensive-care-vendor.js",
+        "openapi": "node generate-openapi.js",
+        "test:order-flow": "node scripts/test-order-flow.js",
         "test": "jest --coverage",
         "test:watch": "jest --watch",
         "lint": "eslint src/",
@@ -44,16 +47,21 @@
         "socket.io": "^4.8.1",
         "swagger-jsdoc": "^6.2.8",
         "swagger-ui-express": "^5.0.1",
-        "winston": "^3.17.0"
+        "winston": "^3.17.0",
+        "zod": "^4.3.6"
     },
     "devDependencies": {
-        "@types/express": "^5.0.0",
+        "@types/express": "^5.0.6",
+        "@types/multer": "^2.0.0",
+        "@types/node": "^25.2.3",
         "@types/swagger-jsdoc": "^6.0.4",
         "@types/swagger-ui-express": "^4.1.6",
         "eslint": "^9.18.0",
         "jest": "^29.7.0",
         "nodemon": "^3.1.9",
-        "prisma": "^5.22.0"
+        "prisma": "^5.22.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.9.3"
     },
     "engines": {
         "node": ">=18.0.0",

@@ -13,9 +13,14 @@ router.use(authMiddleware);
 router.get('/', requireRole('ADMIN'), bookingController.getAllBookings);
 
 /**
- * GET /api/bookings/:id - Get one booking by id (Admin).
+ * GET /api/bookings/my - Current user's bookings (customer: my appointments). Query: page, limit, status
  */
-router.get('/:id', requireRole('ADMIN'), bookingController.getBookingById);
+router.get('/my', bookingController.getMyBookings);
+
+/**
+ * GET /api/bookings/:id - Get one booking by id (Admin or owner).
+ */
+router.get('/:id', bookingController.getBookingById);
 
 /**
  * @swagger

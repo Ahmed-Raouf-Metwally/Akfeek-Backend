@@ -71,6 +71,11 @@ router.get('/', requireRole('ADMIN'), vendorController.getAllVendors);
 router.get('/profile/me', requireRole('VENDOR'), vendorController.getMyVendorProfile);
 
 /**
+ * GET /api/vendors/profile/me/comprehensive-care-bookings - List bookings for vendor's comprehensive care services
+ */
+router.get('/profile/me/comprehensive-care-bookings', requireRole('VENDOR'), vendorController.getMyComprehensiveCareBookings);
+
+/**
  * @swagger
  * /api/vendors/{id}:
  *   get:

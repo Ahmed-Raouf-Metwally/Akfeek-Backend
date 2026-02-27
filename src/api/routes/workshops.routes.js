@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const workshopController = require('../controllers/workshop.controller');
 const workshopReviewController = require('../controllers/workshopReview.controller');
@@ -71,6 +71,11 @@ router.use(authMiddleware);
  *                         type: boolean
  */
 router.get('/', workshopController.getAllWorkshops);
+
+// Vendor (CERTIFIED_WORKSHOP) – my workshop & bookings – must be before /:id
+router.get('/profile/me', requireRole('VENDOR'), workshopController.getMyWorkshop);
+router.put('/profile/me', requireRole('VENDOR'), workshopController.updateMyWorkshop);
+router.get('/profile/me/bookings', requireRole('VENDOR'), workshopController.getMyWorkshopBookings);
 
 /**
  * @swagger

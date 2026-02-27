@@ -1,4 +1,5 @@
 const userService = require('../../services/user.service');
+const authService = require('../../services/auth.service');
 
 /**
  * User Controller
@@ -100,13 +101,31 @@ class UserController {
   }
 
   /**
+   * Create user (Admin only) - e.g. for new vendor accounts
+   * POST /api/users
+   */
+  async createUser(req, res, next) {
+    try {
+      const user = await authService.createUserByAdmin(req.body);
+      res.status(201).json({
+        success: true,
+        message: 'User created successfully',
+        messageAr: 'تم إنشاء المستخدم بنجاح',
+        data: user
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get all users (Admin only)
    * GET /api/users
    */
   async getAllUsers(req, res, next) {
     try {
       const { role, status, search, page, limit } = req.query;
-      
+
       const result = await userService.getAllUsers(
         { role, status, search },
         { page: parseInt(page), limit: parseInt(limit) }
@@ -152,6 +171,25 @@ class UserController {
         success: true,
         message: 'User status updated',
         messageAr: 'تم تحديث حالة المستخدم',
+        data: user
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Update user by ID (Admin only)
+   * PUT /api/users/:id
+   */
+  async updateUserByAdmin(req, res, next) {
+    try {
+      const user = await userService.updateProfile(req.params.id, req.body);
+
+      res.json({
+        success: true,
+        message: 'User updated successfully',
+        messageAr: 'تم تحديث بيانات المستخدم بنجاح',
         data: user
       });
     } catch (error) {

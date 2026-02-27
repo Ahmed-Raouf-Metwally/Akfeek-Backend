@@ -80,7 +80,7 @@ class ModelController {
                     _count: {
                         select: {
                             userVehicles: true,
-                            compatibleProducts: true
+                            compatibleAutoParts: true
                         }
                     }
                 }

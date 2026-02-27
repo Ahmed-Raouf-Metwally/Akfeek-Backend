@@ -67,10 +67,11 @@ model User {
   supplierRequests  SupplyRequest[]    @relation("SupplierSupplyRequests")
 
   // Financials
-  invoices     Invoice[]
-  wallet       Wallet?
-  transactions Transaction[]
-  payments     Payment[]
+  invoices          Invoice[]
+  wallet            Wallet?
+  transactions      Transaction[]
+  payments          Payment[]
+  pointTransactions PointTransaction[]
 
   // Notifications & Ratings
   notifications   Notification[]
@@ -83,11 +84,25 @@ model User {
 
   // Vendor Relations
   vendorProfile     VendorProfile?
+  vendorApplication Vendor?            @relation("VendorApplication")
   autoParts         AutoPart[]         @relation("VendorParts")
   marketplaceOrders MarketplaceOrder[]
+  cart               Cart?
 
   // Workshop Reviews
   workshopReviews WorkshopReview[]
+
+  // Feedback Module
+  feedbacks         Feedback[]         @relation("UserFeedbacks")
+  handledFeedbacks  Feedback[]         @relation("HandledFeedbacks")
+  feedbackReplies   FeedbackReply[]
+  feedbackAuditLogs FeedbackAuditLog[]
+
+  // Admin Transactions
+  performedTransactions      Transaction[]      @relation("TransactionPerformer")
+  performedPointTransactions PointTransaction[] @relation("PointTransactionPerformer")
+  vendor                     Vendor?            @relation(fields: [vendorId], references: [id])
+  vendorId                   String?
 
   @@index([email])
   @@index([phone])
@@ -211,7 +226,6 @@ model VehicleModel {
 
   // Relations
   userVehicles        UserVehicle[]
-  compatibleProducts  ProductCompatibility[]
   compatibleAutoParts AutoPartCompatibility[]
 
   @@unique([brandId, name, year])
@@ -276,6 +290,7 @@ enum ServiceCategory {
   REPAIR
   EMERGENCY
   INSPECTION
+  COMPREHENSIVE_CARE
   CUSTOMIZATION
   CERTIFIED_WORKSHOP
 }
@@ -303,24 +318,33 @@ model Service {
   estimatedDuration Int? // minutes
 
   // Mobile Car Service: parent service contains sub-services
-  parentServiceId String?
-  parentService   Service?  @relation("MobileCarSubServices", fields: [parentServiceId], references: [id], onDelete: SetNull)
-  subServices     Service[] @relation("MobileCarSubServices")
+  parentServiceId  String?
+  parentService    Service?  @relation("MobileCarSubServices", fields: [parentServiceId], references: [id], onDelete: SetNull)
+  subServices      Service[] @relation("MobileCarSubServices")
   customAttributes Json? // Per sub-service custom attributes (not shared)
+
+  // Comprehensive Care: service owned by a vendor (فيندور العناية الشاملة)
+  vendorId String?
+  vendor   VendorProfile? @relation("VendorComprehensiveCareServices", fields: [vendorId], references: [id], onDelete: SetNull)
+
+  // مواعيد العمل للحجز (العناية الشاملة): يوم الأسبوع + من - إلى. يمنع حجز عميلين في نفس الوقت
+  workingHours       Json?   // [{ "dayOfWeek": 0, "start": "09:00", "end": "17:00" }, ...] 0=Sun, 6=Sat
+  slotDurationMinutes Int?   // مدة كل موعد بالدقائق (افتراضي 60)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  pricing         ServicePricing[]
-  bookingServices BookingService[]
-  addOns          ServiceAddOn[]   @relation("ServiceAddOns")
-  parentAddOns    ServiceAddOn[]   @relation("ParentService")
+  pricing          ServicePricing[]
+  bookingServices  BookingService[]
+  addOns           ServiceAddOn[]    @relation("ServiceAddOns")
+  parentAddOns     ServiceAddOn[]    @relation("ParentService")
   autoPartServices AutoPartService[]
 
   @@index([type, isActive])
   @@index([category])
   @@index([parentServiceId])
+  @@index([vendorId])
 }
 
 model ServicePricing {
@@ -328,9 +352,9 @@ model ServicePricing {
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  vehicleType     VehicleType
-  basePrice       Decimal     @db.Decimal(10, 2)
-  discountedPrice Decimal?    @db.Decimal(10, 2)
+  vehicleType     String  // اسم حر من الفيندور (مثلاً سيدان، دفع رباعي، عربية صغيرة)
+  basePrice       Decimal @db.Decimal(10, 2)
+  discountedPrice Decimal? @db.Decimal(10, 2)
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -356,64 +380,6 @@ model ServiceAddOn {
 }
 
 // ================================================================================================
-// PRODUCT CATALOG (E-Commerce Model)
-// ================================================================================================
-
-enum ProductCategory {
-  OIL
-  FILTER
-  BRAKE_PAD
-  BATTERY
-  TIRE
-  FLUID
-  ACCESSORY
-}
-
-model Product {
-  id          String  @id @default(uuid())
-  sku         String  @unique
-  name        String
-  nameAr      String?
-  description String? @db.Text
-
-  category ProductCategory
-  brand    String
-  imageUrl String?
-
-  price         Decimal @db.Decimal(10, 2)
-  stockQuantity Int     @default(0)
-
-  isActive   Boolean @default(true)
-  isFeatured Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  compatibility   ProductCompatibility[]
-  bookingProducts BookingProduct[]
-
-  @@index([category, isActive])
-  @@index([sku])
-}
-
-model ProductCompatibility {
-  id        String  @id @default(uuid())
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  // Vehicle Model Reference
-  vehicleModelId String
-  vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@unique([productId, vehicleModelId])
-  @@index([productId])
-  @@index([vehicleModelId])
-}
-
-// ================================================================================================
 // AUTO PARTS MARKETPLACE - VENDOR MANAGEMENT & PARTS CATALOG
 // ================================================================================================
 
@@ -424,10 +390,19 @@ enum VendorStatus {
   REJECTED
 }
 
+enum VendorType {
+  AUTO_PARTS          // فيندور قطع الغيار / المنتجات
+  COMPREHENSIVE_CARE  // فيندور العناية الشاملة
+  CERTIFIED_WORKSHOP  // فيندور الورش المعتمدة
+  CAR_WASH            // فيندور خدمة الغسيل
+}
+
 model VendorProfile {
   id     String @id @default(uuid())
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  vendorType VendorType @default(AUTO_PARTS) // نوع الفيندور: قطع غيار أو عناية شاملة
 
   businessName   String
   businessNameAr String?
@@ -465,10 +440,12 @@ model VendorProfile {
   updatedAt DateTime @updatedAt
 
   // Relations
-  parts      AutoPart[]             @relation("VendorOwnedParts")
-  orderItems MarketplaceOrderItem[]
-  autoPartVendors AutoPartVendor[]  // Vendors supplying parts (pricing & availability)
+  parts            AutoPart[]             @relation("VendorOwnedParts")
+  orderItems       MarketplaceOrderItem[]
+  autoPartVendors  AutoPartVendor[] // Vendors supplying parts (pricing & availability)
   bookingAutoParts BookingAutoPart[] // Bookings where this vendor supplied parts
+  comprehensiveCareServices Service[] @relation("VendorComprehensiveCareServices") // خدمات العناية الشاملة
+  workshop         CertifiedWorkshop? // فيندور الورش المعتمدة: ورشة واحدة مرتبطة به
 
   @@index([userId])
   @@index([status])
@@ -542,9 +519,10 @@ model AutoPart {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  images        AutoPartImage[]
-  compatibility AutoPartCompatibility[]
-  orderItems    MarketplaceOrderItem[]
+  images           AutoPartImage[]
+  compatibility    AutoPartCompatibility[]
+  orderItems       MarketplaceOrderItem[]
+  cartItems        CartItem[]
   autoPartServices AutoPartService[]
   autoPartVendors  AutoPartVendor[]
   bookingAutoParts BookingAutoPart[]
@@ -594,39 +572,39 @@ model AutoPartCompatibility {
 
 // Spare part linked to one or more services (e.g. sub-services of Mobile Car Service)
 model AutoPartService {
-    id        String  @id @default(uuid())
-    autoPartId String
-    autoPart   AutoPart @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
-    serviceId  String
-    service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  autoPartId String
+  autoPart   AutoPart @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
+  serviceId  String
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-    isRecommended Boolean @default(false) // Recommended for this service
-    sortOrder     Int     @default(0)
-    createdAt     DateTime @default(now())
+  isRecommended Boolean  @default(false) // Recommended for this service
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
 
-    @@unique([autoPartId, serviceId])
-    @@index([autoPartId])
-    @@index([serviceId])
+  @@unique([autoPartId, serviceId])
+  @@index([autoPartId])
+  @@index([serviceId])
 }
 
 // Vendor (supplier) can supply spare part with own pricing & availability
 model AutoPartVendor {
-    id         String   @id @default(uuid())
-    autoPartId String
-    autoPart   AutoPart      @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
-    vendorId   String
-    vendor     VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  id         String        @id @default(uuid())
+  autoPartId String
+  autoPart   AutoPart      @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
+  vendorId   String
+  vendor     VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
-    unitPrice      Decimal  @db.Decimal(10, 2)
-    stockQuantity  Int      @default(0)
-    isAvailable    Boolean  @default(true)
-    leadTimeDays   Int?     // Optional delivery lead time
-    createdAt      DateTime @default(now())
-    updatedAt      DateTime @updatedAt
+  unitPrice     Decimal  @db.Decimal(10, 2)
+  stockQuantity Int      @default(0)
+  isAvailable   Boolean  @default(true)
+  leadTimeDays  Int? // Optional delivery lead time
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-    @@unique([autoPartId, vendorId])
-    @@index([autoPartId])
-    @@index([vendorId])
+  @@unique([autoPartId, vendorId])
+  @@index([autoPartId])
+  @@index([vendorId])
 }
 
 // ================================================================================================
@@ -710,6 +688,10 @@ model CertifiedWorkshop {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ربط الورشة بفيندور واحد (فيندور الورش المعتمدة)
+  vendorId String?        @unique
+  vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
   // Relations
   bookings Booking[]
   reviews  WorkshopReview[]
@@ -717,6 +699,7 @@ model CertifiedWorkshop {
   @@index([isActive, isVerified])
   @@index([city])
   @@index([averageRating])
+  @@index([vendorId])
 }
 
 model WorkshopReview {
@@ -801,6 +784,11 @@ enum BookingStatus {
   NO_SHOW // Customer didn't show up
 }
 
+enum WorkType {
+  WORK   // عمل - أول مرة
+  REWORK // إعادة عمل
+}
+
 model Booking {
   id            String @id @default(uuid())
   bookingNumber String @unique // AUTO-GEN: BKG-20260123-001
@@ -851,6 +839,9 @@ model Booking {
   distanceKm        Float?
   estimatedDuration Int? // minutes
 
+  // Work type: عمل أولي أو إعادة عمل
+  workType WorkType? @default(WORK)
+
   // Status & Metadata
   metadata      Json? // Additional data (vehicle condition, pricing, etc.)
   status        BookingStatus @default(PENDING)
@@ -862,7 +853,6 @@ model Booking {
 
   // Relations
   services            BookingService[]
-  products            BookingProduct[]
   bookingAutoParts    BookingAutoPart[] // Spare parts (e.g. Mobile Car Service)
   statusHistory       BookingStatusHistory[]
   jobBroadcast        JobBroadcast?
@@ -889,9 +879,10 @@ model BookingService {
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id])
 
-  quantity   Int     @default(1)
-  unitPrice  Decimal @db.Decimal(10, 2)
-  totalPrice Decimal @db.Decimal(10, 2)
+  quantity          Int     @default(1)
+  unitPrice         Decimal @db.Decimal(10, 2)
+  totalPrice        Decimal @db.Decimal(10, 2)
+  estimatedMinutes  Int?    // وقت الخدمة بالدقائق (من Service.estimatedDuration)
 
   createdAt DateTime @default(now())
 
@@ -899,13 +890,15 @@ model BookingService {
   @@index([serviceId])
 }
 
-model BookingProduct {
-  id        String  @id @default(uuid())
-  bookingId String
-  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
+// Spare parts on a booking (e.g. Mobile Car Service)
+model BookingAutoPart {
+  id         String         @id @default(uuid())
+  bookingId  String
+  booking    Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  autoPartId String
+  autoPart   AutoPart       @relation(fields: [autoPartId], references: [id])
+  vendorId   String? // Which vendor supplied (optional)
+  vendor     VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
 
   quantity   Int     @default(1)
   unitPrice  Decimal @db.Decimal(10, 2)
@@ -914,28 +907,8 @@ model BookingProduct {
   createdAt DateTime @default(now())
 
   @@index([bookingId])
-  @@index([productId])
-}
-
-// Spare parts on a booking (e.g. Mobile Car Service)
-model BookingAutoPart {
-    id         String  @id @default(uuid())
-    bookingId  String
-    booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-    autoPartId String
-    autoPart   AutoPart @relation(fields: [autoPartId], references: [id])
-    vendorId   String?  // Which vendor supplied (optional)
-    vendor     VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
-
-    quantity   Int     @default(1)
-    unitPrice  Decimal @db.Decimal(10, 2)
-    totalPrice Decimal @db.Decimal(10, 2)
-
-    createdAt DateTime @default(now())
-
-    @@index([bookingId])
-    @@index([autoPartId])
-    @@index([vendorId])
+  @@index([autoPartId])
+  @@index([vendorId])
 }
 
 model BookingStatusHistory {
@@ -1297,16 +1270,19 @@ model Wallet {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  balance        Decimal @default(0) @db.Decimal(10, 2)
-  pendingBalance Decimal @default(0) @db.Decimal(10, 2) // Locked for pending transactions
+  availableBalance Decimal @default(0) @db.Decimal(10, 2)
+  pendingBalance   Decimal @default(0) @db.Decimal(10, 2) // Locked for pending transactions
 
   currency String @default("SAR")
+
+  pointsBalance Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  transactions Transaction[]
+  transactions      Transaction[]
+  pointTransactions PointTransaction[]
 
   @@index([userId])
 }
@@ -1351,12 +1327,50 @@ model Transaction {
 
   metadata Json? // Additional context
 
+  performedById String? @map("performedBy")
+  performedBy   User?   @relation("TransactionPerformer", fields: [performedById], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([walletId])
   @@index([userId])
   @@index([type])
+  @@index([createdAt])
+}
+
+enum PointTransactionType {
+  EARN
+  REDEEM
+  ADJUSTMENT
+  REFUND
+}
+
+model PointTransaction {
+  id String @id @default(uuid())
+
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type          PointTransactionType
+  amount        Int
+  balanceBefore Int
+  balanceAfter  Int
+
+  description String?
+  referenceId String?
+  metadata    Json?
+
+  performedById String? @map("performedBy")
+  performedBy   User?   @relation("PointTransactionPerformer", fields: [performedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([walletId])
+  @@index([userId])
   @@index([createdAt])
 }
 
@@ -1415,6 +1429,9 @@ enum NotificationType {
 
   PAYMENT_RECEIVED
   PAYMENT_FAILED
+
+  WALLET
+  POINTS
 
   STATUS_UPDATE
   MESSAGE
@@ -1514,6 +1531,42 @@ enum OrderStatus {
   REFUNDED
 }
 
+// ================================================================================================
+// CART (Customer shopping cart before checkout)
+// ================================================================================================
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items CartItem[]
+
+  @@index([userId])
+}
+
+model CartItem {
+  id         String   @id @default(uuid())
+  cartId     String
+  cart       Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  autoPartId String
+  autoPart   AutoPart @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
+  quantity   Int      @default(1)
+  unitPrice  Decimal  @db.Decimal(10, 2) // Snapshot at add time for display
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([cartId, autoPartId])
+  @@index([cartId])
+  @@index([autoPartId])
+}
+
+// ================================================================================================
+// MARKETPLACE ORDERS (after checkout from cart)
+// ================================================================================================
+
 model MarketplaceOrder {
   id          String @id @default(uuid())
   orderNumber String @unique // ORD-202X-XXXX
@@ -1544,7 +1597,8 @@ model MarketplaceOrder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items MarketplaceOrderItem[]
+  items     MarketplaceOrderItem[]
+  feedbacks Feedback[]
 
   @@index([customerId])
   @@index([status])
@@ -1600,4 +1654,204 @@ model ActivityLog {
   @@index([action])
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+// ================================================================================================
+// FEEDBACK & COMPLAINTS MODULE
+// ================================================================================================
+
+enum FeedbackType {
+  COMPLAINT
+  SUGGESTION
+}
+
+enum FeedbackCategory {
+  DELIVERY
+  PAYMENT
+  PRODUCT
+  UI_UX
+  OTHER
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+  CLOSED
+}
+
+enum FeedbackPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum FeedbackSenderType {
+  USER
+  ADMIN
+}
+
+model Feedback {
+  id String @id @default(uuid())
+
+  userId String?
+  user   User?   @relation("UserFeedbacks", fields: [userId], references: [id], onDelete: SetNull)
+
+  orderId String?
+  order   MarketplaceOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  type        FeedbackType
+  category    FeedbackCategory
+  subject     String
+  message     String           @db.Text
+  status      FeedbackStatus   @default(OPEN)
+  priority    FeedbackPriority @default(MEDIUM)
+  isAnonymous Boolean          @default(false)
+
+  resolvedAt DateTime?
+  handledBy  String?
+  handler    User?     @relation("HandledFeedbacks", fields: [handledBy], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Soft Delete
+  deletedAt DateTime?
+
+  replies   FeedbackReply[]
+  auditLogs FeedbackAuditLog[]
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model FeedbackReply {
+  id         String   @id @default(uuid())
+  feedbackId String
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  senderType FeedbackSenderType
+  senderId   String
+  sender     User               @relation(fields: [senderId], references: [id])
+
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([feedbackId])
+  @@index([senderId])
+}
+
+model FeedbackAuditLog {
+  id         String   @id @default(uuid())
+  feedbackId String
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  oldStatus FeedbackStatus?
+  newStatus FeedbackStatus
+  changedBy String
+  changer   User            @relation(fields: [changedBy], references: [id])
+
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([feedbackId])
+  @@index([changedBy])
+}
+
+// ================================================================================================
+// VENDOR ONBOARDING MODULE
+// ================================================================================================
+
+enum VendorRegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+// الفيندور يبيع للمستخدمين عبر التطبيق (منصة فقط)
+enum OperatingModel {
+  MARKETPLACE
+}
+
+model Vendor {
+  id           String  @id @default(uuid())
+  userId       String? @unique
+  user         User?   @relation("VendorApplication", fields: [userId], references: [id])
+  supplierId   String? @unique
+  legalName    String
+  tradeName    String?
+  supplierType String
+
+  // Address & Registration
+  country           String
+  city              String
+  addressLine1      String
+  nationalAddress   String
+  postalCode        String
+  commercialRegNo   String  @unique
+  vatRegistered     Boolean @default(false)
+  vatNumber         String?
+  eInvoicingCapable Boolean @default(false)
+
+  // Contacts
+  website             String?
+  companyEmail        String  @unique
+  companyPhone        String
+  contactPersonName   String
+  contactPersonTitle  String
+  contactPersonMobile String
+
+  // Scope Alignment
+  mainService       String
+  subService        String?
+  servicesOffered   String         @db.Text
+  coverageRegion    String
+  operatingModel    OperatingModel @default(MARKETPLACE)
+  support24_7       Boolean        @default(false)
+  emergencyResponse Boolean        @default(false)
+
+  // Capacity
+  yearsOfExperience   Int?
+  employeesBand       String?
+  monthlyCapacityBand String?
+  fleetCount          Int?    @default(0)
+
+  // Commercials
+  paymentTerms      String?
+  currency          String  @default("SAR")
+  priceListProvided Boolean @default(false)
+  discountPercent   Float?
+  payoutMethod      String
+  bankName          String?
+  iban              String?
+
+  // Workflow
+  status    VendorRegistrationStatus @default(PENDING)
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+
+  // Relations
+  coverageCities VendorCity[]
+  users          User[]
+
+  @@index([status])
+  @@index([city])
+}
+
+model VendorCity {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  cityName  String
+  createdAt DateTime @default(now())
+
+  @@index([vendorId])
 }

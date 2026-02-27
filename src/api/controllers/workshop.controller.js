@@ -195,6 +195,70 @@ class WorkshopController {
             next(error);
         }
     }
+
+    /**
+     * Get current vendor's workshop (VENDOR with CERTIFIED_WORKSHOP only)
+     * GET /api/workshops/profile/me
+     */
+    async getMyWorkshop(req, res, next) {
+        try {
+            const workshop = await workshopService.getWorkshopByVendorUserId(req.user.id);
+            if (!workshop) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'No workshop linked to your account',
+                    errorAr: 'لا توجد ورشة مرتبطة بحسابك. تواصل مع الإدارة لربط ورشتك.'
+                });
+            }
+            res.json({ success: true, data: workshop });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Update current vendor's workshop
+     * PUT /api/workshops/profile/me
+     */
+    async updateMyWorkshop(req, res, next) {
+        try {
+            const payload = { ...req.body };
+            if (payload.locationUrl) {
+                const coords = await parseGoogleMapsUrl(payload.locationUrl);
+                if (coords?.latitude && coords?.longitude) {
+                    payload.latitude = coords.latitude;
+                    payload.longitude = coords.longitude;
+                }
+                delete payload.locationUrl;
+            }
+            const workshop = await workshopService.updateWorkshopByVendor(req.user.id, payload);
+            res.json({
+                success: true,
+                message: 'Workshop updated successfully',
+                messageAr: 'تم تحديث الورشة بنجاح',
+                data: workshop
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Get bookings for current vendor's workshop
+     * GET /api/workshops/profile/me/bookings
+     */
+    async getMyWorkshopBookings(req, res, next) {
+        try {
+            const result = await workshopService.getWorkshopBookingsByVendorUserId(req.user.id, req.query);
+            res.json({
+                success: true,
+                data: result.list,
+                pagination: result.pagination
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = new WorkshopController();

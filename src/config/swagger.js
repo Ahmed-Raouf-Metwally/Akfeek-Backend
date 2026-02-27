@@ -52,7 +52,7 @@ Authorization: Bearer <your_jwt_token>
             }
         },
         servers: [{
-            url: 'http://localhost:5000',
+            url: 'http://localhost:3000',
             description: 'Development Server - بيئة التطوير'
         },
         {
@@ -445,10 +445,6 @@ Authorization: Bearer <your_jwt_token>
             description: 'Service catalog - كتالوج الخدمات'
         },
         {
-            name: 'Products',
-            description: 'Product catalog (E-Commerce model) - كتالوج المنتجات'
-        },
-        {
             name: 'Bookings',
             description: 'Booking management (All 4 models) - إدارة الحجوزات'
         },
@@ -515,6 +511,14 @@ Authorization: Bearer <your_jwt_token>
         {
             name: 'Auto Parts',
             description: 'Auto parts catalog management - إدارة كتالوج قطع الغيار'
+        },
+        {
+            name: 'Cart',
+            description: 'Customer cart and checkout - سلة المشتريات وإتمام الطلب'
+        },
+        {
+            name: 'Marketplace Orders',
+            description: 'Orders from marketplace (customer, vendor, admin) - طلبات المتجر'
         }
         ]
     },
@@ -522,7 +526,8 @@ Authorization: Bearer <your_jwt_token>
         './src/api/routes/*.js',
         './src/api/routes/admin/*.js',
         './src/api/controllers/*.js',
-        './src/config/swagger-schemas.js'
+        './src/config/swagger-schemas.js',
+        './src/modules/vendor/*.js'
     ]
 };
 
