@@ -19,24 +19,23 @@ class AutoPartService {
     const where = {
       ...(category && { categoryId: category }),
       ...(vendor && { vendorId: vendor }),
+      // Default: only active parts (exclude soft-deleted). Pass isActive=false to see inactive.
+      ...(isActive === undefined && { isActive: true }),
       ...(isActive !== undefined && { isActive: isActive === 'true' }),
     };
 
     // Role-based filtering
     if (requestingUser) {
       if (requestingUser.role === 'VENDOR') {
-        // Vendors can see approved parts OR their own parts
+        // Vendor sees only their own products
         const vendorProfile = await prisma.vendorProfile.findUnique({
           where: { userId: requestingUser.id },
         });
 
         if (vendorProfile) {
-          where.OR = [
-            { isApproved: true },
-            { vendorId: vendorProfile.id },
-          ];
+          where.vendorId = vendorProfile.id;
         } else {
-          where.isApproved = true;
+          where.vendorId = 'no-profile'; // No profile = no parts
         }
       } else if (requestingUser.role !== 'ADMIN') {
         // Non-admin, non-vendor users only see approved parts
@@ -294,7 +293,7 @@ class AutoPartService {
     let isApproved = true;
 
     if (requestingUser.role === 'VENDOR') {
-      // Vendor creates their own parts - pending approval
+      // Vendor creates their own parts - added and live immediately (no admin approval)
       const vendorProfile = await prisma.vendorProfile.findUnique({
         where: { userId: requestingUser.id },
       });
@@ -308,7 +307,7 @@ class AutoPartService {
       }
 
       finalVendorId = vendorProfile.id;
-      isApproved = false; // Vendor parts need approval
+      isApproved = true; // Vendor parts go live immediately
     } else if (requestingUser.role === 'ADMIN') {
       // Admin can create platform-owned or vendor-owned parts
       finalVendorId = vendorId || null;
@@ -433,37 +432,46 @@ class AutoPartService {
       specifications,
       isActive,
       isFeatured,
+      categoryId,
+      vendorId,
     } = data;
+
+    // Only admin can change category or vendor assignment
+    const updateData = {
+      ...(name !== undefined && { name }),
+      ...(nameAr !== undefined && { nameAr }),
+      ...(description !== undefined && { description }),
+      ...(descriptionAr !== undefined && { descriptionAr }),
+      ...(brand !== undefined && { brand }),
+      ...(partNumber !== undefined && { partNumber }),
+      ...(oemNumber !== undefined && { oemNumber }),
+      ...(price !== undefined && { price: parseFloat(price) }),
+      ...(compareAtPrice !== undefined && {
+        compareAtPrice: compareAtPrice ? parseFloat(compareAtPrice) : null,
+      }),
+      ...(cost !== undefined && { cost: cost ? parseFloat(cost) : null }),
+      ...(stockQuantity !== undefined && {
+        stockQuantity: parseInt(stockQuantity),
+      }),
+      ...(lowStockThreshold !== undefined && {
+        lowStockThreshold: parseInt(lowStockThreshold),
+      }),
+      ...(weight !== undefined && {
+        weight: weight ? parseFloat(weight) : null,
+      }),
+      ...(dimensions !== undefined && { dimensions }),
+      ...(specifications !== undefined && { specifications }),
+      ...(isActive !== undefined && { isActive }),
+      ...(isFeatured !== undefined && { isFeatured }),
+    };
+    if (requestingUser.role === 'ADMIN') {
+      if (categoryId !== undefined) updateData.categoryId = categoryId;
+      if (vendorId !== undefined) updateData.vendorId = vendorId || null;
+    }
 
     const updatedPart = await prisma.autoPart.update({
       where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(nameAr !== undefined && { nameAr }),
-        ...(description !== undefined && { description }),
-        ...(descriptionAr !== undefined && { descriptionAr }),
-        ...(brand !== undefined && { brand }),
-        ...(partNumber !== undefined && { partNumber }),
-        ...(oemNumber !== undefined && { oemNumber }),
-        ...(price !== undefined && { price: parseFloat(price) }),
-        ...(compareAtPrice !== undefined && {
-          compareAtPrice: compareAtPrice ? parseFloat(compareAtPrice) : null,
-        }),
-        ...(cost !== undefined && { cost: cost ? parseFloat(cost) : null }),
-        ...(stockQuantity !== undefined && {
-          stockQuantity: parseInt(stockQuantity),
-        }),
-        ...(lowStockThreshold !== undefined && {
-          lowStockThreshold: parseInt(lowStockThreshold),
-        }),
-        ...(weight !== undefined && {
-          weight: weight ? parseFloat(weight) : null,
-        }),
-        ...(dimensions !== undefined && { dimensions }),
-        ...(specifications !== undefined && { specifications }),
-        ...(isActive !== undefined && { isActive }),
-        ...(isFeatured !== undefined && { isFeatured }),
-      },
+      data: updateData,
       include: {
         category: true,
         vendor: true,
@@ -571,6 +579,14 @@ class AutoPartService {
       }
     }
 
+    const hasPrimary = images.some((img) => img.isPrimary);
+    if (hasPrimary) {
+      await prisma.autoPartImage.updateMany({
+        where: { partId },
+        data: { isPrimary: false },
+      });
+    }
+
     const createdImages = await prisma.autoPartImage.createMany({
       data: images.map((img, index) => ({
         partId,
@@ -583,6 +599,81 @@ class AutoPartService {
 
     logger.info(`Added ${images.length} images to part: ${partId}`);
     return createdImages;
+  }
+
+  /**
+   * Delete one image from a part (ownership check)
+   */
+  async deletePartImage(partId, imageId, requestingUser) {
+    const part = await this.getPartById(partId, requestingUser);
+
+    if (requestingUser.role === 'VENDOR') {
+      const vendorProfile = await prisma.vendorProfile.findUnique({
+        where: { userId: requestingUser.id },
+      });
+      if (part.vendorId !== vendorProfile?.id) {
+        throw new AppError(
+          'You can only delete images from your own parts',
+          403,
+          'FORBIDDEN'
+        );
+      }
+    }
+
+    const image = await prisma.autoPartImage.findFirst({
+      where: { id: imageId, partId },
+    });
+    if (!image) {
+      throw new AppError('Image not found', 404, 'NOT_FOUND');
+    }
+
+    await prisma.autoPartImage.delete({ where: { id: imageId } });
+    logger.info(`Deleted image ${imageId} from part ${partId}`);
+    return { deleted: true };
+  }
+
+  /**
+   * Set one image as primary (ownership check)
+   */
+  async setPrimaryPartImage(partId, imageId, requestingUser) {
+    const part = await this.getPartById(partId, requestingUser);
+
+    if (requestingUser.role === 'VENDOR') {
+      const vendorProfile = await prisma.vendorProfile.findUnique({
+        where: { userId: requestingUser.id },
+      });
+      if (part.vendorId !== vendorProfile?.id) {
+        throw new AppError(
+          'You can only update images for your own parts',
+          403,
+          'FORBIDDEN'
+        );
+      }
+    }
+
+    const image = await prisma.autoPartImage.findFirst({
+      where: { id: imageId, partId },
+    });
+    if (!image) {
+      throw new AppError('Image not found', 404, 'NOT_FOUND');
+    }
+
+    await prisma.$transaction([
+      prisma.autoPartImage.updateMany({
+        where: { partId },
+        data: { isPrimary: false },
+      }),
+      prisma.autoPartImage.update({
+        where: { id: imageId },
+        data: { isPrimary: true },
+      }),
+    ]);
+    const updated = await prisma.autoPart.findUnique({
+      where: { id: partId },
+      include: { images: true },
+    });
+    logger.info(`Set primary image ${imageId} for part ${partId}`);
+    return updated.images;
   }
 
   /**

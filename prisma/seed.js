@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, VendorType } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
 
@@ -382,6 +382,7 @@ async function main() {
     { name: 'Battery Jump Start', nameAr: 'تشغيل البطارية', desc: 'Emergency battery jump start', descAr: 'تشغيل البطارية الطارئ', type: 'EMERGENCY', category: 'EMERGENCY', duration: 20, image: IMAGES.towing },
     { name: 'Ekfik Full Inspection', nameAr: 'فحص أكفيك الكامل', desc: 'Comprehensive vehicle inspection with valet service', descAr: 'فحص شامل للمركبة مع خدمة الڤاليه', type: 'INSPECTION', category: 'INSPECTION', duration: 180, image: IMAGES.brakeService },
     { name: 'Pre-Purchase Inspection', nameAr: 'فحص قبل الشراء', desc: 'Complete inspection before buying', descAr: 'فحص كامل قبل الشراء', type: 'INSPECTION', category: 'INSPECTION', duration: 120, image: IMAGES.brakeService },
+    { name: 'Comprehensive Care Service', nameAr: 'خدمة العناية الشاملة', desc: 'Full care package: inspection, maintenance check, cleaning and fluid top-up', descAr: 'باقة عناية شاملة: فحص، صيانة دورية، تنظيف وتعبئة سوائل', type: 'FIXED', category: 'COMPREHENSIVE_CARE', duration: 150, image: IMAGES.brakeService },
   ];
 
   const serviceIdByName = {};
@@ -483,6 +484,7 @@ async function main() {
     else if (service.category === 'MAINTENANCE') multiplier = 1.5;
     else if (service.category === 'EMERGENCY') multiplier = 2;
     else if (service.category === 'INSPECTION') multiplier = 2.5;
+    else if (service.category === 'COMPREHENSIVE_CARE') multiplier = 2.2;
 
     for (const vehicleType of vehicleTypes) {
       const base = (basePrices[vehicleType] || 75) * multiplier;
@@ -497,51 +499,7 @@ async function main() {
   console.log(`✅ Created ${pricingCount} pricing entries\n`);
 
   // ============================================
-  // 7. Products with Images
-  // ============================================
-  console.log('📦 Seeding Products with images...');
-  const productsData = [
-    { sku: 'OIL-001', name: 'Castrol Edge 5W-30', nameAr: 'كاسترول إيدج 5W-30', category: 'OIL', brand: 'Castrol', price: 89.99, stock: 120, featured: true, image: IMAGES.oil },
-    { sku: 'OIL-002', name: 'Mobil 1 Full Synthetic', nameAr: 'موبيل 1 اصطناعي كامل', category: 'OIL', brand: 'Mobil', price: 75.50, stock: 85, featured: true, image: IMAGES.oil },
-    { sku: 'OIL-003', name: 'Shell Helix HX7', nameAr: 'شل هيليكس HX7', category: 'OIL', brand: 'Shell', price: 62.00, stock: 200, featured: false, image: IMAGES.oil },
-    { sku: 'FLT-001', name: 'Oil Filter OE', nameAr: 'فلتر زيت أصلي', category: 'FILTER', brand: 'Bosch', price: 24.99, stock: 150, featured: false, image: IMAGES.filter },
-    { sku: 'FLT-002', name: 'Air Filter Cabin', nameAr: 'فلتر هواء الكابينة', category: 'FILTER', brand: 'Mann', price: 18.50, stock: 90, featured: false, image: IMAGES.filter },
-    { sku: 'BRK-001', name: 'Brake Pads Front Set', nameAr: 'فحمات فرامل أمامية', category: 'BRAKE_PAD', brand: 'Brembo', price: 145.00, stock: 40, featured: true, image: IMAGES.brakePad },
-    { sku: 'BRK-002', name: 'Brake Pads Rear', nameAr: 'فحمات فرامل خلفية', category: 'BRAKE_PAD', brand: 'Brembo', price: 98.00, stock: 45, featured: false, image: IMAGES.brakePad },
-    { sku: 'BAT-001', name: 'Varta Dynamic 12V 60Ah', nameAr: 'فارتا ديناميك 12 فولت 60 أمبير', category: 'BATTERY', brand: 'Varta', price: 220.00, stock: 30, featured: true, image: IMAGES.battery },
-    { sku: 'BAT-002', name: 'Bosch S4 005', nameAr: 'بوش S4 005', category: 'BATTERY', brand: 'Bosch', price: 195.00, stock: 25, featured: false, image: IMAGES.battery },
-    { sku: 'TIR-001', name: 'Michelin Pilot Sport 4', nameAr: 'ميشلان بايلوت سبورت 4', category: 'TIRE', brand: 'Michelin', price: 185.00, stock: 60, featured: true, image: IMAGES.tire },
-    { sku: 'TIR-002', name: 'Bridgestone Turanza', nameAr: 'بريدجستون تورانزا', category: 'TIRE', brand: 'Bridgestone', price: 165.00, stock: 50, featured: false, image: IMAGES.tire },
-    { sku: 'FLU-001', name: 'Coolant Concentrate', nameAr: 'سائل تبريد مركز', category: 'FLUID', brand: 'Prestone', price: 28.99, stock: 80, featured: false, image: IMAGES.fluid },
-    { sku: 'FLU-002', name: 'Brake Fluid DOT 4', nameAr: 'سائل فرامل DOT 4', category: 'FLUID', brand: 'Castrol', price: 15.50, stock: 100, featured: false, image: IMAGES.fluid },
-    { sku: 'ACC-001', name: 'Car Cover Universal', nameAr: 'غطاء سيارة عام', category: 'ACCESSORY', brand: 'Generic', price: 45.00, stock: 70, featured: false, image: IMAGES.accessory },
-    { sku: 'ACC-002', name: 'Dash Cam 1080p', nameAr: 'كاميرا داش 1080', category: 'ACCESSORY', brand: 'AutoGuard', price: 89.99, stock: 35, featured: true, image: IMAGES.accessory },
-  ];
-
-  const productIdBySku = {};
-  for (const prodData of productsData) {
-    const product = await prisma.product.upsert({
-      where: { sku: prodData.sku },
-      update: { imageUrl: prodData.image, stockQuantity: prodData.stock, price: prodData.price, isFeatured: prodData.featured },
-      create: {
-        sku: prodData.sku,
-        name: prodData.name,
-        nameAr: prodData.nameAr,
-        category: prodData.category,
-        brand: prodData.brand,
-        price: prodData.price,
-        stockQuantity: prodData.stock,
-        isFeatured: prodData.featured,
-        isActive: true,
-        imageUrl: prodData.image,
-      },
-    });
-    productIdBySku[prodData.sku] = product.id;
-  }
-  console.log(`✅ Created ${productsData.length} products\n`);
-
-  // ============================================
-  // 8. Supplier Parts
+  // 7. Supplier Parts
   // ============================================
   console.log('🏭 Seeding Supplier Parts...');
   const supplierPartsData = [
@@ -611,7 +569,7 @@ async function main() {
 
       // Calculate pricing
       const servicePrice = 80 + (i * 10) + (j * 5);
-      const productPrice = j % 2 === 0 ? 50 + (i * 5) : 0;
+      const productPrice = 0; // Product catalog removed; use bookingAutoParts for parts
       const laborFee = 50 + (i * 5);
       const deliveryFee = j % 3 === 0 ? 25 : 0;
       const partsTotal = productPrice;
@@ -662,23 +620,6 @@ async function main() {
         });
       }
 
-      // Add products to booking (if applicable)
-      if (productPrice > 0) {
-        const selectedProducts = Object.values(productIdBySku).slice(0, j % 2 === 0 ? 2 : 1);
-        for (const productId of selectedProducts) {
-          const unitPrice = 25 + Math.floor(Math.random() * 30);
-          await prisma.bookingProduct.create({
-            data: {
-              bookingId: booking.id,
-              productId,
-              quantity: 1,
-              unitPrice,
-              totalPrice: unitPrice,
-            },
-          });
-        }
-      }
-
       // Add status history
       const statusHistory = [
         { status: 'PENDING', timestamp: new Date(booking.createdAt) },
@@ -702,7 +643,7 @@ async function main() {
       }
     }
   }
-  console.log(`✅ Created ${createdBookings.length} complete bookings with services, products, and status history\n`);
+  console.log(`✅ Created ${createdBookings.length} complete bookings with services and status history\n`);
 
   // ============================================
   // 10. Job Broadcasts with Offers
@@ -958,7 +899,6 @@ async function main() {
 
     // Add invoice line items
     const bookingServices = await prisma.bookingService.findMany({ where: { bookingId: booking.id } });
-    const bookingProducts = await prisma.bookingProduct.findMany({ where: { bookingId: booking.id } });
 
     for (const bs of bookingServices) {
       const service = await prisma.service.findUnique({ where: { id: bs.serviceId } });
@@ -971,21 +911,6 @@ async function main() {
           quantity: bs.quantity,
           unitPrice: bs.unitPrice,
           totalPrice: bs.totalPrice,
-        },
-      });
-    }
-
-    for (const bp of bookingProducts) {
-      const product = await prisma.product.findUnique({ where: { id: bp.productId } });
-      await prisma.invoiceLineItem.create({
-        data: {
-          invoiceId: invoice.id,
-          description: product.name,
-          descriptionAr: product.nameAr,
-          itemType: 'PRODUCT',
-          quantity: bp.quantity,
-          unitPrice: bp.unitPrice,
-          totalPrice: bp.totalPrice,
         },
       });
     }
@@ -1056,10 +981,10 @@ async function main() {
 
     const wallet = await prisma.wallet.upsert({
       where: { userId: tech.id },
-      update: { balance, pendingBalance },
+      update: { availableBalance: balance, pendingBalance },
       create: {
         userId: tech.id,
-        balance,
+        availableBalance: balance,
         pendingBalance,
         currency: 'SAR',
       },
@@ -1178,8 +1103,48 @@ async function main() {
   // ============================================
   console.log('🏪 Seeding Auto Parts Vendor Marketplace...');
 
-  // 18.1 Create Vendors
+  // 18.1 Create Vendors (فيندور المنتجات + فيندور العناية الشاملة + آخرون)
   const vendorsData = [
+    {
+      email: 'vendor-products@akfeek.com',
+      phone: '+966571234000',
+      businessName: 'Akfeek Parts Hub',
+      businessNameAr: 'فيندور المنتجات - مركز قطع غيار أكفيك',
+      city: 'Riyadh',
+      desc: 'Vendor dedicated to adding and managing auto parts products on the marketplace',
+      descAr: 'فيندور متخصص في إضافة وإدارة منتجات قطع الغيار في المتجر',
+      vendorType: 'AUTO_PARTS'
+    },
+    {
+      email: 'vendor-care@akfeek.com',
+      phone: '+966571234099',
+      businessName: 'Comprehensive Care Partner',
+      businessNameAr: 'فيندور العناية الشاملة',
+      city: 'Riyadh',
+      desc: 'Vendor offering the Comprehensive Care Service (خدمة العناية الشاملة)',
+      descAr: 'فيندور يقدم خدمة العناية الشاملة: فحص، صيانة، تنظيف وتعبئة سوائل',
+      vendorType: 'COMPREHENSIVE_CARE'
+    },
+    {
+      email: 'vendor-workshop@akfeek.com',
+      phone: '+966571234098',
+      businessName: 'Certified Workshop KSA',
+      businessNameAr: 'الورشة المعتمدة',
+      city: 'Riyadh',
+      desc: 'Certified workshop vendor (الورش المعتمدة)',
+      descAr: 'فيندور الورش المعتمدة',
+      vendorType: 'CERTIFIED_WORKSHOP'
+    },
+    {
+      email: 'vendor-carwash@akfeek.com',
+      phone: '+966571234097',
+      businessName: 'Akfeek Car Wash',
+      businessNameAr: 'خدمة الغسيل',
+      city: 'Riyadh',
+      desc: 'Car wash service vendor (خدمة الغسيل)',
+      descAr: 'فيندور خدمة غسيل السيارات',
+      vendorType: 'CAR_WASH'
+    },
     {
       email: 'vendor1@akfeek.com',
       phone: '+966571234001',
@@ -1232,11 +1197,16 @@ async function main() {
       }
     });
 
+    const vendorTypeEnum = vData.vendorType === 'CERTIFIED_WORKSHOP' ? VendorType.CERTIFIED_WORKSHOP
+      : vData.vendorType === 'CAR_WASH' ? VendorType.CAR_WASH
+      : vData.vendorType === 'COMPREHENSIVE_CARE' ? VendorType.COMPREHENSIVE_CARE
+      : VendorType.AUTO_PARTS;
     const vendorProfile = await prisma.vendorProfile.upsert({
       where: { userId: user.id },
-      update: {},
+      update: { ...(vData.vendorType && { vendorType: vendorTypeEnum }) },
       create: {
         userId: user.id,
+        vendorType: vendorTypeEnum,
         businessName: vData.businessName,
         businessNameAr: vData.businessNameAr,
         description: vData.desc,
@@ -1255,6 +1225,20 @@ async function main() {
     allVendors.push(vendorProfile);
   }
   console.log(`✅ Created ${allVendors.length} vendors`);
+  console.log('   📦 فيندور المنتجات: vendor-products@akfeek.com / Admin123!');
+  console.log('   🛡️ فيندور العناية الشاملة: vendor-care@akfeek.com / Admin123!');
+  console.log('   🔧 فيندور الورش المعتمدة: vendor-workshop@akfeek.com / Admin123!');
+  console.log('   🚿 فيندور خدمة الغسيل: vendor-carwash@akfeek.com / Admin123!');
+
+  // Link Comprehensive Care Service to فيندور العناية الشاملة (vendor-care)
+  const comprehensiveCareServiceId = serviceIdByName['Comprehensive Care Service'];
+  if (comprehensiveCareServiceId && allVendors[1]) {
+    await prisma.service.update({
+      where: { id: comprehensiveCareServiceId },
+      data: { vendorId: allVendors[1].id },
+    });
+    console.log('✅ Linked Comprehensive Care Service to vendor (فيندور العناية الشاملة)');
+  }
 
   // 18.2 Create Auto Part Categories (Hierarchy)
   const categoriesData = [
@@ -1304,7 +1288,6 @@ async function main() {
           create: {
             name: child.name,
             nameAr: child.nameAr,
-            parentId: parent.id,
             imageUrl: child.icon,
           }
         });
@@ -1324,7 +1307,7 @@ async function main() {
       price: 250,
       stock: 50,
       category: 'Filters',
-      vendorIdx: 0, // Speedy Parts
+      vendorIdx: 0, // فيندور المنتجات (vendor-products)
       images: [IMAGES.filter],
       compatibleBrands: ['Toyota', 'Nissan'],
       mobileSubServiceNames: ['Oil Change (Mobile)', 'Periodic Maintenance (Mobile)']
@@ -1363,7 +1346,7 @@ async function main() {
       price: 3500,
       stock: 5,
       category: 'Shock Absorbers',
-      vendorIdx: 1, // Luxury Auto
+      vendorIdx: 3, // Luxury Auto (vendor2)
       images: [IMAGES.accessory],
       compatibleBrands: ['BMW', 'Mercedes-Benz'],
       mobileSubServiceNames: ['Other Mechanical (Mobile)']
@@ -1376,7 +1359,7 @@ async function main() {
       price: 5500,
       stock: 10,
       category: 'Suspension',
-      vendorIdx: 2, // Desert Offroad
+      vendorIdx: 4, // Desert Offroad (vendor3)
       images: [IMAGES.truck],
       compatibleBrands: ['Toyota', 'Nissan'], // Land cruiser, Patrol
       mobileSubServiceNames: ['Other Mechanical (Mobile)']
@@ -1841,6 +1824,39 @@ async function main() {
   console.log(`✅ Created ${workshopCount} certified workshops\n`);
 
   // ============================================
+  // System Settings (VAT, Platform Commission)
+  // ============================================
+  console.log('⚙️ Seeding system settings (VAT, commission)...');
+  const settingsToUpsert = [
+    {
+      key: 'VAT_RATE',
+      value: '14.5',
+      type: 'NUMBER',
+      description: 'VAT % (e.g. 14.5 for Saudi Arabia). Stored as percentage.',
+      descriptionAr: 'نسبة ضريبة القيمة المضافة بالمئة (مثلاً 14.5 للسعودية)',
+      category: 'PRICING',
+      isEditable: true
+    },
+    {
+      key: 'PLATFORM_COMMISSION_PERCENT',
+      value: '10',
+      type: 'NUMBER',
+      description: 'Platform commission percent (0-100) applied to service subtotal before VAT',
+      descriptionAr: 'نسبة عمولة التطبيق من مبلغ الخدمة قبل الضريبة',
+      category: 'PRICING',
+      isEditable: true
+    }
+  ];
+  for (const s of settingsToUpsert) {
+    await prisma.systemSettings.upsert({
+      where: { key: s.key },
+      update: { value: s.value, type: s.type, description: s.description, descriptionAr: s.descriptionAr, category: s.category, isEditable: s.isEditable },
+      create: s
+    });
+  }
+  console.log('✅ System settings (VAT_RATE, PLATFORM_COMMISSION_PERCENT) seeded.\n');
+
+  // ============================================
   console.log('✅ Comprehensive database seeding completed successfully! 🎉\n');
 
   const summary = await Promise.all([
@@ -1853,10 +1869,8 @@ async function main() {
     prisma.vehicleBrand.count(),
     prisma.vehicleModel.count(),
     prisma.service.count(),
-    prisma.product.count(),
     prisma.booking.count(),
     prisma.bookingService.count(),
-    prisma.bookingProduct.count(),
     prisma.bookingStatusHistory.count(),
     prisma.jobBroadcast.count(),
     prisma.jobOffer.count(),
@@ -1887,28 +1901,26 @@ async function main() {
   console.log(`   - Vehicle Brands: ${summary[6]}`);
   console.log(`   - Vehicle Models: ${summary[7]}`);
   console.log(`   - Services: ${summary[8]}`);
-  console.log(`   - Products: ${summary[9]}`);
-  console.log(`   - Bookings: ${summary[10]}`);
-  console.log(`   - Booking Services: ${summary[11]}`);
-  console.log(`   - Booking Products: ${summary[12]}`);
-  console.log(`   - Booking Status History: ${summary[13]}`);
-  console.log(`   - Job Broadcasts: ${summary[14]}`);
-  console.log(`   - Job Offers: ${summary[15]}`);
-  console.log(`   - Inspection Reports: ${summary[16]}`);
-  console.log(`   - Inspection Items: ${summary[17]}`);
-  console.log(`   - Supply Requests: ${summary[18]}`);
-  console.log(`   - Supplier Parts: ${summary[19]}`);
-  console.log(`   - Invoices: ${summary[20]}`);
-  console.log(`   - Invoice Line Items: ${summary[21]}`);
-  console.log(`   - Payments: ${summary[22]}`);
-  console.log(`   - Wallets: ${summary[23]}`);
-  console.log(`   - Transactions: ${summary[24]}`);
-  console.log(`   - Ratings: ${summary[25]}`);
-  console.log(`   - Notifications: ${summary[26]}`);
-  console.log(`   - Vendors: ${summary[27]}`);
-  console.log(`   - Auto Part Categories: ${summary[28]}`);
-  console.log(`   - Auto Parts: ${summary[29]}`);
-  console.log(`   - Marketplace Orders: ${summary[30]}`);
+  console.log(`   - Bookings: ${summary[9]}`);
+  console.log(`   - Booking Services: ${summary[10]}`);
+  console.log(`   - Booking Status History: ${summary[11]}`);
+  console.log(`   - Job Broadcasts: ${summary[12]}`);
+  console.log(`   - Job Offers: ${summary[13]}`);
+  console.log(`   - Inspection Reports: ${summary[14]}`);
+  console.log(`   - Inspection Items: ${summary[15]}`);
+  console.log(`   - Supply Requests: ${summary[16]}`);
+  console.log(`   - Supplier Parts: ${summary[17]}`);
+  console.log(`   - Invoices: ${summary[18]}`);
+  console.log(`   - Invoice Line Items: ${summary[19]}`);
+  console.log(`   - Payments: ${summary[20]}`);
+  console.log(`   - Wallets: ${summary[21]}`);
+  console.log(`   - Transactions: ${summary[22]}`);
+  console.log(`   - Ratings: ${summary[23]}`);
+  console.log(`   - Notifications: ${summary[24]}`);
+  console.log(`   - Vendors: ${summary[25]}`);
+  console.log(`   - Auto Part Categories: ${summary[26]}`);
+  console.log(`   - Auto Parts: ${summary[27]}`);
+  console.log(`   - Marketplace Orders: ${summary[28]}`);
   console.log('\n🎉 All tables seeded with realistic data and real images!');
 }
 

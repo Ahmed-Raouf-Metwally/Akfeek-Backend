@@ -158,6 +158,30 @@ class AutoPartController {
   }
 
   /**
+   * Upload image(s) for auto part (returns URLs to use in create/update)
+   * POST /api/auto-parts/upload-image
+   */
+  async uploadImage(req, res, next) {
+    try {
+      const files = req.files || (req.file ? [req.file] : []);
+      if (!files.length) {
+        return res.status(400).json({
+          success: false,
+          error: 'No file uploaded',
+          errorAr: 'لم يتم رفع أي ملف',
+        });
+      }
+      const urls = files.map((f) => '/uploads/auto-parts/' + f.filename);
+      res.json({
+        success: true,
+        data: urls.length === 1 ? urls[0] : urls,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Add images to part
    * POST /api/auto-parts/:id/images
    */
@@ -175,6 +199,49 @@ class AutoPartController {
         message: 'Images added successfully',
         messageAr: 'تم إضافة الصور بنجاح',
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete one image from part
+   * DELETE /api/auto-parts/:id/images/:imageId
+   */
+  async deletePartImage(req, res, next) {
+    try {
+      await autoPartService.deletePartImage(
+        req.params.id,
+        req.params.imageId,
+        req.user
+      );
+      res.json({
+        success: true,
+        message: 'Image deleted',
+        messageAr: 'تم حذف الصورة',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Set primary image for part
+   * PATCH /api/auto-parts/:id/images/:imageId/primary
+   */
+  async setPrimaryPartImage(req, res, next) {
+    try {
+      const images = await autoPartService.setPrimaryPartImage(
+        req.params.id,
+        req.params.imageId,
+        req.user
+      );
+      res.json({
+        success: true,
+        message: 'Primary image updated',
+        messageAr: 'تم تحديث الصورة الرئيسية',
+        data: images,
       });
     } catch (error) {
       next(error);

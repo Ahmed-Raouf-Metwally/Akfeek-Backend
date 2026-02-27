@@ -1,5 +1,91 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const vendorCouponService = require('../../services/vendorCoupon.service');
+const { getVatRate } = require('../../utils/pricing');
+const { emitNotification } = require('../../socket');
+
+// Statuses that are considered "final" — auto-create invoice when reached
+const INVOICE_TRIGGER_STATUSES = ['COMPLETED', 'DELIVERED'];
+
+// Statuses that mark booking as done (set completedAt)
+const DONE_STATUSES = ['COMPLETED', 'DELIVERED', 'CANCELLED'];
+
+/**
+ * Auto-create an Invoice for a completed booking (idempotent — skips if already exists)
+ */
+async function _autoCreateInvoice(booking) {
+  // Skip if invoice already exists
+  const existing = await prisma.invoice.findUnique({ where: { bookingId: booking.id } });
+  if (existing) return existing;
+
+  const subtotal = Number(booking.subtotal) || 0;
+  const discount = Number(booking.discount) || 0;
+  const tax = Number(booking.tax) || 0;
+  const flatbedFee = Number(booking.flatbedFee) || 0;
+  const totalAmount = Number(booking.totalPrice) || subtotal - discount + tax + flatbedFee;
+
+  const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+  // Build line items from booking services
+  const bookingServices = await prisma.bookingService.findMany({
+    where: { bookingId: booking.id },
+    include: { service: { select: { name: true, nameAr: true } } },
+  });
+
+  const lineItems = bookingServices.map((bs) => ({
+    description: bs.service?.name || 'Service',
+    descriptionAr: bs.service?.nameAr || 'خدمة',
+    itemType: 'SERVICE',
+    quantity: bs.quantity || 1,
+    unitPrice: Number(bs.unitPrice),
+    totalPrice: Number(bs.totalPrice),
+  }));
+
+  if (flatbedFee > 0) {
+    lineItems.push({
+      description: 'Flatbed Delivery Fee',
+      descriptionAr: 'رسوم النقل بالسطحة',
+      itemType: 'DELIVERY',
+      quantity: 1,
+      unitPrice: flatbedFee,
+      totalPrice: flatbedFee,
+    });
+  }
+
+  const invoice = await prisma.invoice.create({
+    data: {
+      invoiceNumber,
+      bookingId: booking.id,
+      customerId: booking.customerId,
+      subtotal,
+      tax,
+      discount,
+      totalAmount,
+      paidAmount: 0,
+      status: 'ISSUED',
+      issuedAt: new Date(),
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      lineItems: { create: lineItems },
+    },
+  });
+
+  // Notify customer
+  try {
+    const notification = await prisma.notification.create({
+      data: {
+        userId: booking.customerId,
+        type: 'BOOKING_CONFIRMED',
+        title: 'Invoice Issued',
+        titleAr: 'تم إصدار الفاتورة',
+        message: `Invoice ${invoiceNumber} has been issued for your booking. Total: ${totalAmount} SAR`,
+        messageAr: `تم إصدار الفاتورة ${invoiceNumber} لحجزك. الإجمالي: ${totalAmount} ريال`,
+      },
+    });
+    emitNotification(booking.customerId, notification);
+  } catch (_) { /* non-critical */ }
+
+  return invoice;
+}
 
 /**
  * Get all bookings (Admin). Paginated list with customer/vehicle summary.
@@ -82,7 +168,7 @@ async function getAllBookings(req, res, next) {
 }
 
 /**
- * Get single booking by id (Admin).
+ * Get single booking by id (Admin: any; Customer: own only).
  * GET /api/bookings/:id
  */
 async function getBookingById(req, res, next) {
@@ -175,18 +261,6 @@ async function getBookingById(req, res, next) {
             },
           },
         },
-        products: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                nameAr: true,
-                sku: true,
-              },
-            },
-          },
-        },
         address: {
           select: {
             id: true,
@@ -216,6 +290,9 @@ async function getBookingById(req, res, next) {
     if (!booking) {
       throw new AppError('Booking not found', 404, 'NOT_FOUND');
     }
+    if (req.user.role !== 'ADMIN' && booking.customerId !== req.user.id) {
+      throw new AppError('Not allowed to view this booking', 403, 'FORBIDDEN');
+    }
     res.json({ success: true, message: '', data: booking });
   } catch (error) {
     next(error);
@@ -223,83 +300,203 @@ async function getBookingById(req, res, next) {
 }
 
 /**
- * Create new booking
+ * Create new booking (customer books appointment; admin can create for any customer)
  * POST /api/bookings
+ * Body: vehicleId, scheduledDate, scheduledTime, serviceIds (array), addressId?, workshopId?, deliveryMethod?, notes?
  */
 async function createBooking(req, res, next) {
   try {
     const {
-      customerId,
+      customerId: bodyCustomerId,
       vehicleId,
       scheduledDate,
       scheduledTime,
+      workType: bodyWorkType,
       workshopId,
       deliveryMethod,
-      services,
-      products,
-      notes
+      serviceIds,
+      services: servicesLegacy,
+      addressId,
+      notes,
+      couponCode
     } = req.body;
 
-    // Validate required fields
-    if (!customerId || !vehicleId || !scheduledDate) {
-      throw new AppError('Missing required fields', 400, 'VALIDATION_ERROR');
+    const workType = bodyWorkType === 'REWORK' ? 'REWORK' : 'WORK';
+
+    const isAdmin = req.user.role === 'ADMIN';
+    const customerId = isAdmin && bodyCustomerId ? bodyCustomerId : req.user.id;
+
+    if (!vehicleId || !scheduledDate) {
+      throw new AppError('vehicleId and scheduledDate are required', 400, 'VALIDATION_ERROR');
     }
 
-    // Validate workshop if provided
-    if (workshopId) {
-      const workshop = await prisma.certifiedWorkshop.findUnique({
-        where: { id: workshopId }
+    const ids = serviceIds || (Array.isArray(servicesLegacy) ? servicesLegacy : []);
+    if (!ids.length) {
+      throw new AppError('At least one service is required (serviceIds)', 400, 'VALIDATION_ERROR');
+    }
+
+    const scheduledDateObj = new Date(scheduledDate);
+    const dayStart = new Date(scheduledDateObj);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd = new Date(scheduledDateObj);
+    dayEnd.setUTCHours(23, 59, 59, 999);
+    if (scheduledTime) {
+      const conflicting = await prisma.booking.findFirst({
+        where: {
+          scheduledDate: { gte: dayStart, lte: dayEnd },
+          scheduledTime,
+          status: { notIn: ['CANCELLED', 'REJECTED', 'NO_SHOW'] },
+          services: { some: { serviceId: { in: ids } } }
+        }
       });
-
-      if (!workshop) {
-        throw new AppError('Workshop not found', 404, 'NOT_FOUND');
+      if (conflicting) {
+        throw new AppError('This time slot is already booked for one of the selected services', 400, 'SLOT_NOT_AVAILABLE');
       }
+    }
 
+    const vehicle = await prisma.userVehicle.findUnique({
+      where: { id: vehicleId },
+      include: { vehicleModel: { select: { type: true } } }
+    });
+    if (!vehicle) {
+      throw new AppError('Vehicle not found', 404, 'NOT_FOUND');
+    }
+    if (vehicle.userId !== customerId) {
+      throw new AppError('Vehicle does not belong to customer', 403, 'FORBIDDEN');
+    }
+
+    const vehicleType = vehicle.vehicleModel?.type || 'SEDAN';
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const workshopPlaceholders = ['string', 'uuid-الورشة', 'uuid-workshop'];
+    let flatbedFee = 0;
+    if (workshopId) {
+      if (workshopPlaceholders.includes(workshopId) || !uuidRegex.test(workshopId)) {
+        throw new AppError(
+          'workshopId must be a real UUID from GET /api/workshops. If you are not booking at a workshop, omit workshopId and deliveryMethod.',
+          400,
+          'VALIDATION_ERROR'
+        );
+      }
+      const workshop = await prisma.certifiedWorkshop.findUnique({ where: { id: workshopId } });
+      if (!workshop) throw new AppError('Workshop not found', 404, 'NOT_FOUND');
       if (!workshop.isActive || !workshop.isVerified) {
         throw new AppError('Workshop is not available', 400, 'WORKSHOP_NOT_AVAILABLE');
       }
+      if (deliveryMethod === 'FLATBED') flatbedFee = 150;
+    }
 
-      // Validate delivery method for workshop bookings
-      if (deliveryMethod && !['FLATBED', 'SELF_DELIVERY'].includes(deliveryMethod)) {
-        throw new AppError('Invalid delivery method', 400, 'INVALID_DELIVERY_METHOD');
+    const bookingNumber = `BKG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    const bookingServiceData = [];
+    let subtotal = 0;
+
+    for (const serviceId of ids) {
+      const service = await prisma.service.findUnique({
+        where: { id: serviceId, isActive: true },
+        include: {
+          pricing: {
+            where: { isActive: true },
+            take: 1,
+            orderBy: { vehicleType: 'asc' }
+          }
+        }
+      });
+      if (!service) {
+        throw new AppError(`Service not found or inactive: ${serviceId}`, 404, 'NOT_FOUND');
+      }
+
+      let unitPrice = 0;
+      const forType = await prisma.servicePricing.findFirst({
+        where: { serviceId, vehicleType, isActive: true }
+      });
+      if (forType) {
+        unitPrice = Number(forType.discountedPrice ?? forType.basePrice);
+      } else {
+        const fallback = await prisma.servicePricing.findFirst({
+          where: { serviceId, isActive: true }
+        });
+        unitPrice = fallback ? Number(fallback.discountedPrice ?? fallback.basePrice) : 0;
+      }
+      const quantity = 1;
+      const totalPrice = unitPrice * quantity;
+      subtotal += totalPrice;
+      const estimatedMinutes = service.estimatedDuration != null ? Number(service.estimatedDuration) : null;
+      const vendorId = service.vendorId || null;
+      bookingServiceData.push({ serviceId, quantity, unitPrice, totalPrice, estimatedMinutes, vendorId });
+    }
+
+    const totalEstimatedMinutes = bookingServiceData.reduce((sum, s) => sum + (s.estimatedMinutes ?? 0), 0);
+
+    // تطبيق كوبون الفيندور — الخصم على خدمات هذا الفيندور فقط
+    let discountAmount = 0;
+    let appliedCouponId = null;
+    const vendorIdsInBooking = [...new Set(bookingServiceData.map((s) => s.vendorId).filter(Boolean))];
+    if (couponCode && typeof couponCode === 'string' && couponCode.trim() && vendorIdsInBooking.length > 0) {
+      const codeNorm = couponCode.trim().toUpperCase();
+      const now = new Date();
+      const validCoupons = await prisma.vendorCoupon.findMany({
+        where: {
+          code: codeNorm,
+          isActive: true,
+          validFrom: { lte: now },
+          validUntil: { gte: now },
+          vendorId: { in: vendorIdsInBooking }
+        }
+      });
+      const validCouponsWithUses = validCoupons.filter((c) => c.maxUses == null || c.usedCount < c.maxUses);
+      const coupon = validCouponsWithUses.length === 1
+        ? validCouponsWithUses[0]
+        : validCouponsWithUses.find((c) => vendorIdsInBooking.includes(c.vendorId));
+      if (coupon) {
+        const vendorSubtotal = bookingServiceData
+          .filter((s) => s.vendorId === coupon.vendorId)
+          .reduce((sum, s) => sum + s.totalPrice, 0);
+        const { discountAmount: d } = vendorCouponService.computeDiscount(coupon, vendorSubtotal);
+        discountAmount = d;
+        appliedCouponId = coupon.id;
+      } else if (couponCode.trim()) {
+        throw new AppError('Invalid or expired coupon code for this booking', 400, 'INVALID_COUPON');
       }
     }
 
-    // Calculate flatbed fee if delivery method is FLATBED
-    let flatbedFee = 0;
-    if (workshopId && deliveryMethod === 'FLATBED') {
-      // TODO: Calculate distance-based flatbed fee
-      // For now, use a fixed fee
-      flatbedFee = 150; // SAR
-    }
+    const afterDiscount = subtotal - discountAmount;
+    const vatRate = await getVatRate();
+    const tax = Math.round(afterDiscount * vatRate * 100) / 100;
+    const totalPrice = afterDiscount + flatbedFee + tax;
 
-    // Generate booking number
-    const bookingNumber = `BKG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-    // Calculate pricing (simplified - you may need to adjust based on your business logic)
-    let subtotal = 0;
-    let laborFee = 0;
-
-    // Create booking
     const booking = await prisma.booking.create({
       data: {
         bookingNumber,
         customerId,
         vehicleId,
+        addressId: addressId || null,
         scheduledDate: new Date(scheduledDate),
-        scheduledTime,
-        workshopId,
-        deliveryMethod,
+        scheduledTime: scheduledTime || null,
+        workType,
+        estimatedDuration: totalEstimatedMinutes || null,
+        workshopId: workshopId || null,
+        deliveryMethod: deliveryMethod || null,
         flatbedFee,
         status: 'PENDING',
         subtotal,
-        laborFee,
+        laborFee: 0,
         deliveryFee: flatbedFee,
         partsTotal: 0,
-        discount: 0,
-        tax: 0,
-        totalPrice: flatbedFee, // Will be updated after adding services/products
-        notes
+        discount: discountAmount,
+        couponId: appliedCouponId || null,
+        tax,
+        totalPrice,
+        notes: notes || null,
+        services: {
+          create: bookingServiceData.map(({ serviceId, quantity, unitPrice, totalPrice: tp, estimatedMinutes: em }) => ({
+            serviceId,
+            quantity,
+            unitPrice,
+            totalPrice: tp,
+            estimatedMinutes: em ?? undefined
+          }))
+        }
       },
       include: {
         customer: {
@@ -311,33 +508,33 @@ async function createBooking(req, res, next) {
         },
         vehicle: {
           include: {
-            vehicleModel: {
-              include: { brand: true }
-            }
+            vehicleModel: { include: { brand: true } }
           }
         },
-        workshop: {
-          select: {
-            id: true,
-            name: true,
-            nameAr: true,
-            city: true,
-            phone: true
+        workshop: workshopId ? {
+          select: { id: true, name: true, nameAr: true, city: true, phone: true }
+        } : false,
+        services: {
+          include: {
+            service: { select: { id: true, name: true, nameAr: true } }
           }
         }
       }
     });
 
-    // Create booking status history
     await prisma.bookingStatusHistory.create({
       data: {
         bookingId: booking.id,
-        fromStatus: 'PENDING',
+        fromStatus: null,
         toStatus: 'PENDING',
         changedBy: customerId,
         reason: 'Booking created'
       }
     });
+
+    if (appliedCouponId) {
+      await vendorCouponService.incrementUsedCount(appliedCouponId).catch(() => { });
+    }
 
     res.status(201).json({
       success: true,
@@ -350,4 +547,249 @@ async function createBooking(req, res, next) {
   }
 }
 
-module.exports = { getAllBookings, getBookingById, createBooking };
+/**
+ * Get current user's bookings (customer: my appointments; admin: all)
+ * GET /api/bookings/my or GET /api/bookings?my=1
+ */
+async function getMyBookings(req, res, next) {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const status = req.query.status || null;
+    const skip = (page - 1) * limit;
+
+    const where = { customerId: req.user.id };
+    if (status) where.status = status;
+
+    const [items, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ scheduledDate: 'desc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          bookingNumber: true,
+          scheduledDate: true,
+          scheduledTime: true,
+          status: true,
+          totalPrice: true,
+          createdAt: true,
+          vehicle: {
+            select: {
+              id: true,
+              plateNumber: true,
+              vehicleModel: {
+                select: {
+                  name: true,
+                  year: true,
+                  brand: { select: { name: true } }
+                }
+              }
+            }
+          },
+          services: {
+            include: {
+              service: { select: { id: true, name: true, nameAr: true } }
+            }
+          }
+        }
+      }),
+      prisma.booking.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get bookings assigned to current technician (فني اكفيك - حجوزاتي المعينة لي)
+ * GET /api/technician/bookings
+ */
+async function getMyAssignedBookings(req, res, next) {
+  try {
+    const technicianId = req.user.id;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const status = req.query.status || null;
+    const skip = (page - 1) * limit;
+
+    const where = { technicianId };
+    if (status) where.status = status;
+
+    const [items, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ scheduledDate: 'desc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          bookingNumber: true,
+          customerId: true,
+          vehicleId: true,
+          scheduledDate: true,
+          scheduledTime: true,
+          status: true,
+          totalPrice: true,
+          pickupAddress: true,
+          destinationAddress: true,
+          createdAt: true,
+          customer: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              profile: { select: { firstName: true, lastName: true } },
+            },
+          },
+          vehicle: {
+            select: {
+              id: true,
+              plateNumber: true,
+              vehicleModel: {
+                select: {
+                  name: true,
+                  year: true,
+                  brand: { select: { name: true, nameAr: true } },
+                },
+              },
+            },
+          },
+          services: {
+            include: {
+              service: { select: { id: true, name: true, nameAr: true } },
+            },
+          },
+        },
+      }),
+      prisma.booking.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    res.json({
+      success: true,
+      data: items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Update booking status (Admin / Technician)
+ * PATCH /api/bookings/:id/status
+ * Body: { status, notes?, technicianId? }
+ */
+async function updateBookingStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { status, notes, technicianId } = req.body;
+    const actor = req.user;
+
+    const VALID_STATUSES = [
+      'PENDING', 'CONFIRMED', 'BROADCASTING', 'OFFERS_RECEIVED', 'TECHNICIAN_ASSIGNED',
+      'PICKUP_SCHEDULED', 'IN_TRANSIT_PICKUP', 'INSPECTING', 'QUOTE_PENDING',
+      'QUOTE_APPROVED', 'QUOTE_REJECTED', 'IN_PROGRESS', 'PARTS_NEEDED',
+      'PARTS_ORDERED', 'PARTS_DELIVERED', 'COMPLETED', 'READY_FOR_DELIVERY',
+      'IN_TRANSIT_DELIVERY', 'DELIVERED', 'TECHNICIAN_EN_ROUTE', 'ON_THE_WAY',
+      'ARRIVED', 'IN_SERVICE', 'CANCELLED', 'REFUNDED',
+    ];
+
+    if (!status || !VALID_STATUSES.includes(status)) {
+      throw new AppError(`Invalid status. Allowed: ${VALID_STATUSES.join(', ')}`, 400, 'VALIDATION_ERROR');
+    }
+
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { services: { include: { service: true } } },
+    });
+    if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+
+    // Only admin or the assigned technician can update
+    if (actor.role !== 'ADMIN' && booking.technicianId !== actor.id) {
+      throw new AppError('Not authorized to update this booking', 403, 'FORBIDDEN');
+    }
+
+    const updateData = { status };
+    if (notes) updateData.internalNotes = notes;
+    if (technicianId && actor.role === 'ADMIN') updateData.technicianId = technicianId;
+    if (DONE_STATUSES.includes(status)) updateData.completedAt = new Date();
+
+    const [updatedBooking] = await prisma.$transaction([
+      prisma.booking.update({ where: { id }, data: updateData }),
+      prisma.bookingStatusHistory.create({
+        data: {
+          bookingId: id,
+          status,
+          notes: notes || null,
+          changedById: actor.id,
+        },
+      }),
+    ]);
+
+    // Auto-create invoice when booking reaches a final completed state
+    let invoice = null;
+    if (INVOICE_TRIGGER_STATUSES.includes(status)) {
+      invoice = await _autoCreateInvoice({ ...booking, ...updateData });
+    }
+
+    // Notify customer of status change
+    try {
+      const STATUS_LABELS = {
+        CONFIRMED: { en: 'Booking Confirmed', ar: 'تم تأكيد الحجز' },
+        IN_PROGRESS: { en: 'Work Started', ar: 'بدأ العمل' },
+        COMPLETED: { en: 'Service Completed', ar: 'اكتملت الخدمة' },
+        CANCELLED: { en: 'Booking Cancelled', ar: 'تم إلغاء الحجز' },
+        TECHNICIAN_EN_ROUTE: { en: 'Technician On The Way', ar: 'الفني في الطريق إليك' },
+        ARRIVED: { en: 'Technician Arrived', ar: 'وصل الفني' },
+      };
+      const label = STATUS_LABELS[status];
+      if (label) {
+        const notification = await prisma.notification.create({
+          data: {
+            userId: booking.customerId,
+            type: 'STATUS_UPDATE',
+            title: label.en,
+            titleAr: label.ar,
+            message: `Your booking #${booking.bookingNumber} status updated to: ${status}`,
+            messageAr: `تم تحديث حجزك #${booking.bookingNumber} إلى: ${status}`,
+            bookingId: id,
+          },
+        });
+        emitNotification(booking.customerId, notification);
+      }
+    } catch (_) { /* non-critical */ }
+
+    res.json({
+      success: true,
+      message: `Booking status updated to ${status}`,
+      data: {
+        booking: updatedBooking,
+        invoice: invoice || undefined,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { getAllBookings, getBookingById, createBooking, getMyBookings, getMyAssignedBookings, updateBookingStatus };
