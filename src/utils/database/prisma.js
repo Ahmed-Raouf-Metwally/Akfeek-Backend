@@ -22,7 +22,6 @@ const prisma = new PrismaClient({
   ],
 });
 
-//
 // Log queries in development
 if (process.env.NODE_ENV === 'development') {
   prisma.$on('query', (e) => {

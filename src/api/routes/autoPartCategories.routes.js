@@ -9,7 +9,7 @@ const requireRole = require('../middlewares/role.middleware');
  * /api/auto-part-categories:
  *   get:
  *     summary: Get all categories
- *     tags: [📱 Customer | Marketplace]
+ *     tags: [Auto Part Categories]
  *     responses:
  *       200:
  *         description: List of categories
@@ -32,7 +32,7 @@ router.get('/', autoPartCategoryController.getAllCategories);
  * /api/auto-part-categories/tree:
  *   get:
  *     summary: Get category tree hierarchy
- *     tags: [📱 Customer | Marketplace]
+ *     tags: [Auto Part Categories]
  *     responses:
  *       200:
  *         description: Category hierarchical tree
@@ -62,7 +62,7 @@ router.get('/tree', autoPartCategoryController.getCategoryTree);
  * /api/auto-part-categories/{id}:
  *   get:
  *     summary: Get category by ID
- *     tags: [📱 Customer | Marketplace]
+ *     tags: [Auto Part Categories]
  *     parameters:
  *       - in: path
  *         name: id
@@ -84,7 +84,7 @@ router.use(requireRole('ADMIN'));
  * /api/auto-part-categories:
  *   post:
  *     summary: Create new category (Admin only)
- *     tags: [📱 Customer | Marketplace]
+ *     tags: [Auto Part Categories]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -99,9 +99,8 @@ router.use(requireRole('ADMIN'));
  *                 type: string
  *               nameAr:
  *                 type: string
- *               vehicleType:
+ *               parentId:
  *                 type: string
- *                 enum: [SEDAN, HATCHBACK, COUPE, SMALL_SUV, LARGE_SEDAN, SUV, CROSSOVER, TRUCK, MOTORCYCLE, HEAVY_EQUIPMENT]
  *               icon:
  *                 type: string
  *     responses:
@@ -115,7 +114,7 @@ router.post('/', autoPartCategoryController.createCategory);
  * /api/auto-part-categories/{id}:
  *   put:
  *     summary: Update category (Admin only)
- *     tags: [📱 Customer | Marketplace]
+ *     tags: [Auto Part Categories]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -148,7 +147,7 @@ router.put('/:id', autoPartCategoryController.updateCategory);
  * /api/auto-part-categories/{id}:
  *   delete:
  *     summary: Delete category (Admin only)
- *     tags: [📱 Customer | Marketplace]
+ *     tags: [Auto Part Categories]
  *     security:
  *       - bearerAuth: []
  *     parameters:

@@ -15,7 +15,7 @@ router.use(authMiddleware);
  *       Get available vehicle brands (Toyota, BMW, Mercedes, etc.)
  *       
  *       الحصول على العلامات التجارية للمركبات المتاحة
- *     tags: [📱 Customer | Vehicles]
+ *     tags: [Vehicles]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -33,7 +33,7 @@ router.get('/brands', vehicleController.getVehicleBrands);
  *       Get all available models for a specific brand
  *       
  *       الحصول على موديلات مركبة محددة
- *     tags: [📱 Customer | Vehicles]
+ *     tags: [Vehicles]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -69,7 +69,7 @@ router.get('/brands/:brandId/models', vehicleController.getVehicleModels);
  *       Get all vehicles registered to current user
  *       
  *       الحصول على جميع مركبات المستخدم
- *     tags: [📱 Customer | Vehicles]
+ *     tags: [Vehicles]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -87,7 +87,7 @@ router.get('/', vehicleController.getMyVehicles);
  *       Register a new vehicle to current user
  *       
  *       إضافة مركبة جديدة
- *     tags: [📱 Customer | Vehicles]
+ *     tags: [Vehicles]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -142,7 +142,7 @@ router.post('/', vehicleController.addVehicle);
  * /api/vehicles/{id}:
  *   get:
  *     summary: Get vehicle by ID
- *     tags: [📱 Customer | Vehicles]
+ *     tags: [Vehicles]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -168,7 +168,7 @@ router.get('/:id', vehicleController.getVehicleById);
  *       Update vehicle information
  *       
  *       تحديث معلومات المركبة
- *     tags: [📱 Customer | Vehicles]
+ *     tags: [Vehicles]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -205,7 +205,7 @@ router.put('/:id', vehicleController.updateVehicle);
  *       Remove vehicle from user account
  *       
  *       حذف المركبة
- *     tags: [📱 Customer | Vehicles]
+ *     tags: [Vehicles]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -229,7 +229,7 @@ router.delete('/:id', vehicleController.deleteVehicle);
  *       Set this vehicle as the primary vehicle for bookings
  *       
  *       تعيين كمركبة رئيسية
- *     tags: [📱 Customer | Vehicles]
+ *     tags: [Vehicles]
  *     security:
  *       - bearerAuth: []
  *     parameters:

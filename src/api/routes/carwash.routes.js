@@ -18,7 +18,7 @@ router.use(requireRole(['CUSTOMER']));
  *       The request will be broadcasted to available car wash service providers in the area.
  *       
  *       إنشاء طلب غسيل سيارة جديد وإرساله إلى الفنيين القريبين
- *     tags: [📱 Customer | Car Wash]
+ *     tags: [Car Wash Service]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -126,7 +126,7 @@ router.post('/request', carWashController.requestWash);
  *       Each offer includes technician details, bid amount, and estimated arrival time.
  *       
  *       الحصول على جميع العروض المقدمة من الفنيين لطلب غسيل السيارة
- *     tags: [📱 Customer | Car Wash]
+ *     tags: [Car Wash Service]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -247,7 +247,7 @@ router.get('/:broadcastId/offers', carWashController.getOffers);
  *       This will assign the technician to the booking and close the broadcast.
  *       
  *       قبول عرض محدد من فني لخدمة غسيل السيارة
- *     tags: [📱 Customer | Car Wash]
+ *     tags: [Car Wash Service]
  *     security:
  *       - bearerAuth: []
  *     parameters:

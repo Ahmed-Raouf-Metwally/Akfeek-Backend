@@ -1,5 +1,3 @@
-const path = require('path');
-const fs = require('fs');
 const userService = require('../../services/user.service');
 const authService = require('../../services/auth.service');
 
@@ -39,46 +37,6 @@ class UserController {
         messageAr: 'تم تحديث الملف الشخصي بنجاح',
         data: user
       });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Change password
-   * PUT /api/users/password
-   */
-  async changePassword(req, res, next) {
-    try {
-      const { currentPassword, newPassword } = req.body;
-      await userService.changePassword(req.user.id, currentPassword, newPassword);
-      res.json({ success: true, message: 'Password changed successfully', messageAr: 'تم تغيير كلمة المرور بنجاح' });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Upload avatar image
-   * POST /api/users/avatar  (multipart/form-data, field: avatar)
-   */
-  async uploadAvatar(req, res, next) {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ success: false, error: 'No file uploaded', errorAr: 'لم يتم رفع أي ملف' });
-      }
-      const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-
-      // delete old avatar file if it was a local upload
-      const current = await userService.getUserProfile(req.user.id);
-      const oldAvatar = current?.profile?.avatar;
-      if (oldAvatar && oldAvatar.startsWith('/uploads/avatars/')) {
-        const oldPath = path.join(__dirname, '../../../', oldAvatar);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-
-      const user = await userService.updateProfile(req.user.id, { avatar: avatarUrl });
-      res.json({ success: true, message: 'Avatar updated', messageAr: 'تم تحديث الصورة الشخصية', data: user });
     } catch (error) {
       next(error);
     }

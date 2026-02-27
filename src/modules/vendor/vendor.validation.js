@@ -9,12 +9,6 @@ const registerVendorSchema = z.object({
     tradeName: z.string().optional(),
     supplierType: z.string().min(1, "Supplier type is required"),
 
-    // ✅ نوع الفيندور — يحدد طبيعة عمله في المنصة
-    vendorType: z.enum(
-        ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'ADHMN_AKFEEK'],
-        { errorMap: () => ({ message: 'vendorType must be one of: AUTO_PARTS, COMPREHENSIVE_CARE, CERTIFIED_WORKSHOP, CAR_WASH, ADHMN_AKFEEK' }) }
-    ).default('AUTO_PARTS'),
-
     // Address & Registration
     country: z.string().min(1, "Country is required"),
     city: z.string().min(1, "City is required"),

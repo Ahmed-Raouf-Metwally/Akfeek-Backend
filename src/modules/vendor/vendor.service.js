@@ -3,24 +3,6 @@ const { AppError } = require('../../api/middlewares/error.middleware');
 const logger = require('../../utils/logger/logger');
 
 /**
- * ربط mainService بنوع الفيندور (vendorType) عند عدم وجود vendorType صريح
- * @param {string} vendorType - القيمة المحددة من الفيندور
- * @param {string} mainService - الخدمة الرئيسية كـ string
- * @returns {string} - أحد قيم: AUTO_PARTS | COMPREHENSIVE_CARE | CERTIFIED_WORKSHOP | CAR_WASH
- */
-function resolveVendorType(vendorType, mainService) {
-    const VALID_TYPES = ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH'];
-    if (vendorType && VALID_TYPES.includes(vendorType)) return vendorType;
-
-    // Fallback: استنتاج النوع من mainService إذا لم يُحدَّد صراحةً
-    const svc = (mainService || '').toLowerCase();
-    if (svc.includes('wash') || svc.includes('غسيل') || svc.includes('cleaning')) return 'CAR_WASH';
-    if (svc.includes('workshop') || svc.includes('ورشة') || svc.includes('certified')) return 'CERTIFIED_WORKSHOP';
-    if (svc.includes('comprehensive') || svc.includes('عناية') || svc.includes('care')) return 'COMPREHENSIVE_CARE';
-    return 'AUTO_PARTS'; // default
-}
-
-/**
  * Vendor Service
  * Handles business logic for vendor onboarding and management.
  */
@@ -141,18 +123,11 @@ class VendorService {
                     });
 
                     if (!existingProfile) {
-                        // ✅ تحديد vendorType الصحيح من طلب الـ Onboarding
-                        const resolvedVendorType = resolveVendorType(
-                            vendor.vendorType,
-                            vendor.mainService
-                        );
-
-                        const vendorProfile = await tx.vendorProfile.create({
+                        await tx.vendorProfile.create({
                             data: {
                                 userId: vendor.userId,
-                                vendorType: resolvedVendorType,
                                 businessName: vendor.tradeName || vendor.legalName,
-                                businessNameAr: vendor.legalName,
+                                businessNameAr: vendor.legalName, // Fallback or handle translations
                                 contactEmail: vendor.companyEmail,
                                 contactPhone: vendor.companyPhone,
                                 address: vendor.addressLine1,
@@ -165,77 +140,11 @@ class VendorService {
                                 verifiedAt: new Date()
                             }
                         });
-
-                        // ✅ إنشاء سجل ورشة تلقائياً لو النوع CERTIFIED_WORKSHOP
-                        if (resolvedVendorType === 'CERTIFIED_WORKSHOP') {
-                            await tx.certifiedWorkshop.create({
-                                data: {
-                                    vendorId: vendorProfile.id,
-                                    name: vendor.tradeName || vendor.legalName,
-                                    nameAr: vendor.legalName,
-                                    address: vendor.addressLine1,
-                                    city: vendor.city,
-                                    phone: vendor.companyPhone,
-                                    email: vendor.companyEmail,
-                                    services: vendor.mainService || 'General Maintenance',
-                                    isActive: true,
-                                    isVerified: true,
-                                    verifiedAt: new Date(),
-                                    latitude: 0, // قيم افتراضية يتم تحديثها لاحقاً
-                                    longitude: 0
-                                }
-                            });
-                            logger.info(`CertifiedWorkshop automatically created for vendorProfileId=${vendorProfile.id}`);
-                        }
-
-                        logger.info(`VendorProfile created for userId=${vendor.userId} with vendorType=${resolvedVendorType}`);
                     }
                 }
 
                 return updated;
             });
-
-            // ✅ إرسال إشعار للفيندور عند تحديث الحالة
-            if (vendor.userId) {
-                try {
-                    const notificationData = {
-                        userId: vendor.userId,
-                        type: 'SYSTEM',
-                        title: status === 'APPROVED'
-                            ? 'تم قبول طلبك كفيندور'
-                            : status === 'REJECTED'
-                                ? 'تم رفض طلبك كفيندور'
-                                : 'تم تحديث حالة حسابك',
-                        titleEn: status === 'APPROVED'
-                            ? 'Your vendor application has been approved'
-                            : status === 'REJECTED'
-                                ? 'Your vendor application has been rejected'
-                                : 'Your vendor account status has been updated',
-                        message: status === 'APPROVED'
-                            ? 'مبروك! تم قبول طلبك. يمكنك الآن الدخول إلى لوحة التحكم الخاصة بك.'
-                            : status === 'REJECTED'
-                                ? 'نأسف، تم رفض طلبك. يمكنك التواصل مع الدعم لمزيد من المعلومات.'
-                                : `تم تغيير حالة حسابك إلى ${status}`,
-                        isRead: false,
-                    };
-
-                    await tx.notification.create({ data: notificationData });
-
-                    // Socket.io real-time notification (best-effort)
-                    try {
-                        const { emitNotification } = require('../../socket');
-                        emitNotification(vendor.userId, notificationData);
-                    } catch (_socketErr) {
-                        // Socket may not be initialized in all envs — log only
-                        logger.warn('Socket not available for vendor notification');
-                    }
-
-                    logger.info(`Notification sent to vendor userId=${vendor.userId} for status=${status}`);
-                } catch (notifErr) {
-                    // لا نوقف العملية لو الإشعار فشل
-                    logger.warn(`Failed to create notification for vendor ${id}: ${notifErr.message}`);
-                }
-            }
 
             logger.info(`Vendor application ${id} status updated to: ${status}`);
             return updatedVendor;

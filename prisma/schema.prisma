@@ -87,22 +87,16 @@ model User {
   vendorApplication Vendor?            @relation("VendorApplication")
   autoParts         AutoPart[]         @relation("VendorParts")
   marketplaceOrders MarketplaceOrder[]
-  cart              Cart?
+  cart               Cart?
 
   // Workshop Reviews
-  workshopReviews    WorkshopReview[]
-  vendorReviewsGiven VendorReview[]
+  workshopReviews WorkshopReview[]
 
   // Feedback Module
   feedbacks         Feedback[]         @relation("UserFeedbacks")
   handledFeedbacks  Feedback[]         @relation("HandledFeedbacks")
   feedbackReplies   FeedbackReply[]
   feedbackAuditLogs FeedbackAuditLog[]
-
-  // Technical Support Requests (طلب دعم فني)
-  technicalSupportRequestsAsCustomer   TechnicalSupportRequest[] @relation("TechnicalSupportCustomer")
-  technicalSupportRequestsAsTechnician TechnicalSupportRequest[] @relation("TechnicalSupportTechnician")
-  technicalSupportRequestsAssignedBy   TechnicalSupportRequest[] @relation("TechnicalSupportAssignedBy")
 
   // Admin Transactions
   performedTransactions      Transaction[]      @relation("TransactionPerformer")
@@ -185,16 +179,16 @@ model Address {
 // ================================================================================================
 
 enum VehicleType {
-  SEDAN
-  HATCHBACK
-  COUPE
-  SMALL_SUV
-  LARGE_SEDAN
-  SUV
-  CROSSOVER
-  TRUCK
-  MOTORCYCLE
-  HEAVY_EQUIPMENT
+  SEDAN // سيدان - Standard sedan cars
+  HATCHBACK // هاتشباك - Hatchback cars
+  COUPE // كوبيه - Coupe cars
+  SMALL_SUV // دفع رباعي صغير - Compact SUV
+  LARGE_SEDAN // سيدان كبيرة - Full-size sedan
+  SUV // دفع رباعي - Sport Utility Vehicle
+  CROSSOVER // كروس أوفر - Crossover SUV
+  TRUCK // شاحنة/بيك أب - Pickup truck
+  VAN // فان - Van
+  BUS // باص - Bus
 }
 
 // New: Separate brand and model tables for better data management
@@ -334,8 +328,8 @@ model Service {
   vendor   VendorProfile? @relation("VendorComprehensiveCareServices", fields: [vendorId], references: [id], onDelete: SetNull)
 
   // مواعيد العمل للحجز (العناية الشاملة): يوم الأسبوع + من - إلى. يمنع حجز عميلين في نفس الوقت
-  workingHours        Json? // [{ "dayOfWeek": 0, "start": "09:00", "end": "17:00" }, ...] 0=Sun, 6=Sat
-  slotDurationMinutes Int? // مدة كل موعد بالدقائق (افتراضي 60)
+  workingHours       Json?   // [{ "dayOfWeek": 0, "start": "09:00", "end": "17:00" }, ...] 0=Sun, 6=Sat
+  slotDurationMinutes Int?   // مدة كل موعد بالدقائق (افتراضي 60)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -358,8 +352,8 @@ model ServicePricing {
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  vehicleType     String // اسم حر من الفيندور (مثلاً سيدان، دفع رباعي، عربية صغيرة)
-  basePrice       Decimal  @db.Decimal(10, 2)
+  vehicleType     String  // اسم حر من الفيندور (مثلاً سيدان، دفع رباعي، عربية صغيرة)
+  basePrice       Decimal @db.Decimal(10, 2)
   discountedPrice Decimal? @db.Decimal(10, 2)
 
   isActive  Boolean  @default(true)
@@ -397,11 +391,10 @@ enum VendorStatus {
 }
 
 enum VendorType {
-  AUTO_PARTS // فيندور قطع الغيار / المنتجات
-  COMPREHENSIVE_CARE // فيندور العناية الشاملة
-  CERTIFIED_WORKSHOP // فيندور الورش المعتمدة
-  CAR_WASH // فيندور خدمة الغسيل
-  ADHMN_AKFEEK // أضمن أكفيك
+  AUTO_PARTS          // فيندور قطع الغيار / المنتجات
+  COMPREHENSIVE_CARE  // فيندور العناية الشاملة
+  CERTIFIED_WORKSHOP  // فيندور الورش المعتمدة
+  CAR_WASH            // فيندور خدمة الغسيل
 }
 
 model VendorProfile {
@@ -447,86 +440,38 @@ model VendorProfile {
   updatedAt DateTime @updatedAt
 
   // Relations
-  parts                     AutoPart[]             @relation("VendorOwnedParts")
-  orderItems                MarketplaceOrderItem[]
-  autoPartVendors           AutoPartVendor[] // Vendors supplying parts (pricing & availability)
-  bookingAutoParts          BookingAutoPart[] // Bookings where this vendor supplied parts
-  comprehensiveCareServices Service[]              @relation("VendorComprehensiveCareServices") // خدمات العناية الشاملة
-  workshop                  CertifiedWorkshop? // فيندور الورش المعتمدة: ورشة واحدة مرتبطة به
-  reviews                   VendorReview[] // تقييمات العملاء للفيندور (نجوم ١–٥)
-  coupons                   VendorCoupon[] // كوبونات الخصم الخاصة بالفيندور (تطبق على خدماته فقط)
+  parts            AutoPart[]             @relation("VendorOwnedParts")
+  orderItems       MarketplaceOrderItem[]
+  autoPartVendors  AutoPartVendor[] // Vendors supplying parts (pricing & availability)
+  bookingAutoParts BookingAutoPart[] // Bookings where this vendor supplied parts
+  comprehensiveCareServices Service[] @relation("VendorComprehensiveCareServices") // خدمات العناية الشاملة
+  workshop         CertifiedWorkshop? // فيندور الورش المعتمدة: ورشة واحدة مرتبطة به
 
   @@index([userId])
   @@index([status])
   @@index([isVerified])
 }
 
-/// كوبون خصم خاص بالفيندور — ينفذ على الخدمات التابعة له فقط
-model VendorCoupon {
-  id       String        @id @default(uuid())
-  vendorId String
-  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-
-  code           String // كود الكوبون (فريد ضمن نفس الفيندور)
-  discountType   String // PERCENT | FIXED
-  discountValue  Decimal  @db.Decimal(10, 2) // نسبة مئوية أو مبلغ ثابت
-  minOrderAmount Decimal? @db.Decimal(10, 2) // حد أدنى لطلب لتطبيق الكوبون (اختياري)
-
-  validFrom  DateTime @default(now())
-  validUntil DateTime
-  maxUses    Int? // عدد مرات الاستخدام الكلي (null = غير محدود)
-  usedCount  Int      @default(0)
-
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  bookings Booking[]
-
-  @@unique([vendorId, code])
-  @@index([vendorId])
-  @@index([code])
-}
-
-/// تقييم الفيندور من العميل — نجوم ١–٥ لاختيار أفضل فيندور
-model VendorReview {
-  id       String            @id @default(uuid())
-  vendorId String
-  vendor   VendorProfile     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  userId   String
-  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderId  String? // اختياري: تقييم بعد طلب معين
-  order    MarketplaceOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
-
-  rating  Int     @db.SmallInt // 1-5 stars
-  comment String? @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([vendorId, userId]) // عميل واحد تقييم واحد لكل فيندور (يمكن تغييره لاحقاً إذا أردت عدة تقييمات)
-  @@index([vendorId])
-  @@index([userId])
-}
-
 model AutoPartCategory {
-  id            String      @id @default(uuid())
-  name          String      @unique
+  id            String             @id @default(uuid())
+  name          String             @unique
   nameAr        String?
-  description   String?     @db.Text
-  descriptionAr String?     @db.Text
+  description   String?            @db.Text
+  descriptionAr String?            @db.Text
   icon          String?
   imageUrl      String?
-  vehicleType   VehicleType @default(SEDAN)
-  isActive      Boolean     @default(true)
-  sortOrder     Int         @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  parentId      String?
+  parent        AutoPartCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children      AutoPartCategory[] @relation("CategoryHierarchy")
+  isActive      Boolean            @default(true)
+  sortOrder     Int                @default(0)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   parts AutoPart[]
 
+  @@index([parentId])
   @@index([isActive])
-  @@index([vehicleType])
 }
 
 model AutoPart {
@@ -840,7 +785,7 @@ enum BookingStatus {
 }
 
 enum WorkType {
-  WORK // عمل - أول مرة
+  WORK   // عمل - أول مرة
   REWORK // إعادة عمل
 }
 
@@ -890,10 +835,6 @@ model Booking {
   tax         Decimal @default(0) @db.Decimal(10, 2)
   totalPrice  Decimal @default(0) @db.Decimal(10, 2)
 
-  // كوبون الفيندور — الخصم يطبق على خدمات هذا الفيندور فقط
-  couponId String?
-  coupon   VendorCoupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
-
   // Distance calculation (for delivery fee)
   distanceKm        Float?
   estimatedDuration Int? // minutes
@@ -925,7 +866,6 @@ model Booking {
 
   @@index([customerId])
   @@index([technicianId])
-  @@index([couponId])
   @@index([status])
   @@index([scheduledDate])
   @@index([createdAt])
@@ -939,10 +879,10 @@ model BookingService {
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id])
 
-  quantity         Int     @default(1)
-  unitPrice        Decimal @db.Decimal(10, 2)
-  totalPrice       Decimal @db.Decimal(10, 2)
-  estimatedMinutes Int? // وقت الخدمة بالدقائق (من Service.estimatedDuration)
+  quantity          Int     @default(1)
+  unitPrice         Decimal @db.Decimal(10, 2)
+  totalPrice        Decimal @db.Decimal(10, 2)
+  estimatedMinutes  Int?    // وقت الخدمة بالدقائق (من Service.estimatedDuration)
 
   createdAt DateTime @default(now())
 
@@ -1562,11 +1502,9 @@ model TechnicianLocation {
   speed     Float? // Speed in km/h
   accuracy  Float? // GPS accuracy in meters
 
-  // Context - which booking or technical support request
-  bookingId                 String?
-  booking                   Booking?                 @relation("BookingTracking", fields: [bookingId], references: [id], onDelete: SetNull)
-  technicalSupportRequestId String?
-  technicalSupportRequest   TechnicalSupportRequest? @relation(fields: [technicalSupportRequestId], references: [id], onDelete: SetNull)
+  // Context - which booking is this technician working on
+  bookingId String?
+  booking   Booking? @relation("BookingTracking", fields: [bookingId], references: [id], onDelete: SetNull)
 
   // Status
   status String @default("ONLINE") // OFFLINE, ONLINE, ON_JOB
@@ -1576,7 +1514,6 @@ model TechnicianLocation {
 
   @@index([technicianId])
   @@index([bookingId])
-  @@index([technicalSupportRequestId])
   @@index([createdAt])
 }
 
@@ -1660,9 +1597,8 @@ model MarketplaceOrder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items         MarketplaceOrderItem[]
-  feedbacks     Feedback[]
-  vendorReviews VendorReview[]
+  items     MarketplaceOrderItem[]
+  feedbacks Feedback[]
 
   @@index([customerId])
   @@index([status])
@@ -1830,63 +1766,6 @@ model FeedbackAuditLog {
 }
 
 // ================================================================================================
-// TECHNICAL SUPPORT REQUEST (طلب دعم فني)
-// ================================================================================================
-
-enum TechnicalSupportRequestStatus {
-  PENDING // مقدم - بانتظار تعيين فني
-  ASSIGNED // تم تعيين فني
-  IN_PROGRESS // الفني في الطريق / جاري التنفيذ
-  COMPLETED // مكتمل
-  CANCELLED // ملغي
-}
-
-model TechnicalSupportRequest {
-  id     String @id @default(uuid())
-  number String @unique // TSR-20260123-001
-
-  customerId String
-  customer   User   @relation("TechnicalSupportCustomer", fields: [customerId], references: [id], onDelete: Cascade)
-
-  technicianId String?
-  technician   User?     @relation("TechnicalSupportTechnician", fields: [technicianId], references: [id], onDelete: SetNull)
-  assignedById String?
-  assignedBy   User?     @relation("TechnicalSupportAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
-  assignedAt   DateTime?
-
-  // بيانات السيارة
-  vehicleSerialNumber String // الرقم التسلسلي للسيارة (VIN / رقم الهيكل)
-  plateNumber         String // رقم اللوحة
-
-  // التأمين
-  hasInsurance     Boolean @default(false)
-  insuranceCompany String? // اسم شركة التأمين
-
-  // عنوان التسليم
-  deliveryAddress String @db.Text // عنوان التسليم
-
-  // مستندات اختيارية (روابط رفع أو نصوص)
-  repairAuthUrl    String? @db.Text // إذن إصلاح
-  najmDocUrl       String? @db.Text // وثيقة نجم
-  trafficReportUrl String? @db.Text // تقرير مرور
-
-  accidentDamages String @db.Text // أضرار الحادث
-  carImageUrls    Json? // صور السيارة (مصفوفة روابط) اختياري
-
-  status    TechnicalSupportRequestStatus @default(PENDING)
-  notes     String?                       @db.Text // ملاحظات أدمن/فني
-  createdAt DateTime                      @default(now())
-  updatedAt DateTime                      @updatedAt
-
-  technicianLocations TechnicianLocation[]
-
-  @@index([customerId])
-  @@index([technicianId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-// ================================================================================================
 // VENDOR ONBOARDING MODULE
 // ================================================================================================
 
@@ -1903,14 +1782,13 @@ enum OperatingModel {
 }
 
 model Vendor {
-  id           String     @id @default(uuid())
-  userId       String?    @unique
-  user         User?      @relation("VendorApplication", fields: [userId], references: [id])
-  supplierId   String?    @unique
+  id           String  @id @default(uuid())
+  userId       String? @unique
+  user         User?   @relation("VendorApplication", fields: [userId], references: [id])
+  supplierId   String? @unique
   legalName    String
   tradeName    String?
   supplierType String
-  vendorType   VendorType @default(AUTO_PARTS) // ✅ نوع الفيندور — يُحدَّد عند التقديم ويُنقل لـ VendorProfile عند الموافقة
 
   // Address & Registration
   country           String

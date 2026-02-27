@@ -5,11 +5,18 @@ const authMiddleware = require('../middlewares/auth.middleware');
 
 /**
  * @swagger
+ * tags:
+ *   name: Tracking
+ *   description: Real-time location tracking endpoints - نقاط تتبع الموقع اللحظي
+ */
+
+/**
+ * @swagger
  * /api/technician/tracking/location:
  *   post:
  *     summary: Update technician location
  *     description: Technician updates their GPS location (called every 5-10 seconds)
- *     tags: [🔧 Technician | Location]
+ *     tags: [Tracking]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -56,7 +63,7 @@ router.post('/location', authMiddleware, trackingController.updateLocation);
  *   get:
  *     summary: Track technician location
  *     description: Customer tracks technician's real-time location
- *     tags: [🔧 Technician | Location]
+ *     tags: [Tracking]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -111,7 +118,7 @@ router.get('/:bookingId/track', authMiddleware, trackingController.getTrackingIn
  *   get:
  *     summary: Get location history
  *     description: Retrieve technician's route history for completed job
- *     tags: [🔧 Technician | Location]
+ *     tags: [Tracking]
  *     security:
  *       - bearerAuth: []
  *     parameters:

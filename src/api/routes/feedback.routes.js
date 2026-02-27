@@ -5,6 +5,13 @@ const authMiddleware = require('../middlewares/auth.middleware');
 
 /**
  * @swagger
+ * tags:
+ *   name: Feedback
+ *   description: Customer Complaints and Suggestions management (نظام الشكاوى والمقترحات)
+ */
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     Feedback:
@@ -36,7 +43,7 @@ router.use(authMiddleware);
  *   post:
  *     summary: Submit new complaint or suggestion
  *     description: Submit feedback. If linked to an order, ownership is verified.
- *     tags: [📱 Customer | Feedback]
+ *     tags: [Feedback]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -59,7 +66,7 @@ router.post('/', feedbackController.createFeedback);
  *   get:
  *     summary: Get my feedback history
  *     description: Retrieve list of feedbacks submitted by the current user.
- *     tags: [📱 Customer | Feedback]
+ *     tags: [Feedback]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -74,7 +81,7 @@ router.get('/my', feedbackController.getMyFeedbacks);
  *   get:
  *     summary: Get feedback details
  *     description: Get full details including replies and history.
- *     tags: [📱 Customer | Feedback]
+ *     tags: [Feedback]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -95,7 +102,7 @@ router.get('/:id', feedbackController.getFeedbackDetail);
  *   post:
  *     summary: Reply to a feedback (Customer)
  *     description: Allow customer to reply to an ongoing feedback conversation.
- *     tags: [📱 Customer | Feedback]
+ *     tags: [Feedback]
  *     security:
  *       - bearerAuth: []
  *     parameters:

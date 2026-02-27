@@ -1,5 +1,4 @@
 const vendorService = require('../../services/vendor.service');
-const vendorCouponService = require('../../services/vendorCoupon.service');
 
 /**
  * Vendor Controller
@@ -12,12 +11,11 @@ class VendorController {
    */
   async getAllVendors(req, res, next) {
     try {
-      const { status, search, isVerified, vendorType } = req.query;
+      const { status, search, isVerified } = req.query;
       const vendors = await vendorService.getAllVendors({
         status,
         search,
         isVerified,
-        vendorType,
       });
 
       res.json({
@@ -39,7 +37,7 @@ class VendorController {
 
       res.json({
         success: true,
-        data: vendor,
+        data:vendor,
       });
     } catch (error) {
       next(error);
@@ -58,95 +56,6 @@ class VendorController {
         success: true,
         data: vendor,
       });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * List my coupons (كوبوناتي)
-   * GET /api/vendors/profile/me/coupons
-   */
-  async getMyCoupons(req, res, next) {
-    try {
-      const vendorId = await vendorCouponService.getVendorIdByUserId(req.user.id);
-      const list = await vendorCouponService.listByVendorId(vendorId, {
-        isActive: req.query.isActive,
-      });
-      res.json({ success: true, data: list });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Create coupon (فيندور يضيف كوبون)
-   * POST /api/vendors/profile/me/coupons
-   */
-  async createMyCoupon(req, res, next) {
-    try {
-      const vendorId = await vendorCouponService.getVendorIdByUserId(req.user.id);
-      const coupon = await vendorCouponService.create(vendorId, req.body);
-      res.status(201).json({
-        success: true,
-        message: 'Coupon created',
-        messageAr: 'تم إنشاء الكوبون',
-        data: coupon,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Update my coupon
-   * PATCH /api/vendors/profile/me/coupons/:id
-   */
-  async updateMyCoupon(req, res, next) {
-    try {
-      const vendorId = await vendorCouponService.getVendorIdByUserId(req.user.id);
-      const coupon = await vendorCouponService.update(req.params.id, vendorId, req.body);
-      res.json({
-        success: true,
-        message: 'Coupon updated',
-        messageAr: 'تم تحديث الكوبون',
-        data: coupon,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Delete my coupon
-   * DELETE /api/vendors/profile/me/coupons/:id
-   */
-  async deleteMyCoupon(req, res, next) {
-    try {
-      const vendorId = await vendorCouponService.getVendorIdByUserId(req.user.id);
-      await vendorCouponService.remove(req.params.id, vendorId);
-      res.json({
-        success: true,
-        message: 'Coupon deleted',
-        messageAr: 'تم حذف الكوبون',
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Get all coupons (Admin)
-   * GET /api/vendors/coupons
-   */
-  async getAllCoupons(req, res, next) {
-    try {
-      const list = await vendorCouponService.listAllCoupons({
-        isActive: req.query.isActive,
-        vendorId: req.query.vendorId,
-        search: req.query.search,
-      });
-      res.json({ success: true, data: list });
     } catch (error) {
       next(error);
     }
@@ -181,8 +90,8 @@ class VendorController {
   async createVendor(req, res, next) {
     try {
       // If admin, use userId from request body; otherwise use authenticated user's ID
-      const userId = req.user.role === 'ADMIN' && req.body.userId
-        ? req.body.userId
+      const userId = req.user.role === 'ADMIN' && req.body.userId 
+        ? req.body.userId 
         : req.user.id;
 
       const vendor = await vendorService.createVendor(userId, req.body);
@@ -260,55 +169,6 @@ class VendorController {
       res.json({
         success: true,
         data: stats,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Get vendor reviews (تقييمات الفيندور)
-   * GET /api/vendors/:id/reviews
-   */
-  async getVendorReviews(req, res, next) {
-    try {
-      const result = await vendorService.getVendorReviews(req.params.id, {
-        page: req.query.page,
-        limit: req.query.limit,
-      });
-
-      res.json({
-        success: true,
-        data: result.reviews,
-        pagination: result.pagination,
-        averageRating: result.averageRating,
-        totalReviews: result.totalReviews,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Submit or update my review for a vendor (نجوم ١–٥)
-   * POST /api/vendors/:id/reviews
-   */
-  async submitVendorReview(req, res, next) {
-    try {
-      const { rating, comment, orderId } = req.body;
-      const result = await vendorService.submitVendorReview(
-        req.params.id,
-        req.user.id,
-        { rating, comment, orderId }
-      );
-
-      res.json({
-        success: true,
-        message: 'Thank you for your rating',
-        messageAr: 'شكراً على تقييمك',
-        data: result.review,
-        averageRating: result.averageRating,
-        totalReviews: result.totalReviews,
       });
     } catch (error) {
       next(error);

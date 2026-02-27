@@ -1,13 +1,27 @@
 {
   "openapi": "3.0.0",
+  "info": {
+    "title": "AutoService (أكفيك) API",
+    "version": "1.0.0",
+    "description": "\n# AutoService API Documentation\n\nComprehensive car services platform supporting 4 service models:\n1. **Direct Booking** (Fixed Services) - Car Wash, Polishing\n2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement\n3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance\n4. **Ekfik Lifecycle** (Inspection Services) - Valet & Comprehensive Repair\n\n---\n\nمنصة شاملة لخدمات السيارات تدعم 4 نماذج خدمة:\n1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع\n2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر\n3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق\n4. **دورة الفحص** (خدمات الفحص) - الفحص الشامل والإصلاح\n\n---\n\n## Features / المميزات\n\n- ✅ Bilingual support (Arabic/English) - دعم اللغتين\n- ✅ Real-time updates via Socket.io - تحديثات فورية\n- ✅ Multiple payment gateways - بوابات دفع متعددة\n- ✅ Supply chain integration - تكامل سلسلة التوريد\n- ✅ Geolocation-based services - خدمات الموقع الجغرافي\n\n## Authentication / المصادقة\n\nAll protected endpoints require Bearer token in Authorization header:\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n      ",
+    "contact": {
+      "name": "AutoService API Support",
+      "email": "support@autoservice.com",
+      "url": "https://autoservice.com/support"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
   "servers": [
     {
       "url": "http://localhost:3000",
-      "description": "Development — بيئة التطوير"
+      "description": "Development Server - بيئة التطوير"
     },
     {
       "url": "https://akfeek-backend.developteam.site",
-      "description": "Production — بيئة الإنتاج"
+      "description": "Production Server - بيئة الإنتاج"
     }
   ],
   "components": {
@@ -16,7 +30,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "JWT token — أدخل التوكن بعد كلمة Bearer مثال: `Bearer eyJhbGci...`"
+        "description": "JWT Authorization header using Bearer scheme - رمز التفويض باستخدام JWT"
       }
     },
     "schemas": {
@@ -67,19 +81,23 @@
         "properties": {
           "page": {
             "type": "integer",
-            "example": 1
+            "example": 1,
+            "description": "Current page number"
           },
           "limit": {
             "type": "integer",
-            "example": 10
+            "example": 10,
+            "description": "Items per page"
           },
           "total": {
             "type": "integer",
-            "example": 100
+            "example": 100,
+            "description": "Total number of items"
           },
           "totalPages": {
             "type": "integer",
-            "example": 10
+            "example": 10,
+            "description": "Total number of pages"
           }
         }
       },
@@ -88,78 +106,95 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Address ID"
           },
           "userId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "User ID"
           },
           "label": {
             "type": "string",
+            "description": "Address label (e.g., Home, Work)",
             "example": "Home"
           },
           "labelAr": {
             "type": "string",
             "nullable": true,
+            "description": "Arabic label",
             "example": "المنزل"
           },
           "street": {
             "type": "string",
+            "description": "Street address",
             "example": "King Fahd Road"
           },
           "streetAr": {
             "type": "string",
             "nullable": true,
+            "description": "Arabic street name",
             "example": "طريق الملك فهد"
           },
           "city": {
             "type": "string",
+            "description": "City",
             "example": "Riyadh"
           },
           "cityAr": {
             "type": "string",
             "nullable": true,
+            "description": "Arabic city name",
             "example": "الرياض"
           },
           "state": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "State/Province"
           },
           "stateAr": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Arabic state name"
           },
           "postalCode": {
             "type": "string",
             "nullable": true,
+            "description": "Postal code",
             "example": "12345"
           },
           "country": {
             "type": "string",
+            "description": "Country code",
             "example": "SA",
             "default": "SA"
           },
           "latitude": {
             "type": "number",
             "format": "double",
+            "description": "GPS latitude",
             "example": 24.7136
           },
           "longitude": {
             "type": "number",
             "format": "double",
+            "description": "GPS longitude",
             "example": 46.6753
           },
           "isDefault": {
             "type": "boolean",
+            "description": "Is this the default address?",
             "example": true
           },
           "createdAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Creation timestamp"
           },
           "updatedAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Last update timestamp"
           }
         }
       },
@@ -175,55 +210,68 @@
         "properties": {
           "label": {
             "type": "string",
+            "description": "Address label (e.g., Home, Work)",
             "example": "Home"
           },
           "labelAr": {
             "type": "string",
+            "description": "Arabic label",
             "example": "المنزل"
           },
           "street": {
             "type": "string",
+            "description": "Street address",
             "example": "King Fahd Road"
           },
           "streetAr": {
             "type": "string",
+            "description": "Arabic street name",
             "example": "طريق الملك فهد"
           },
           "city": {
             "type": "string",
+            "description": "City",
             "example": "Riyadh"
           },
           "cityAr": {
             "type": "string",
+            "description": "Arabic city name",
             "example": "الرياض"
           },
           "state": {
-            "type": "string"
+            "type": "string",
+            "description": "State/Province"
           },
           "stateAr": {
-            "type": "string"
+            "type": "string",
+            "description": "Arabic state name"
           },
           "postalCode": {
             "type": "string",
+            "description": "Postal code",
             "example": "12345"
           },
           "country": {
             "type": "string",
+            "description": "Country code",
             "example": "SA",
             "default": "SA"
           },
           "latitude": {
             "type": "number",
             "format": "double",
+            "description": "GPS latitude",
             "example": 24.7136
           },
           "longitude": {
             "type": "number",
             "format": "double",
+            "description": "GPS longitude",
             "example": 46.6753
           },
           "isDefault": {
             "type": "boolean",
+            "description": "Set as default address?",
             "example": false
           }
         }
@@ -329,20 +377,10 @@
           "slug": {
             "type": "string"
           },
-          "vehicleType": {
+          "parentId": {
             "type": "string",
-            "enum": [
-              "SEDAN",
-              "HATCHBACK",
-              "COUPE",
-              "SMALL_SUV",
-              "LARGE_SEDAN",
-              "SUV",
-              "CROSSOVER",
-              "TRUCK",
-              "MOTORCYCLE",
-              "HEAVY_EQUIPMENT"
-            ]
+            "format": "uuid",
+            "nullable": true
           },
           "icon": {
             "type": "string"
@@ -440,7 +478,7 @@
       "LanguageHeader": {
         "name": "Accept-Language",
         "in": "header",
-        "description": "اللغة المفضلة | Preferred language",
+        "description": "Preferred language (ar or en) - اللغة المفضلة",
         "schema": {
           "type": "string",
           "enum": [
@@ -453,7 +491,7 @@
       "PageParam": {
         "name": "page",
         "in": "query",
-        "description": "رقم الصفحة | Page number",
+        "description": "Page number - رقم الصفحة",
         "schema": {
           "type": "integer",
           "minimum": 1,
@@ -463,7 +501,7 @@
       "LimitParam": {
         "name": "limit",
         "in": "query",
-        "description": "عدد العناصر في الصفحة | Items per page",
+        "description": "Items per page - عدد العناصر في الصفحة",
         "schema": {
           "type": "integer",
           "minimum": 1,
@@ -474,7 +512,7 @@
     },
     "responses": {
       "UnauthorizedError": {
-        "description": "مطلوب مصادقة | Authentication required",
+        "description": "Authentication required - مطلوب مصادقة",
         "content": {
           "application/json": {
             "schema": {
@@ -490,7 +528,7 @@
         }
       },
       "ForbiddenError": {
-        "description": "تم رفض الوصول | Access denied",
+        "description": "Access denied - تم رفض الوصول",
         "content": {
           "application/json": {
             "schema": {
@@ -506,7 +544,7 @@
         }
       },
       "NotFoundError": {
-        "description": "المورد غير موجود | Resource not found",
+        "description": "Resource not found - المورد غير موجود",
         "content": {
           "application/json": {
             "schema": {
@@ -522,7 +560,7 @@
         }
       },
       "ValidationError": {
-        "description": "خطأ في التحقق من البيانات | Validation error",
+        "description": "Validation error - خطأ في التحقق",
         "content": {
           "application/json": {
             "schema": {
@@ -534,7 +572,8 @@
               "errorAr": "فشل التحقق",
               "code": "VALIDATION_ERROR",
               "details": {
-                "field": "Invalid value"
+                "email": "Invalid email format",
+                "password": "Password must be at least 8 characters"
               }
             }
           }
@@ -547,449 +586,139 @@
       "bearerAuth": []
     }
   ],
-  "info": {
-    "title": "🚗 Akfeek API — Full Reference",
-    "version": "1.0.0",
-    "description": "\n# Akfeek Platform — Full API Reference\n\n> **للمطورين الداخليين فقط** — هذه الوثيقة تحتوي على **جميع** الـ endpoints.\n> لو بتشتغل على جزء معين، استخدم الرابط المخصص ليك:\n\n| الجمهور | الرابط |\n|---|---|\n| 📱 تطبيق موبايل العميل | [`/api-docs/mobile`](/api-docs/mobile) |\n| 🔧 تطبيق موبايل الفني | [`/api-docs/technician`](/api-docs/technician) |\n| 🏪 بوابة الفيندور / الورشة | [`/api-docs/vendor`](/api-docs/vendor) |\n| ⚙️ لوحة تحكم الأدمن | [`/api-docs/admin`](/api-docs/admin) |\n\n---\n\n## Authentication / المصادقة\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n\n1. `POST /api/auth/login` — سجل دخول واحصل على التوكن\n2. انقر **Authorize** في الأعلى وأدخل: `Bearer <token>`\n      ",
-    "contact": {
-      "name": "Akfeek API Support",
-      "email": "support@akfeek.com"
-    }
-  },
   "tags": [
     {
-      "name": "🔓 Auth",
-      "description": "تسجيل الدخول والتسجيل والـ OTP — مشترك لجميع أنواع المستخدمين | Login, register, OTP — shared for all user types"
+      "name": "Authentication",
+      "description": "User authentication endpoints - نقاط المصادقة",
+      "externalDocs": {
+        "description": "Authentication Guide",
+        "url": "https://docs.autoservice.com/authentication"
+      }
     },
     {
-      "name": "🔓 Brands & Models",
-      "description": "ماركات وموديلات السيارات (بيانات عامة لا تحتاج توكن) | Vehicle brands & models — public data, no auth required"
+      "name": "Vehicle Brands",
+      "description": "Vehicle brand management (Toyota, BMW, etc.) - إدارة ماركات المركبات"
     },
     {
-      "name": "📱 Customer | Profile",
-      "description": "إدارة الملف الشخصي للعميل | Customer profile management"
+      "name": "Vehicle Models",
+      "description": "Vehicle model management (Camry, X5, etc.) - إدارة موديلات المركبات"
     },
     {
-      "name": "📱 Customer | Vehicles",
-      "description": "مركبات العميل — إضافة وعرض وتعديل وحذف | Customer vehicles — CRUD"
+      "name": "Users",
+      "description": "User profile management - إدارة الملف الشخصي"
     },
     {
-      "name": "📱 Customer | Addresses",
-      "description": "عناوين العميل المحفوظة | Customer saved addresses"
+      "name": "Vehicles",
+      "description": "Vehicle management - إدارة المركبات"
     },
     {
-      "name": "📱 Customer | Services",
-      "description": "عرض قائمة الخدمات المتاحة والأوقات | Browse available services & slots"
+      "name": "Services",
+      "description": "Service catalog - كتالوج الخدمات"
     },
     {
-      "name": "📱 Customer | Bookings",
-      "description": "إنشاء وإدارة الحجوزات العامة | Create & manage general service bookings"
+      "name": "Products",
+      "description": "Product catalog (E-Commerce model) - كتالوج المنتجات"
     },
     {
-      "name": "📱 Customer | Car Wash",
-      "description": "طلب وتتبع خدمة غسيل السيارة | Request & track car wash service"
+      "name": "Bookings",
+      "description": "Booking management (All 4 models) - إدارة الحجوزات"
     },
     {
-      "name": "📱 Customer | Towing",
-      "description": "طلب خدمة سحب الطوارئ | Request emergency towing service"
+      "name": "Broadcasts",
+      "description": "Emergency job broadcasts (Indrive model) - بث وظائف الطوارئ"
     },
     {
-      "name": "📱 Customer | Mobile Car Service",
-      "description": "خدمة الصيانة المتنقلة (الزرَش) | On-the-go mobile maintenance service"
+      "name": "Inspections",
+      "description": "Vehicle inspections (Ekfik model) - فحص المركبات"
     },
     {
-      "name": "📱 Customer | Comprehensive Care",
-      "description": "خدمة العناية الشاملة بالسيارة | Comprehensive car care service"
+      "name": "Supply Requests",
+      "description": "Spare parts supply chain - سلسلة توريد قطع الغيار"
     },
     {
-      "name": "📱 Customer | Workshops",
-      "description": "عرض الورش المعتمدة وتفاصيلها وتقييماتها | Browse certified workshops, details & reviews"
+      "name": "Invoices",
+      "description": "Invoice management - إدارة الفواتير"
     },
     {
-      "name": "📱 Customer | Inspections",
-      "description": "طلبات فحص السيارة | Vehicle inspection requests"
+      "name": "Payments",
+      "description": "Payment processing - معالجة الدفع"
     },
     {
-      "name": "📱 Customer | Marketplace",
-      "description": "تصفح وشراء قطع الغيار — الفئات والقطع والسلة والطلبات | Browse & buy spare parts — categories, parts, cart & orders"
+      "name": "Wallets",
+      "description": "Wallet & transactions - المحفظة والمعاملات"
     },
     {
-      "name": "📱 Customer | Vendors",
-      "description": "عرض قائمة الفيندورز والموردين | Browse vendor/supplier listings"
+      "name": "Ratings",
+      "description": "Reviews & ratings - التقييمات والمراجعات"
     },
     {
-      "name": "📱 Customer | Payments",
-      "description": "الدفع وعمليات الدفع | Payment processing"
+      "name": "Notifications",
+      "description": "Push notifications - الإشعارات"
     },
     {
-      "name": "📱 Customer | Wallet",
-      "description": "المحفظة والرصيد والمعاملات | Wallet, balance & transactions"
+      "name": "Addresses",
+      "description": "Address management - إدارة العناوين"
     },
     {
-      "name": "📱 Customer | Invoices",
-      "description": "فواتير العميل | Customer invoices"
+      "name": "Towing Service",
+      "description": "Emergency towing service - خدمة السحب الطارئة"
     },
     {
-      "name": "📱 Customer | Ratings",
-      "description": "تقييم الخدمات والفنيين والورش | Rate services, technicians & workshops"
+      "name": "Technician Towing",
+      "description": "Technician towing endpoints - نقاط خدمة السحب للفنيين"
     },
     {
-      "name": "📱 Customer | Notifications",
-      "description": "إشعارات التطبيق | App push notifications"
+      "name": "Technician Car Wash",
+      "description": "Car Wash technician endpoints for viewing requests and offering services - نقاط خدمة غسيل السيارات للفنيين"
     },
     {
-      "name": "📱 Customer | Technical Support",
-      "description": "طلبات دعم فني من العميل | Customer technical support requests"
+      "name": "Admin Settings",
+      "description": "System settings management for administrators - إدارة إعدادات النظام للمسؤولين"
     },
     {
-      "name": "📱 Customer | Feedback",
-      "description": "شكاوى ومقترحات من العميل | Customer complaints & suggestions"
+      "name": "Marketplace Vendors",
+      "description": "Vendor management for auto parts - إدارة البائعين لقطع الغيار"
     },
     {
-      "name": "📱 Customer | Emergency Broadcasts",
-      "description": "بث طلبات الطوارئ — العميل يبث وينتظر عروض الفنيين | Emergency broadcasts — customer broadcasts & receives technician offers"
+      "name": "Auto Part Categories",
+      "description": "Auto part category management - إدارة فئات قطع الغيار"
     },
     {
-      "name": "📱 Customer | Tracking",
-      "description": "تتبع موقع الفني في الوقت الفعلي | Real-time technician location tracking"
+      "name": "Auto Parts",
+      "description": "Auto parts catalog management - إدارة كتالوج قطع الغيار"
     },
     {
-      "name": "🔧 Technician | My Jobs",
-      "description": "الحجوزات المعينة للفني (حجوزات عامة + دعم فني) | Assigned bookings & technical support requests"
+      "name": "Cart",
+      "description": "Customer cart and checkout - سلة المشتريات وإتمام الطلب"
     },
     {
-      "name": "🔧 Technician | Towing Jobs",
-      "description": "طلبات السحب المعينة للفني | Assigned towing requests for technician"
+      "name": "Marketplace Orders",
+      "description": "Orders from marketplace (customer, vendor, admin) - طلبات المتجر"
     },
     {
-      "name": "🔧 Technician | Car Wash Jobs",
-      "description": "طلبات الغسيل المعينة للفني | Assigned car wash requests for technician"
+      "name": "Feedback",
+      "description": "Customer Complaints and Suggestions management (نظام الشكاوى والمقترحات)"
     },
     {
-      "name": "🔧 Technician | Location",
-      "description": "بث الموقع الجغرافي للفني في الوقت الفعلي | Real-time technician GPS broadcasting"
+      "name": "Tracking",
+      "description": "Real-time location tracking endpoints - نقاط تتبع الموقع اللحظي"
     },
     {
-      "name": "🏪 Vendor | Onboarding",
-      "description": "تسجيل وتوثيق الفيندور الجديد | New vendor registration & verification"
+      "name": "Admin Feedback",
+      "description": "Administrative operations for Managing complaints and suggestions"
     },
     {
-      "name": "🏪 Vendor | Workshop",
-      "description": "إدارة ملف الورشة وخدماتها وصورها والكوبونات | Workshop profile, services, images & coupons management"
-    },
-    {
-      "name": "🏪 Vendor | Spare Parts",
-      "description": "إدارة قطع الغيار في المتجر | Spare parts inventory management"
-    },
-    {
-      "name": "🏪 Vendor | Orders",
-      "description": "طلبات العملاء لقطع الغيار | Customer spare parts orders"
-    },
-    {
-      "name": "🏪 Vendor | Supply Requests",
-      "description": "طلبات التوريد من الفيندور | Supply requests from vendor"
-    },
-    {
-      "name": "🏪 Vendor | Comprehensive Care",
-      "description": "خدمات العناية الشاملة المقدمة من الفيندور | Comprehensive care services offered by vendor"
-    },
-    {
-      "name": "⚙️ Admin | Dashboard",
-      "description": "إحصائيات وملخص لوحة التحكم | Dashboard statistics & summary"
-    },
-    {
-      "name": "⚙️ Admin | Users",
-      "description": "إدارة كل المستخدمين (عملاء + فنيين + فيندورز) | Manage all users — customers, technicians & vendors"
-    },
-    {
-      "name": "⚙️ Admin | Bookings",
-      "description": "إدارة الحجوزات وتحديث الحالة — فاتورة تُنشأ تلقائياً عند الإكمال | Manage bookings & update status — invoice auto-created on COMPLETED"
-    },
-    {
-      "name": "⚙️ Admin | Services",
-      "description": "إدارة قائمة الخدمات | Manage service catalog"
-    },
-    {
-      "name": "⚙️ Admin | Workshops",
-      "description": "مراجعة وإدارة الورش المعتمدة | Review & manage certified workshops"
-    },
-    {
-      "name": "⚙️ Admin | Finance",
-      "description": "التقارير المالية والفواتير والمحافظ والعمولات — إنشاء فاتورة يدوياً وتسجيل الدفع | Financial reports, invoices, wallets & commissions"
-    },
-    {
-      "name": "⚙️ Admin | Settings",
-      "description": "إعدادات النظام العامة (ضريبة القيمة المضافة، عمولة التطبيق، النقاط) | System-wide settings (VAT, commission, points)"
-    },
-    {
-      "name": "⚙️ Admin | Feedback",
-      "description": "مراجعة شكاوى ومقترحات العملاء | Review customer complaints & suggestions"
-    },
-    {
-      "name": "⚙️ Admin | Activity Logs",
-      "description": "سجل نشاط الأدمن | Admin activity logs"
-    },
-    {
-      "name": "⚙️ Admin | Brands & Models",
-      "description": "إضافة وتعديل وحذف ماركات وموديلات السيارات | Add, edit & delete vehicle brands & models"
-    },
-    {
-      "name": "⚙️ Admin | Spare Parts",
-      "description": "الإشراف على قطع الغيار في المتجر | Oversee marketplace spare parts"
+      "name": "Vendor Onboarding",
+      "description": "Vendor registration and approval workflow"
     }
   ],
   "paths": {
-    "/api/activity": {
-      "get": {
-        "summary": "Get all activity logs (Admin)",
-        "tags": [
-          "⚙️ Admin | Activity Logs"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            }
-          },
-          {
-            "in": "query",
-            "name": "type",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of activity logs"
-          }
-        }
-      },
-      "post": {
-        "summary": "Create manual activity log (Admin)",
-        "tags": [
-          "⚙️ Admin | Activity Logs"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "action",
-                  "description"
-                ],
-                "properties": {
-                  "action": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "metadata": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Log created"
-          }
-        }
-      }
-    },
-    "/api/addresses": {
-      "get": {
-        "summary": "Get my addresses",
-        "tags": [
-          "📱 Customer | Addresses"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of user addresses",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Address"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Create new address",
-        "tags": [
-          "📱 Customer | Addresses"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddressInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Address created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Address"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/addresses/{id}": {
-      "get": {
-        "summary": "Get address by ID",
-        "tags": [
-          "📱 Customer | Addresses"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Address details",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Address"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Update address",
-        "tags": [
-          "📱 Customer | Addresses"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddressInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Address updated"
-          }
-        }
-      },
-      "delete": {
-        "summary": "Delete address",
-        "tags": [
-          "📱 Customer | Addresses"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Address deleted"
-          }
-        }
-      }
-    },
     "/api/auth/register": {
       "post": {
         "summary": "Register new user",
         "description": "Create a new user account (Customer, Technician, or Supplier)\n\nإنشاء حساب مستخدم جديد (عميل، فني، أو مورد)\n",
         "tags": [
-          "🔓 Auth"
+          "Authentication"
         ],
         "security": [],
         "requestBody": {
@@ -1131,7 +860,7 @@
         "summary": "User login",
         "description": "Authenticate user with email/phone and password, return JWT token\n\nمصادقة المستخدم بالبريد الإلكتروني/الهاتف وكلمة المرور، وإرجاع رمز JWT\n",
         "tags": [
-          "🔓 Auth"
+          "Authentication"
         ],
         "security": [],
         "requestBody": {
@@ -1206,7 +935,7 @@
         "summary": "Send OTP to phone",
         "description": "Send OTP code to user's phone number for verification\n\nإرسال رمز OTP إلى رقم هاتف المستخدم للتحقق\n",
         "tags": [
-          "🔓 Auth"
+          "Authentication"
         ],
         "requestBody": {
           "required": true,
@@ -1246,7 +975,7 @@
         "summary": "Verify OTP",
         "description": "Verify phone number with OTP code\n\nالتحقق من رقم الهاتف برمز OTP\n",
         "tags": [
-          "🔓 Auth"
+          "Authentication"
         ],
         "requestBody": {
           "required": true,
@@ -1294,7 +1023,7 @@
         "summary": "Get current user",
         "description": "Get authenticated user's profile information\n\nالحصول على معلومات ملف المستخدم المصادق عليه\n",
         "tags": [
-          "🔓 Auth"
+          "Authentication"
         ],
         "security": [
           {
@@ -1330,7 +1059,7 @@
       "get": {
         "summary": "Get all categories",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Auto Part Categories"
         ],
         "responses": {
           "200": {
@@ -1359,7 +1088,7 @@
       "post": {
         "summary": "Create new category (Admin only)",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Auto Part Categories"
         ],
         "security": [
           {
@@ -1382,20 +1111,8 @@
                   "nameAr": {
                     "type": "string"
                   },
-                  "vehicleType": {
-                    "type": "string",
-                    "enum": [
-                      "SEDAN",
-                      "HATCHBACK",
-                      "COUPE",
-                      "SMALL_SUV",
-                      "LARGE_SEDAN",
-                      "SUV",
-                      "CROSSOVER",
-                      "TRUCK",
-                      "MOTORCYCLE",
-                      "HEAVY_EQUIPMENT"
-                    ]
+                  "parentId": {
+                    "type": "string"
                   },
                   "icon": {
                     "type": "string"
@@ -1416,7 +1133,7 @@
       "get": {
         "summary": "Get category tree hierarchy",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Auto Part Categories"
         ],
         "responses": {
           "200": {
@@ -1462,7 +1179,7 @@
       "get": {
         "summary": "Get category by ID",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Auto Part Categories"
         ],
         "parameters": [
           {
@@ -1483,7 +1200,7 @@
       "put": {
         "summary": "Update category (Admin only)",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Auto Part Categories"
         ],
         "security": [
           {
@@ -1530,7 +1247,7 @@
       "delete": {
         "summary": "Delete category (Admin only)",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Auto Part Categories"
         ],
         "security": [
           {
@@ -1558,7 +1275,7 @@
       "get": {
         "summary": "Get all auto parts with filters",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Auto Parts"
         ],
         "parameters": [
           {
@@ -1619,7 +1336,7 @@
       "post": {
         "summary": "Create new auto part",
         "tags": [
-          "🏪 Vendor | Spare Parts"
+          "Auto Parts"
         ],
         "security": [
           {
@@ -1674,7 +1391,7 @@
       "get": {
         "summary": "Get parts by vendor",
         "tags": [
-          "🏪 Vendor | Spare Parts"
+          "Auto Parts"
         ],
         "parameters": [
           {
@@ -1697,7 +1414,7 @@
       "get": {
         "summary": "Get parts compatible with vehicle",
         "tags": [
-          "🏪 Vendor | Spare Parts"
+          "Auto Parts"
         ],
         "parameters": [
           {
@@ -1720,7 +1437,7 @@
       "get": {
         "summary": "Get part details",
         "tags": [
-          "🏪 Vendor | Spare Parts"
+          "Auto Parts"
         ],
         "parameters": [
           {
@@ -1756,7 +1473,7 @@
       "put": {
         "summary": "Update auto part",
         "tags": [
-          "🏪 Vendor | Spare Parts"
+          "Auto Parts"
         ],
         "security": [
           {
@@ -1803,7 +1520,7 @@
       "delete": {
         "summary": "Delete part",
         "tags": [
-          "🏪 Vendor | Spare Parts"
+          "Auto Parts"
         ],
         "security": [
           {
@@ -1827,49 +1544,11 @@
         }
       }
     },
-    "/api/auto-parts/upload-image": {
-      "post": {
-        "summary": "Upload image file(s) for auto parts",
-        "description": "Upload up to 10 image files. Returns an array of uploaded image URLs.",
-        "tags": [
-          "🏪 Vendor | Spare Parts"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "files": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "binary"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Images uploaded successfully"
-          }
-        }
-      }
-    },
     "/api/auto-parts/{id}/approve": {
       "put": {
         "summary": "Approve or reject part (Admin only)",
         "tags": [
-          "🏪 Vendor | Spare Parts"
+          "Auto Parts"
         ],
         "security": [
           {
@@ -1915,7 +1594,7 @@
       "post": {
         "summary": "Add images to part",
         "tags": [
-          "🏪 Vendor | Spare Parts"
+          "Auto Parts"
         ],
         "security": [
           {
@@ -1960,83 +1639,11 @@
         }
       }
     },
-    "/api/auto-parts/{id}/images/{imageId}": {
-      "delete": {
-        "summary": "Remove an image from part",
-        "tags": [
-          "🏪 Vendor | Spare Parts"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "imageId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Image removed"
-          }
-        }
-      }
-    },
-    "/api/auto-parts/{id}/images/{imageId}/primary": {
-      "patch": {
-        "summary": "Set image as primary for part",
-        "tags": [
-          "🏪 Vendor | Spare Parts"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "imageId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Primary image updated"
-          }
-        }
-      }
-    },
     "/api/auto-parts/{id}/stock": {
       "put": {
         "summary": "Update part stock quantity",
         "tags": [
-          "🏪 Vendor | Spare Parts"
+          "Auto Parts"
         ],
         "security": [
           {
@@ -2079,56 +1686,11 @@
       }
     },
     "/api/bookings": {
-      "get": {
-        "summary": "List all bookings (Admin)",
-        "description": "Retrieve a paginated list of all bookings in the system.",
-        "tags": [
-          "📱 Customer | Bookings"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            },
-            "description": "Page number"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 10
-            },
-            "description": "Items per page"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Filter by status"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of bookings"
-          }
-        }
-      },
       "post": {
         "summary": "Create new booking",
         "description": "Create a new booking with optional workshop and delivery method",
         "tags": [
-          "📱 Customer | Bookings"
+          "Bookings"
         ],
         "security": [
           {
@@ -2142,6 +1704,7 @@
               "schema": {
                 "type": "object",
                 "required": [
+                  "customerId",
                   "vehicleId",
                   "scheduledDate"
                 ],
@@ -2172,13 +1735,13 @@
                     ],
                     "description": "Required if workshopId is provided"
                   },
-                  "serviceIds": {
+                  "services": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     }
                   },
-                  "productIds": {
+                  "products": {
                     "type": "array",
                     "items": {
                       "type": "string"
@@ -2205,291 +1768,12 @@
         }
       }
     },
-    "/api/bookings/my": {
-      "get": {
-        "summary": "Get my bookings",
-        "description": "Retrieve bookings for the authenticated customer.",
-        "tags": [
-          "📱 Customer | Bookings"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 10
-            }
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of user bookings"
-          }
-        }
-      }
-    },
-    "/api/bookings/{id}": {
-      "get": {
-        "summary": "Get booking by ID",
-        "description": "Retrieve details of a specific booking.",
-        "tags": [
-          "📱 Customer | Bookings"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Booking details"
-          },
-          "404": {
-            "description": "Booking not found"
-          }
-        }
-      }
-    },
-    "/api/bookings/{bookingId}/track": {
-      "get": {
-        "summary": "Track technician location",
-        "description": "Customer tracks technician's real-time location",
-        "tags": [
-          "🔧 Technician | Location"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "bookingId",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Tracking information",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "booking": {
-                          "type": "object"
-                        },
-                        "technician": {
-                          "type": "object",
-                          "properties": {
-                            "currentLocation": {
-                              "type": "object",
-                              "properties": {
-                                "latitude": {
-                                  "type": "number"
-                                },
-                                "longitude": {
-                                  "type": "number"
-                                },
-                                "heading": {
-                                  "type": "number"
-                                },
-                                "speed": {
-                                  "type": "number"
-                                }
-                              }
-                            }
-                          }
-                        },
-                        "eta": {
-                          "type": "object",
-                          "properties": {
-                            "distanceKm": {
-                              "type": "number"
-                            },
-                            "durationMinutes": {
-                              "type": "number"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/bookings/{id}/status": {
-      "patch": {
-        "summary": "Update booking status",
-        "description": "Update booking status. Auto-creates invoice when status is COMPLETED or DELIVERED.",
-        "tags": [
-          "⚙️ Admin | Bookings"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "status"
-                ],
-                "properties": {
-                  "status": {
-                    "type": "string",
-                    "enum": [
-                      "PENDING",
-                      "CONFIRMED",
-                      "IN_PROGRESS",
-                      "COMPLETED",
-                      "DELIVERED",
-                      "CANCELLED",
-                      "TECHNICIAN_EN_ROUTE",
-                      "ARRIVED",
-                      "IN_SERVICE"
-                    ]
-                  },
-                  "notes": {
-                    "type": "string"
-                  },
-                  "technicianId": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Status updated. Invoice auto-created if COMPLETED/DELIVERED."
-          }
-        }
-      }
-    },
-    "/api/bookings/{bookingId}/location-history": {
-      "get": {
-        "summary": "Get location history",
-        "description": "Retrieve technician's route history for completed job",
-        "tags": [
-          "🔧 Technician | Location"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "bookingId",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "in": "query",
-            "name": "startTime",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "in": "query",
-            "name": "endTime",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 100
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Location history points"
-          }
-        }
-      }
-    },
     "/api/brands": {
       "get": {
         "summary": "Get all vehicle brands",
-        "description": "Retrieve a list of all vehicle brands (Toyota, BMW, etc.) with optional filters - ???? ??? ????? ????? ?????? ????????",
+        "description": "Retrieve a list of all vehicle brands (Toyota, BMW, etc.) with optional filters - احصل على قائمة بجميع ماركات المركبات",
         "tags": [
-          "🔓 Brands & Models"
+          "Vehicle Brands"
         ],
         "parameters": [
           {
@@ -2499,7 +1783,7 @@
               "type": "boolean",
               "default": false
             },
-            "description": "Include models for each brand - ????? ??????? ?? ?????"
+            "description": "Include models for each brand - تضمين موديلات كل ماركة"
           },
           {
             "in": "query",
@@ -2508,12 +1792,12 @@
               "type": "boolean",
               "default": true
             },
-            "description": "Only return active brands - ??? ???????? ?????? ???"
+            "description": "Only return active brands - عرض الماركات النشطة فقط"
           }
         ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved brands - ?? ??? ???????? ?????",
+            "description": "Successfully retrieved brands - تم جلب الماركات بنجاح",
             "content": {
               "application/json": {
                 "schema": {
@@ -2538,7 +1822,7 @@
                           },
                           "nameAr": {
                             "type": "string",
-                            "example": "??????"
+                            "example": "تويوتا"
                           },
                           "logo": {
                             "type": "string",
@@ -2579,9 +1863,9 @@
       },
       "post": {
         "summary": "Create new brand (Admin only)",
-        "description": "Create a new vehicle brand - ????? ????? ????? ?????",
+        "description": "Create a new vehicle brand - إنشاء ماركة مركبة جديدة",
         "tags": [
-          "⚙️ Admin | Brands & Models"
+          "Vehicle Brands"
         ],
         "security": [
           {
@@ -2601,18 +1885,18 @@
                   "name": {
                     "type": "string",
                     "example": "Tesla",
-                    "description": "Brand name - ??? ???????"
+                    "description": "Brand name - اسم الماركة"
                   },
                   "nameAr": {
                     "type": "string",
-                    "example": "????",
-                    "description": "Arabic brand name - ??? ??????? ????????"
+                    "example": "تسلا",
+                    "description": "Arabic brand name - اسم الماركة بالعربية"
                   },
                   "logo": {
                     "type": "string",
                     "nullable": true,
                     "example": "https://example.com/tesla-logo.png",
-                    "description": "Brand logo URL - ???? ???? ???????"
+                    "description": "Brand logo URL - رابط شعار الماركة"
                   }
                 }
               }
@@ -2621,7 +1905,7 @@
         },
         "responses": {
           "201": {
-            "description": "Brand created successfully - ?? ????? ??????? ?????",
+            "description": "Brand created successfully - تم إنشاء الماركة بنجاح",
             "content": {
               "application/json": {
                 "schema": {
@@ -2640,7 +1924,7 @@
                     },
                     "messageAr": {
                       "type": "string",
-                      "example": "?? ????? ??????? ?????"
+                      "example": "تم إنشاء الماركة بنجاح"
                     }
                   }
                 }
@@ -2648,7 +1932,7 @@
             }
           },
           "400": {
-            "description": "Validation error - ??? ?? ??????"
+            "description": "Validation error - خطأ في التحقق"
           },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
@@ -2657,7 +1941,7 @@
             "$ref": "#/components/responses/ForbiddenError"
           },
           "409": {
-            "description": "Brand already exists - ??????? ?????? ??????"
+            "description": "Brand already exists - الماركة موجودة بالفعل"
           }
         }
       }
@@ -2665,9 +1949,9 @@
     "/api/brands/{id}": {
       "get": {
         "summary": "Get brand by ID",
-        "description": "Retrieve a specific brand with all its models - ???? ??? ????? ????? ?? ???? ?????????",
+        "description": "Retrieve a specific brand with all its models - احصل على ماركة محددة مع جميع موديلاتها",
         "tags": [
-          "🔓 Brands & Models"
+          "Vehicle Brands"
         ],
         "parameters": [
           {
@@ -2677,15 +1961,15 @@
             "schema": {
               "type": "string"
             },
-            "description": "Brand ID - ???? ???????"
+            "description": "Brand ID - معرف الماركة"
           }
         ],
         "responses": {
           "200": {
-            "description": "Brand found - ?? ?????? ??? ???????"
+            "description": "Brand found - تم العثور على الماركة"
           },
           "404": {
-            "description": "Brand not found - ??????? ??? ??????",
+            "description": "Brand not found - الماركة غير موجودة",
             "content": {
               "application/json": {
                 "schema": {
@@ -2701,7 +1985,7 @@
                     },
                     "errorAr": {
                       "type": "string",
-                      "example": "??????? ??? ??????"
+                      "example": "الماركة غير موجودة"
                     },
                     "code": {
                       "type": "string",
@@ -2716,9 +2000,9 @@
       },
       "patch": {
         "summary": "Update brand (Admin only)",
-        "description": "Update an existing brand - ????? ????? ??????",
+        "description": "Update an existing brand - تحديث ماركة موجودة",
         "tags": [
-          "⚙️ Admin | Brands & Models"
+          "Vehicle Brands"
         ],
         "security": [
           {
@@ -2733,7 +2017,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Brand ID - ???? ???????"
+            "description": "Brand ID - معرف الماركة"
           }
         ],
         "requestBody": {
@@ -2763,21 +2047,21 @@
         },
         "responses": {
           "200": {
-            "description": "Brand updated successfully - ?? ????? ??????? ?????"
+            "description": "Brand updated successfully - تم تحديث الماركة بنجاح"
           },
           "404": {
-            "description": "Brand not found - ??????? ??? ??????"
+            "description": "Brand not found - الماركة غير موجودة"
           },
           "409": {
-            "description": "Brand name already exists - ??? ??????? ????? ??????"
+            "description": "Brand name already exists - اسم الماركة موجود بالفعل"
           }
         }
       },
       "delete": {
         "summary": "Delete brand (Admin only)",
-        "description": "Delete a brand (soft delete by default) - ??? ????? (??? ???????)",
+        "description": "Delete a brand (soft delete by default) - حذف ماركة (حفظ افتراضي)",
         "tags": [
-          "⚙️ Admin | Brands & Models"
+          "Vehicle Brands"
         ],
         "security": [
           {
@@ -2792,7 +2076,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Brand ID - ???? ???????"
+            "description": "Brand ID - معرف الماركة"
           },
           {
             "in": "query",
@@ -2801,62 +2085,15 @@
               "type": "boolean",
               "default": false
             },
-            "description": "Permanently delete brand and all models - ??? ????? ??????? ????? ?????????"
+            "description": "Permanently delete brand and all models - حذف نهائي للماركة وجميع الموديلات"
           }
         ],
         "responses": {
           "200": {
-            "description": "Brand deleted/deactivated - ?? ???/????? ???????"
+            "description": "Brand deleted/deactivated - تم حذف/تعطيل الماركة"
           },
           "404": {
-            "description": "Brand not found - ??????? ??? ??????"
-          }
-        }
-      }
-    },
-    "/api/broadcasts": {
-      "get": {
-        "summary": "List all active broadcasts (Admin)",
-        "tags": [
-          "📱 Customer | Emergency Broadcasts"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of broadcasts"
-          }
-        }
-      }
-    },
-    "/api/broadcasts/{id}": {
-      "get": {
-        "summary": "Get broadcast by ID (Admin)",
-        "tags": [
-          "📱 Customer | Emergency Broadcasts"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Broadcast details"
+            "description": "Brand not found - الماركة غير موجودة"
           }
         }
       }
@@ -2865,7 +2102,7 @@
       "get": {
         "summary": "Get my cart (with items)",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Cart"
         ],
         "security": [
           {
@@ -2883,7 +2120,7 @@
       "post": {
         "summary": "Create order from cart (Customer)",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Cart"
         ],
         "security": [
           {
@@ -2935,7 +2172,7 @@
       "post": {
         "summary": "Add auto part to cart",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Cart"
         ],
         "security": [
           {
@@ -2975,7 +2212,7 @@
       "patch": {
         "summary": "Update cart item quantity",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Cart"
         ],
         "security": [
           {
@@ -3015,7 +2252,7 @@
       "delete": {
         "summary": "Remove item from cart",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Cart"
         ],
         "security": [
           {
@@ -3044,7 +2281,7 @@
         "summary": "Create a car wash request",
         "description": "Create a new car wash request and broadcast it to nearby technicians.\nThe request will be broadcasted to available car wash service providers in the area.\n\nإنشاء طلب غسيل سيارة جديد وإرساله إلى الفنيين القريبين\n",
         "tags": [
-          "📱 Customer | Car Wash"
+          "Car Wash Service"
         ],
         "security": [
           {
@@ -3182,7 +2419,7 @@
         "summary": "Get offers for a car wash broadcast",
         "description": "Retrieve all offers submitted by technicians for a specific car wash broadcast.\nEach offer includes technician details, bid amount, and estimated arrival time.\n\nالحصول على جميع العروض المقدمة من الفنيين لطلب غسيل السيارة\n",
         "tags": [
-          "📱 Customer | Car Wash"
+          "Car Wash Service"
         ],
         "security": [
           {
@@ -3348,7 +2585,7 @@
         "summary": "Accept a car wash offer",
         "description": "Accept a specific offer from a technician for the car wash service.\nThis will assign the technician to the booking and close the broadcast.\n\nقبول عرض محدد من فني لخدمة غسيل السيارة\n",
         "tags": [
-          "📱 Customer | Car Wash"
+          "Car Wash Service"
         ],
         "security": [
           {
@@ -3478,117 +2715,12 @@
         }
       }
     },
-    "/api/comprehensive-care/providers": {
-      "get": {
-        "summary": "Get all comprehensive care providers (Merged Vendors & Workshops)",
-        "description": "Returns a unified list of vendors of type COMPREHENSIVE_CARE and workshops offering care services.",
-        "tags": [
-          "📱 Customer | Comprehensive Care"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "city",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of providers",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "nameAr": {
-                            "type": "string"
-                          },
-                          "type": {
-                            "type": "string",
-                            "enum": [
-                              "VENDOR",
-                              "WORKSHOP"
-                            ]
-                          },
-                          "category": {
-                            "type": "string"
-                          },
-                          "city": {
-                            "type": "string"
-                          },
-                          "phone": {
-                            "type": "string"
-                          },
-                          "logo": {
-                            "type": "string"
-                          },
-                          "averageRating": {
-                            "type": "number"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/dashboard/stats": {
-      "get": {
-        "summary": "Get dashboard statistics overview",
-        "description": "Retrieve key metrics like total users, bookings, revenue, etc.",
-        "tags": [
-          "⚙️ Admin | Dashboard"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Dashboard statistics"
-          }
-        }
-      }
-    },
     "/api/feedback": {
       "post": {
         "summary": "Submit new complaint or suggestion",
         "description": "Submit feedback. If linked to an order, ownership is verified.",
         "tags": [
-          "📱 Customer | Feedback"
+          "Feedback"
         ],
         "security": [
           {
@@ -3620,7 +2752,7 @@
         "summary": "Get my feedback history",
         "description": "Retrieve list of feedbacks submitted by the current user.",
         "tags": [
-          "📱 Customer | Feedback"
+          "Feedback"
         ],
         "security": [
           {
@@ -3639,7 +2771,7 @@
         "summary": "Get feedback details",
         "description": "Get full details including replies and history.",
         "tags": [
-          "📱 Customer | Feedback"
+          "Feedback"
         ],
         "security": [
           {
@@ -3668,7 +2800,7 @@
         "summary": "Reply to a feedback (Customer)",
         "description": "Allow customer to reply to an ongoing feedback conversation.",
         "tags": [
-          "📱 Customer | Feedback"
+          "Feedback"
         ],
         "security": [
           {
@@ -3721,322 +2853,11 @@
         }
       }
     },
-    "/api/inspections": {
-      "get": {
-        "summary": "List all inspections",
-        "description": "Retrieve a list of vehicle inspections (Admin/Technician only)",
-        "tags": [
-          "📱 Customer | Inspections"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Filter by status"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of inspections"
-          }
-        }
-      },
-      "post": {
-        "summary": "Create inspection report",
-        "description": "Create a new vehicle inspection report (Technician only)",
-        "tags": [
-          "📱 Customer | Inspections"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "bookingId",
-                  "mileage"
-                ],
-                "properties": {
-                  "bookingId": {
-                    "type": "string"
-                  },
-                  "mileage": {
-                    "type": "integer"
-                  },
-                  "overallCondition": {
-                    "type": "string"
-                  },
-                  "notes": {
-                    "type": "string"
-                  },
-                  "items": {
-                    "type": "array",
-                    "items": {
-                      "type": "object"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Inspection created"
-          }
-        }
-      }
-    },
-    "/api/inspections/{id}": {
-      "put": {
-        "summary": "Update inspection report",
-        "description": "Update an existing inspection report or respond as customer",
-        "tags": [
-          "📱 Customer | Inspections"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Inspection updated"
-          }
-        }
-      },
-      "get": {
-        "summary": "Get inspection by ID",
-        "description": "Retrieve details of a specific inspection",
-        "tags": [
-          "📱 Customer | Inspections"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Inspection details"
-          },
-          "404": {
-            "description": "Inspection not found"
-          }
-        }
-      }
-    },
-    "/api/invoices": {
-      "get": {
-        "summary": "List all invoices (Admin)",
-        "tags": [
-          "📱 Customer | Invoices"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 10
-            }
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of invoices"
-          }
-        }
-      },
-      "post": {
-        "summary": "Manually create invoice for a booking (Admin)",
-        "tags": [
-          "⚙️ Admin | Finance"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "bookingId"
-                ],
-                "properties": {
-                  "bookingId": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Invoice created with subtotal, tax (VAT), discount, and total"
-          }
-        }
-      }
-    },
-    "/api/invoices/{id}": {
-      "get": {
-        "summary": "Get invoice by ID (Admin)",
-        "tags": [
-          "📱 Customer | Invoices"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Invoice details"
-          }
-        }
-      }
-    },
-    "/api/invoices/{id}/pay": {
-      "patch": {
-        "summary": "Mark invoice as paid (Admin)",
-        "tags": [
-          "⚙️ Admin | Finance"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "method": {
-                    "type": "string",
-                    "enum": [
-                      "CASH",
-                      "CARD",
-                      "WALLET",
-                      "APPLE_PAY",
-                      "MADA",
-                      "BANK_TRANSFER"
-                    ],
-                    "default": "CASH"
-                  },
-                  "amount": {
-                    "type": "number"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Invoice marked as paid and Payment record created"
-          }
-        }
-      }
-    },
     "/api/marketplace-orders": {
       "post": {
         "summary": "Create new order",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Marketplace Orders"
         ],
         "requestBody": {
           "required": true,
@@ -4087,7 +2908,7 @@
       "get": {
         "summary": "Get all orders (Admin)",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Marketplace Orders"
         ],
         "responses": {
           "200": {
@@ -4100,7 +2921,7 @@
       "get": {
         "summary": "Get my orders (Customer)",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Marketplace Orders"
         ],
         "responses": {
           "200": {
@@ -4113,7 +2934,7 @@
       "get": {
         "summary": "Get received orders (Vendor)",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Marketplace Orders"
         ],
         "responses": {
           "200": {
@@ -4126,7 +2947,7 @@
       "get": {
         "summary": "Get order details",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Marketplace Orders"
         ],
         "parameters": [
           {
@@ -4143,86 +2964,13 @@
             "description": "Order details"
           }
         }
-      },
-      "put": {
-        "summary": "Update order details (Customer/Admin)",
-        "description": "Update shipping address, contact info or items before payment/processing.",
-        "tags": [
-          "📱 Customer | Marketplace"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "shippingAddress": {
-                    "type": "object",
-                    "properties": {
-                      "address": {
-                        "type": "string"
-                      },
-                      "city": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "phone": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "items": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "autoPartId": {
-                          "type": "string"
-                        },
-                        "quantity": {
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  },
-                  "notes": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Order updated"
-          }
-        }
       }
     },
     "/api/marketplace-orders/{id}/status": {
       "put": {
         "summary": "Update global order status (Admin)",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Marketplace Orders"
         ],
         "security": [
           {
@@ -4268,7 +3016,7 @@
       "put": {
         "summary": "Update item status (Vendor)",
         "tags": [
-          "📱 Customer | Marketplace"
+          "Marketplace Orders"
         ],
         "security": [
           {
@@ -4310,186 +3058,12 @@
         }
       }
     },
-    "/api/mobile-car-service": {
-      "get": {
-        "summary": "Get Mobile Car Service details",
-        "tags": [
-          "📱 Customer | Mobile Car Service"
-        ],
-        "responses": {
-          "200": {
-            "description": "Service details"
-          }
-        }
-      }
-    },
-    "/api/mobile-car-service/sub-services": {
-      "get": {
-        "summary": "Get sub-services for Mobile Car Service",
-        "tags": [
-          "📱 Customer | Mobile Car Service"
-        ],
-        "responses": {
-          "200": {
-            "description": "List of sub-services"
-          }
-        }
-      }
-    },
-    "/api/mobile-car-service/compatible-parts": {
-      "get": {
-        "summary": "Get compatible spare parts for a vehicle",
-        "tags": [
-          "📱 Customer | Mobile Car Service"
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "vehicleId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of compatible parts"
-          }
-        }
-      }
-    },
-    "/api/mobile-car-service/recommended-parts": {
-      "get": {
-        "summary": "Get recommended spare parts for a service",
-        "tags": [
-          "📱 Customer | Mobile Car Service"
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "serviceId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of recommended parts"
-          }
-        }
-      }
-    },
-    "/api/mobile-car-service/bookings": {
-      "post": {
-        "summary": "Create mobile car service booking",
-        "tags": [
-          "📱 Customer | Mobile Car Service"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "vehicleId",
-                  "scheduledDate",
-                  "serviceIds"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Booking created"
-          }
-        }
-      }
-    },
-    "/api/mobile-car-service/bookings/{id}": {
-      "get": {
-        "summary": "Get mobile service booking details",
-        "tags": [
-          "📱 Customer | Mobile Car Service"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Booking details"
-          }
-        }
-      }
-    },
-    "/api/mobile-car-service/bookings/{id}/status": {
-      "patch": {
-        "summary": "Update mobile service booking status",
-        "tags": [
-          "📱 Customer | Mobile Car Service"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "status"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Status updated"
-          }
-        }
-      }
-    },
     "/api/models": {
       "get": {
         "summary": "Get all vehicle models",
-        "description": "Retrieve vehicle models with optional filters - ???? ??? ??????? ???????? ?? ????? ????????",
+        "description": "Retrieve vehicle models with optional filters - احصل على موديلات المركبات مع فلاتر اختيارية",
         "tags": [
-          "🔓 Brands & Models"
+          "Vehicle Models"
         ],
         "parameters": [
           {
@@ -4498,7 +3072,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Filter by brand ID - ????? ??? ???? ???????"
+            "description": "Filter by brand ID - تصفية حسب معرف الماركة"
           },
           {
             "in": "query",
@@ -4506,7 +3080,7 @@
             "schema": {
               "type": "integer"
             },
-            "description": "Filter by year - ????? ??? ?????",
+            "description": "Filter by year - تصفية حسب السنة",
             "example": 2023
           },
           {
@@ -4521,7 +3095,7 @@
                 "EXTRA_LARGE"
               ]
             },
-            "description": "Filter by size - ????? ??? ?????"
+            "description": "Filter by size - تصفية حسب الحجم"
           },
           {
             "in": "query",
@@ -4530,12 +3104,12 @@
               "type": "boolean",
               "default": true
             },
-            "description": "Only active models - ????????? ?????? ???"
+            "description": "Only active models - الموديلات النشطة فقط"
           }
         ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved models - ?? ??? ????????? ?????",
+            "description": "Successfully retrieved models - تم جلب الموديلات بنجاح",
             "content": {
               "application/json": {
                 "schema": {
@@ -4562,7 +3136,7 @@
                           },
                           "nameAr": {
                             "type": "string",
-                            "example": "?????"
+                            "example": "كامري"
                           },
                           "year": {
                             "type": "integer",
@@ -4594,7 +3168,7 @@
                               },
                               "nameAr": {
                                 "type": "string",
-                                "example": "??????"
+                                "example": "تويوتا"
                               }
                             }
                           },
@@ -4630,9 +3204,9 @@
       },
       "post": {
         "summary": "Create new model (Admin only)",
-        "description": "Create a new vehicle model - ????? ????? ????? ????",
+        "description": "Create a new vehicle model - إنشاء موديل مركبة جديد",
         "tags": [
-          "⚙️ Admin | Brands & Models"
+          "Vehicle Models"
         ],
         "security": [
           {
@@ -4654,22 +3228,22 @@
                 "properties": {
                   "brandId": {
                     "type": "string",
-                    "description": "Brand ID - ???? ???????"
+                    "description": "Brand ID - معرف الماركة"
                   },
                   "name": {
                     "type": "string",
                     "example": "Camry",
-                    "description": "Model name - ??? ???????"
+                    "description": "Model name - اسم الموديل"
                   },
                   "nameAr": {
                     "type": "string",
-                    "example": "?????",
-                    "description": "Arabic model name - ??? ??????? ????????"
+                    "example": "كامري",
+                    "description": "Arabic model name - اسم الموديل بالعربية"
                   },
                   "year": {
                     "type": "integer",
                     "example": 2023,
-                    "description": "Model year - ??? ???????"
+                    "description": "Model year - سنة الموديل"
                   },
                   "size": {
                     "type": "string",
@@ -4680,12 +3254,12 @@
                       "EXTRA_LARGE"
                     ],
                     "example": "MEDIUM",
-                    "description": "Vehicle size - ??? ???????"
+                    "description": "Vehicle size - حجم المركبة"
                   },
                   "imageUrl": {
                     "type": "string",
                     "nullable": true,
-                    "description": "Model image URL - ???? ???? ???????"
+                    "description": "Model image URL - رابط صورة الموديل"
                   }
                 }
               }
@@ -4694,16 +3268,16 @@
         },
         "responses": {
           "201": {
-            "description": "Model created successfully - ?? ????? ??????? ?????"
+            "description": "Model created successfully - تم إنشاء الموديل بنجاح"
           },
           "400": {
-            "description": "Validation error - ??? ?? ??????"
+            "description": "Validation error - خطأ في التحقق"
           },
           "404": {
-            "description": "Brand not found - ??????? ??? ??????"
+            "description": "Brand not found - الماركة غير موجودة"
           },
           "409": {
-            "description": "Model already exists - ??????? ????? ??????"
+            "description": "Model already exists - الموديل موجود بالفعل"
           }
         }
       }
@@ -4711,9 +3285,9 @@
     "/api/models/{id}": {
       "get": {
         "summary": "Get model by ID",
-        "description": "Retrieve a specific vehicle model - ???? ??? ????? ????",
+        "description": "Retrieve a specific vehicle model - احصل على موديل محدد",
         "tags": [
-          "🔓 Brands & Models"
+          "Vehicle Models"
         ],
         "parameters": [
           {
@@ -4723,23 +3297,23 @@
             "schema": {
               "type": "string"
             },
-            "description": "Model ID - ???? ???????"
+            "description": "Model ID - معرف الموديل"
           }
         ],
         "responses": {
           "200": {
-            "description": "Model found - ?? ?????? ??? ???????"
+            "description": "Model found - تم العثور على الموديل"
           },
           "404": {
-            "description": "Model not found - ??????? ??? ?????"
+            "description": "Model not found - الموديل غير موجود"
           }
         }
       },
       "patch": {
         "summary": "Update model (Admin only)",
-        "description": "Update an existing model - ????? ????? ?????",
+        "description": "Update an existing model - تحديث موديل موجود",
         "tags": [
-          "⚙️ Admin | Brands & Models"
+          "Vehicle Models"
         ],
         "security": [
           {
@@ -4754,7 +3328,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Model ID - ???? ???????"
+            "description": "Model ID - معرف الموديل"
           }
         ],
         "requestBody": {
@@ -4798,21 +3372,21 @@
         },
         "responses": {
           "200": {
-            "description": "Model updated successfully - ?? ????? ??????? ?????"
+            "description": "Model updated successfully - تم تحديث الموديل بنجاح"
           },
           "404": {
-            "description": "Model not found - ??????? ??? ?????"
+            "description": "Model not found - الموديل غير موجود"
           },
           "409": {
-            "description": "Model with these details already exists - ??????? ???? ???????? ????? ??????"
+            "description": "Model with these details already exists - الموديل بهذه التفاصيل موجود بالفعل"
           }
         }
       },
       "delete": {
         "summary": "Delete model (Admin only)",
-        "description": "Delete a model (soft delete by default) - ??? ????? (??? ???????)",
+        "description": "Delete a model (soft delete by default) - حذف موديل (حفظ افتراضي)",
         "tags": [
-          "⚙️ Admin | Brands & Models"
+          "Vehicle Models"
         ],
         "security": [
           {
@@ -4827,7 +3401,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Model ID - ???? ???????"
+            "description": "Model ID - معرف الموديل"
           },
           {
             "in": "query",
@@ -4836,226 +3410,15 @@
               "type": "boolean",
               "default": false
             },
-            "description": "Permanently delete model - ??? ????? ???????"
+            "description": "Permanently delete model - حذف نهائي للموديل"
           }
         ],
         "responses": {
           "200": {
-            "description": "Model deleted/deactivated - ?? ???/????? ???????"
+            "description": "Model deleted/deactivated - تم حذف/تعطيل الموديل"
           },
           "404": {
-            "description": "Model not found - ??????? ??? ?????"
-          }
-        }
-      }
-    },
-    "/api/notifications": {
-      "get": {
-        "summary": "Get my notifications",
-        "tags": [
-          "📱 Customer | Notifications"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of notifications"
-          }
-        }
-      }
-    },
-    "/api/notifications/read-all": {
-      "patch": {
-        "summary": "Mark all my notifications as read",
-        "tags": [
-          "📱 Customer | Notifications"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Notifications updated"
-          }
-        }
-      }
-    },
-    "/api/notifications/{id}": {
-      "get": {
-        "summary": "Get notification by ID",
-        "tags": [
-          "📱 Customer | Notifications"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Notification details"
-          }
-        }
-      }
-    },
-    "/api/notifications/{id}/read": {
-      "patch": {
-        "summary": "Mark a single notification as read",
-        "tags": [
-          "📱 Customer | Notifications"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Notification marked as read"
-          }
-        }
-      }
-    },
-    "/api/notifications/admin/all": {
-      "get": {
-        "summary": "Get all system notifications (Admin)",
-        "tags": [
-          "⚙️ Admin | Users"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of all notifications"
-          }
-        }
-      }
-    },
-    "/api/payments": {
-      "get": {
-        "summary": "List my payments",
-        "tags": [
-          "📱 Customer | Payments"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of payments"
-          }
-        }
-      }
-    },
-    "/api/payments/{id}": {
-      "get": {
-        "summary": "Get payment by ID",
-        "tags": [
-          "📱 Customer | Payments"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Payment details"
-          }
-        }
-      }
-    },
-    "/api/ratings": {
-      "get": {
-        "summary": "List all ratings (Admin)",
-        "tags": [
-          "📱 Customer | Ratings"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of ratings"
-          }
-        }
-      }
-    },
-    "/api/services/upload-image": {
-      "post": {
-        "summary": "Upload service image",
-        "tags": [
-          "⚙️ Admin | Services"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Image uploaded successfully"
+            "description": "Model not found - الموديل غير موجود"
           }
         }
       }
@@ -5065,7 +3428,7 @@
         "summary": "Get all services",
         "description": "Retrieve a list of all available services with filtering",
         "tags": [
-          "📱 Customer | Services"
+          "Services"
         ],
         "security": [
           {
@@ -5084,8 +3447,7 @@
                 "REPAIR",
                 "EMERGENCY",
                 "INSPECTION",
-                "CUSTOMIZATION",
-                "COMPREHENSIVE_CARE"
+                "CUSTOMIZATION"
               ]
             }
           },
@@ -5119,7 +3481,7 @@
       "post": {
         "summary": "Create new service (Admin)",
         "tags": [
-          "⚙️ Admin | Services"
+          "Services"
         ],
         "security": [
           {
@@ -5182,50 +3544,11 @@
         }
       }
     },
-    "/api/services/{id}/available-slots": {
-      "get": {
-        "summary": "Get available time slots for a service",
-        "description": "Returns available time slots for Comprehensive Care booking (no double-book).",
-        "tags": [
-          "🏪 Vendor | Comprehensive Care"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "date",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "date"
-            },
-            "example": "2024-02-23"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of available slots"
-          }
-        }
-      }
-    },
     "/api/services/{id}": {
       "get": {
         "summary": "Get service details",
         "tags": [
-          "📱 Customer | Services"
+          "Services"
         ],
         "security": [
           {
@@ -5254,7 +3577,7 @@
       "put": {
         "summary": "Update service (Admin)",
         "tags": [
-          "⚙️ Admin | Services"
+          "Services"
         ],
         "security": [
           {
@@ -5297,7 +3620,7 @@
       "delete": {
         "summary": "Delete/Deactivate service (Admin)",
         "tags": [
-          "⚙️ Admin | Services"
+          "Services"
         ],
         "security": [
           {
@@ -5321,566 +3644,12 @@
         }
       }
     },
-    "/api/supplies": {
-      "get": {
-        "summary": "List all supply requests",
-        "tags": [
-          "🏪 Vendor | Supply Requests"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of supply requests"
-          }
-        }
-      }
-    },
-    "/api/supplies/{id}": {
-      "get": {
-        "summary": "Get supply request by ID",
-        "tags": [
-          "🏪 Vendor | Supply Requests"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Supply request details"
-          },
-          "404": {
-            "description": "Not found"
-          }
-        }
-      }
-    },
-    "/api/technical-support-requests": {
-      "post": {
-        "summary": "Submit technical support request (طلب دعم فني)",
-        "description": "المستخدم يقدم طلب دعم فني يتضمن:\nالرقم التسلسلي للسيارة، رقم اللوحة، هل يوجد تأمين واسم شركة التأمين،\nعنوان التسليم، اختياري إذن إصلاح/وثيقة نجم/تقرير مرور، أضرار الحادث، صور السيارة (اختياري).\n",
-        "tags": [
-          "📱 Customer | Technical Support"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "vehicleSerialNumber",
-                  "plateNumber",
-                  "deliveryAddress",
-                  "accidentDamages"
-                ],
-                "properties": {
-                  "vehicleSerialNumber": {
-                    "type": "string",
-                    "description": "الرقم التسلسلي للسيارة"
-                  },
-                  "plateNumber": {
-                    "type": "string",
-                    "description": "رقم اللوحة"
-                  },
-                  "hasInsurance": {
-                    "type": "boolean",
-                    "default": false
-                  },
-                  "insuranceCompany": {
-                    "type": "string",
-                    "description": "اسم شركة التأمين"
-                  },
-                  "deliveryAddress": {
-                    "type": "string",
-                    "description": "عنوان التسليم"
-                  },
-                  "repairAuthUrl": {
-                    "type": "string",
-                    "description": "رابط إذن إصلاح (اختياري)"
-                  },
-                  "najmDocUrl": {
-                    "type": "string",
-                    "description": "رابط وثيقة نجم (اختياري)"
-                  },
-                  "trafficReportUrl": {
-                    "type": "string",
-                    "description": "رابط تقرير مرور (اختياري)"
-                  },
-                  "accidentDamages": {
-                    "type": "string",
-                    "description": "أضرار الحادث"
-                  },
-                  "carImageUrls": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "روابط صور السيارة (اختياري)"
-                  },
-                  "notes": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Request created"
-          },
-          "400": {
-            "description": "Validation error"
-          }
-        }
-      }
-    },
-    "/api/technical-support-requests/my": {
-      "get": {
-        "summary": "Get my technical support requests",
-        "tags": [
-          "📱 Customer | Technical Support"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 10
-            }
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "PENDING",
-                "ASSIGNED",
-                "IN_PROGRESS",
-                "COMPLETED",
-                "CANCELLED"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of my requests"
-          }
-        }
-      }
-    },
-    "/api/technical-support-requests/admin/list": {
-      "get": {
-        "summary": "[Admin] List all technical support requests",
-        "tags": [
-          "⚙️ Admin | Users"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            }
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "PENDING",
-                "ASSIGNED",
-                "IN_PROGRESS",
-                "COMPLETED",
-                "CANCELLED"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of requests"
-          }
-        }
-      }
-    },
-    "/api/technical-support-requests/admin/{id}/assign": {
-      "post": {
-        "summary": "[Admin] Assign technician to request",
-        "description": "الأدمن يحدد الفني الذي سيراجع العميل",
-        "tags": [
-          "⚙️ Admin | Users"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "technicianId"
-                ],
-                "properties": {
-                  "technicianId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "ID الفني"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Technician assigned"
-          },
-          "400": {
-            "description": "Invalid technician or request state"
-          },
-          "404": {
-            "description": "Request not found"
-          }
-        }
-      }
-    },
-    "/api/technical-support-requests/admin/{id}/status": {
-      "patch": {
-        "summary": "[Admin] Update request status",
-        "tags": [
-          "⚙️ Admin | Users"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "status": {
-                    "type": "string",
-                    "enum": [
-                      "PENDING",
-                      "ASSIGNED",
-                      "IN_PROGRESS",
-                      "COMPLETED",
-                      "CANCELLED"
-                    ]
-                  },
-                  "notes": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Status updated"
-          }
-        }
-      }
-    },
-    "/api/technical-support-requests/technicians": {
-      "get": {
-        "summary": "[Admin] List technicians for assign dropdown",
-        "tags": [
-          "⚙️ Admin | Users"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of technicians (id, email, profile.firstName, profile.lastName)"
-          }
-        }
-      }
-    },
-    "/api/technical-support-requests/{id}/track": {
-      "get": {
-        "summary": "Get tracking info (technician location) for customer",
-        "description": "العميل يتابع موقع الفني. ثم يتصل بالسوكيت وغرفة tsr لاستقبال التحديثات اللحظية.",
-        "tags": [
-          "📱 Customer | Technical Support"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "request, technician, currentLocation"
-          }
-        }
-      }
-    },
-    "/api/technical-support-requests/{id}": {
-      "get": {
-        "summary": "Get request by ID (owner or admin)",
-        "tags": [
-          "📱 Customer | Technical Support"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Request details"
-          },
-          "403": {
-            "description": "Not owner"
-          },
-          "404": {
-            "description": "Not found"
-          }
-        }
-      }
-    },
-    "/api/technician/bookings": {
-      "get": {
-        "summary": "Get my assigned bookings (Technician)",
-        "description": "الحجوزات العامة المعينة للفني (غير الونش والغسيل)\nReturns general bookings assigned to the authenticated technician.\n",
-        "tags": [
-          "🔧 Technician | My Jobs"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PageParam"
-          },
-          {
-            "$ref": "#/components/parameters/LimitParam"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "description": "Filter by booking status",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "PENDING",
-                "CONFIRMED",
-                "IN_PROGRESS",
-                "COMPLETED",
-                "CANCELLED"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of assigned bookings",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/UnauthorizedError"
-          },
-          "403": {
-            "$ref": "#/components/responses/ForbiddenError"
-          }
-        }
-      }
-    },
-    "/api/technician/technical-support-requests": {
-      "get": {
-        "summary": "Get my assigned technical support requests (Technician)",
-        "description": "طلبات الدعم الفني المعينة للفني المسجل دخوله\nReturns technical support requests assigned to the authenticated technician.\n",
-        "tags": [
-          "🔧 Technician | My Jobs"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PageParam"
-          },
-          {
-            "$ref": "#/components/parameters/LimitParam"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of assigned support requests",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/UnauthorizedError"
-          },
-          "403": {
-            "$ref": "#/components/responses/ForbiddenError"
-          }
-        }
-      }
-    },
     "/api/technician/carwash/broadcasts": {
       "get": {
         "summary": "Get active car wash broadcasts",
         "description": "Fetch all active car wash requests within the technician's service radius.\n\nجلب جميع طلبات غسيل السيارات النشطة في نطاق خدمة الفني\n",
         "tags": [
-          "🔧 Technician | Car Wash Jobs"
+          "Technician Car Wash"
         ],
         "security": [
           {
@@ -5975,7 +3744,7 @@
         "summary": "Submit an offer for a car wash request",
         "description": "Submit a price and ETA offer for a specific car wash job broadcast.\n\nتقديم عرض سعر ووقت وصول لطلب غسيل سيارة محدد\n",
         "tags": [
-          "🔧 Technician | Car Wash Jobs"
+          "Technician Car Wash"
         ],
         "security": [
           {
@@ -6043,7 +3812,7 @@
         "summary": "Get active towing broadcasts",
         "description": "Get all active towing requests that the technician can bid on",
         "tags": [
-          "🔧 Technician | Towing Jobs"
+          "Technician Towing"
         ],
         "security": [
           {
@@ -6138,7 +3907,7 @@
       "post": {
         "summary": "Submit offer for towing request",
         "tags": [
-          "🔧 Technician | Towing Jobs"
+          "Technician Towing"
         ],
         "security": [
           {
@@ -6244,7 +4013,7 @@
       "get": {
         "summary": "Get assigned towing jobs",
         "tags": [
-          "🔧 Technician | Towing Jobs"
+          "Technician Towing"
         ],
         "security": [
           {
@@ -6315,7 +4084,7 @@
         "summary": "Update job status",
         "description": "Update the status of an assigned towing job",
         "tags": [
-          "🔧 Technician | Towing Jobs"
+          "Technician Towing"
         ],
         "security": [
           {
@@ -6369,7 +4138,7 @@
       "post": {
         "summary": "Create towing request",
         "tags": [
-          "📱 Customer | Towing"
+          "Towing Service"
         ],
         "security": [
           {
@@ -6538,7 +4307,7 @@
       "get": {
         "summary": "Get offers for towing request",
         "tags": [
-          "📱 Customer | Towing"
+          "Towing Service"
         ],
         "security": [
           {
@@ -6664,7 +4433,7 @@
       "post": {
         "summary": "Accept technician offer",
         "tags": [
-          "📱 Customer | Towing"
+          "Towing Service"
         ],
         "security": [
           {
@@ -6767,7 +4536,7 @@
         "summary": "Update technician location",
         "description": "Technician updates their GPS location (called every 5-10 seconds)",
         "tags": [
-          "🔧 Technician | Location"
+          "Tracking"
         ],
         "security": [
           {
@@ -6825,12 +4594,148 @@
         }
       }
     },
+    "/api/bookings/{bookingId}/track": {
+      "get": {
+        "summary": "Track technician location",
+        "description": "Customer tracks technician's real-time location",
+        "tags": [
+          "Tracking"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tracking information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "booking": {
+                          "type": "object"
+                        },
+                        "technician": {
+                          "type": "object",
+                          "properties": {
+                            "currentLocation": {
+                              "type": "object",
+                              "properties": {
+                                "latitude": {
+                                  "type": "number"
+                                },
+                                "longitude": {
+                                  "type": "number"
+                                },
+                                "heading": {
+                                  "type": "number"
+                                },
+                                "speed": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "eta": {
+                          "type": "object",
+                          "properties": {
+                            "distanceKm": {
+                              "type": "number"
+                            },
+                            "durationMinutes": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/location-history": {
+      "get": {
+        "summary": "Get location history",
+        "description": "Retrieve technician's route history for completed job",
+        "tags": [
+          "Tracking"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "startTime",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endTime",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Location history points"
+          }
+        }
+      }
+    },
     "/api/users/profile": {
       "get": {
         "summary": "Get current user profile",
         "description": "Get authenticated user's profile information\n\nالحصول على معلومات الملف الشخصي للمستخدم\n",
         "tags": [
-          "📱 Customer | Profile"
+          "Users"
         ],
         "security": [
           {
@@ -6850,7 +4755,7 @@
         "summary": "Update user profile",
         "description": "Update current user's profile information\n\nتحديث معلومات الملف الشخصي\n",
         "tags": [
-          "📱 Customer | Profile"
+          "Users"
         ],
         "security": [
           {
@@ -6904,7 +4809,7 @@
         "summary": "Update technician profile",
         "description": "Update technician-specific profile fields\n\nتحديث بيانات الفني\n",
         "tags": [
-          "🔧 Technician | My Jobs"
+          "Users"
         ],
         "security": [
           {
@@ -6952,7 +4857,7 @@
         "summary": "Update supplier profile",
         "description": "Update supplier-specific profile fields\n\nتحديث بيانات المورد\n",
         "tags": [
-          "🏪 Vendor | Onboarding"
+          "Users"
         ],
         "security": [
           {
@@ -6991,7 +4896,7 @@
         "summary": "Update language preference",
         "description": "Update user's preferred language\n\nتحديث اللغة المفضلة\n",
         "tags": [
-          "📱 Customer | Profile"
+          "Users"
         ],
         "security": [
           {
@@ -7033,7 +4938,7 @@
         "summary": "Get all users (Admin only)",
         "description": "Get paginated list of all users with filters\n\nالحصول على قائمة المستخدمين (للمشرف فقط)\n",
         "tags": [
-          "⚙️ Admin | Users"
+          "Users"
         ],
         "security": [
           {
@@ -7083,86 +4988,13 @@
             "$ref": "#/components/responses/ForbiddenError"
           }
         }
-      },
-      "post": {
-        "summary": "Create user (Admin only) - e.g. vendor account",
-        "tags": [
-          "⚙️ Admin | Users"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "email",
-                  "password",
-                  "firstName",
-                  "lastName",
-                  "role"
-                ],
-                "properties": {
-                  "email": {
-                    "type": "string"
-                  },
-                  "password": {
-                    "type": "string"
-                  },
-                  "firstName": {
-                    "type": "string"
-                  },
-                  "lastName": {
-                    "type": "string"
-                  },
-                  "role": {
-                    "type": "string",
-                    "enum": [
-                      "CUSTOMER",
-                      "TECHNICIAN",
-                      "SUPPLIER",
-                      "VENDOR",
-                      "ADMIN"
-                    ]
-                  },
-                  "phone": {
-                    "type": "string"
-                  },
-                  "preferredLanguage": {
-                    "type": "string",
-                    "enum": [
-                      "AR",
-                      "EN"
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "User created"
-          },
-          "400": {
-            "description": "Validation error"
-          },
-          "409": {
-            "description": "Email or phone already registered"
-          }
-        }
       }
     },
     "/api/users/{id}": {
       "get": {
         "summary": "Get user by ID (Admin only)",
         "tags": [
-          "⚙️ Admin | Users"
+          "Users"
         ],
         "security": [
           {
@@ -7191,7 +5023,7 @@
       "put": {
         "summary": "Update user (Admin only)",
         "tags": [
-          "⚙️ Admin | Users"
+          "Users"
         ],
         "security": [
           {
@@ -7247,7 +5079,7 @@
       "delete": {
         "summary": "Delete user (Admin only)",
         "tags": [
-          "⚙️ Admin | Users"
+          "Users"
         ],
         "security": [
           {
@@ -7275,7 +5107,7 @@
       "patch": {
         "summary": "Update user status (Admin only)",
         "tags": [
-          "⚙️ Admin | Users"
+          "Users"
         ],
         "security": [
           {
@@ -7328,7 +5160,7 @@
         "summary": "Get vehicle brands catalog",
         "description": "Get available vehicle brands (Toyota, BMW, Mercedes, etc.)\n\nالحصول على العلامات التجارية للمركبات المتاحة\n",
         "tags": [
-          "📱 Customer | Vehicles"
+          "Vehicles"
         ],
         "security": [
           {
@@ -7347,7 +5179,7 @@
         "summary": "Get vehicle models for a brand",
         "description": "Get all available models for a specific brand\n\nالحصول على موديلات مركبة محددة\n",
         "tags": [
-          "📱 Customer | Vehicles"
+          "Vehicles"
         ],
         "security": [
           {
@@ -7405,7 +5237,7 @@
         "summary": "Get my vehicles",
         "description": "Get all vehicles registered to current user\n\nالحصول على جميع مركبات المستخدم\n",
         "tags": [
-          "📱 Customer | Vehicles"
+          "Vehicles"
         ],
         "security": [
           {
@@ -7422,7 +5254,7 @@
         "summary": "Add new vehicle",
         "description": "Register a new vehicle to current user\n\nإضافة مركبة جديدة\n",
         "tags": [
-          "📱 Customer | Vehicles"
+          "Vehicles"
         ],
         "security": [
           {
@@ -7496,7 +5328,7 @@
       "get": {
         "summary": "Get vehicle by ID",
         "tags": [
-          "📱 Customer | Vehicles"
+          "Vehicles"
         ],
         "security": [
           {
@@ -7526,7 +5358,7 @@
         "summary": "Update vehicle",
         "description": "Update vehicle information\n\nتحديث معلومات المركبة\n",
         "tags": [
-          "📱 Customer | Vehicles"
+          "Vehicles"
         ],
         "security": [
           {
@@ -7574,7 +5406,7 @@
         "summary": "Delete vehicle",
         "description": "Remove vehicle from user account\n\nحذف المركبة\n",
         "tags": [
-          "📱 Customer | Vehicles"
+          "Vehicles"
         ],
         "security": [
           {
@@ -7603,7 +5435,7 @@
         "summary": "Set as primary vehicle",
         "description": "Set this vehicle as the primary vehicle for bookings\n\nتعيين كمركبة رئيسية\n",
         "tags": [
-          "📱 Customer | Vehicles"
+          "Vehicles"
         ],
         "security": [
           {
@@ -7631,7 +5463,7 @@
       "get": {
         "summary": "Get all vendors (Admin only)",
         "tags": [
-          "📱 Customer | Vendors"
+          "Marketplace Vendors"
         ],
         "security": [
           {
@@ -7654,27 +5486,6 @@
               "type": "string"
             },
             "description": "Search by business name"
-          },
-          {
-            "in": "query",
-            "name": "vendorType",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "AUTO_PARTS",
-                "COMPREHENSIVE_CARE",
-                "CERTIFIED_WORKSHOP",
-                "CAR_WASH",
-                "ADHMN_AKFEEK"
-              ]
-            }
-          },
-          {
-            "in": "query",
-            "name": "isVerified",
-            "schema": {
-              "type": "boolean"
-            }
           },
           {
             "$ref": "#/components/parameters/PageParam"
@@ -7713,7 +5524,7 @@
       "post": {
         "summary": "Create new vendor profile",
         "tags": [
-          "📱 Customer | Vendors"
+          "Marketplace Vendors"
         ],
         "security": [
           {
@@ -7766,53 +5577,11 @@
         }
       }
     },
-    "/api/vendors/coupons": {
-      "get": {
-        "summary": "Get all vendor coupons (Admin Only)",
-        "description": "Retrieve all coupons across all vendors with optional filtering.",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "isActive",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "in": "query",
-            "name": "vendorId",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of all coupons"
-          }
-        }
-      }
-    },
     "/api/vendors/profile/me": {
       "get": {
         "summary": "Get current user's vendor profile",
         "tags": [
-          "📱 Customer | Vendors"
+          "Marketplace Vendors"
         ],
         "security": [
           {
@@ -7841,163 +5610,11 @@
         }
       }
     },
-    "/api/vendors/profile/me/comprehensive-care-bookings": {
-      "get": {
-        "summary": "Get comprehensive care service bookings for current vendor",
-        "tags": [
-          "🏪 Vendor | Comprehensive Care"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of bookings"
-          }
-        }
-      }
-    },
-    "/api/vendors/profile/me/coupons": {
-      "get": {
-        "summary": "Get all coupons for current vendor",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of vendor coupons"
-          }
-        }
-      },
-      "post": {
-        "summary": "Create new coupon for current vendor",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "code",
-                  "discountType",
-                  "discountValue"
-                ],
-                "properties": {
-                  "code": {
-                    "type": "string"
-                  },
-                  "discountType": {
-                    "type": "string",
-                    "enum": [
-                      "PERCENTAGE",
-                      "FIXED"
-                    ]
-                  },
-                  "discountValue": {
-                    "type": "number"
-                  },
-                  "minOrderValue": {
-                    "type": "number"
-                  },
-                  "startDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "endDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "usageLimit": {
-                    "type": "integer"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Coupon created"
-          }
-        }
-      }
-    },
-    "/api/vendors/profile/me/coupons/{id}": {
-      "patch": {
-        "summary": "Update vendor coupon",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Coupon updated"
-          }
-        }
-      },
-      "delete": {
-        "summary": "Delete vendor coupon",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Coupon deleted"
-          }
-        }
-      }
-    },
     "/api/vendors/{id}": {
       "get": {
         "summary": "Get vendor details by ID",
         "tags": [
-          "📱 Customer | Vendors"
+          "Marketplace Vendors"
         ],
         "security": [
           {
@@ -8038,7 +5655,7 @@
       "put": {
         "summary": "Update vendor profile",
         "tags": [
-          "📱 Customer | Vendors"
+          "Marketplace Vendors"
         ],
         "security": [
           {
@@ -8082,7 +5699,7 @@
       "delete": {
         "summary": "Delete vendor (Admin only)",
         "tags": [
-          "📱 Customer | Vendors"
+          "Marketplace Vendors"
         ],
         "security": [
           {
@@ -8110,7 +5727,7 @@
       "get": {
         "summary": "Get vendor statistics",
         "tags": [
-          "📱 Customer | Vendors"
+          "Marketplace Vendors"
         ],
         "security": [
           {
@@ -8134,89 +5751,11 @@
         }
       }
     },
-    "/api/vendors/{id}/reviews": {
-      "get": {
-        "summary": "Get vendor reviews",
-        "tags": [
-          "📱 Customer | Vendors"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of vendor reviews"
-          }
-        }
-      },
-      "post": {
-        "summary": "Submit a review for a vendor",
-        "tags": [
-          "📱 Customer | Vendors"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "rating",
-                  "comment"
-                ],
-                "properties": {
-                  "rating": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 5
-                  },
-                  "comment": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Review submitted"
-          }
-        }
-      }
-    },
     "/api/vendors/{id}/status": {
       "put": {
         "summary": "Update vendor status (Admin only)",
         "tags": [
-          "📱 Customer | Vendors"
+          "Marketplace Vendors"
         ],
         "security": [
           {
@@ -8264,30 +5803,12 @@
         }
       }
     },
-    "/api/wallets": {
-      "get": {
-        "summary": "Get my wallet details",
-        "tags": [
-          "📱 Customer | Wallet"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Wallet and transactions details"
-          }
-        }
-      }
-    },
     "/api/workshops": {
       "get": {
         "summary": "Get all certified workshops",
         "description": "Retrieve a list of active and verified workshops with optional filtering",
         "tags": [
-          "📱 Customer | Workshops"
+          "Certified Workshops"
         ],
         "security": [
           {
@@ -8376,293 +5897,12 @@
         }
       }
     },
-    "/api/workshops/profile/me": {
-      "post": {
-        "summary": "Create my workshop (Vendor)",
-        "description": "الفيندور (نوع ورشة معتمدة) يضيف ورشته بنفسه. الورشة تُنشأ غير معتمدة حتى يتحقق منها الأدمن.\n",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "name",
-                  "city",
-                  "address",
-                  "phone",
-                  "services"
-                ],
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "example": "Al-Salam Auto Center"
-                  },
-                  "nameAr": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "address": {
-                    "type": "string"
-                  },
-                  "city": {
-                    "type": "string"
-                  },
-                  "phone": {
-                    "type": "string"
-                  },
-                  "email": {
-                    "type": "string"
-                  },
-                  "locationUrl": {
-                    "type": "string",
-                    "description": "Google Maps URL to extract lat/lng"
-                  },
-                  "latitude": {
-                    "type": "number"
-                  },
-                  "longitude": {
-                    "type": "number"
-                  },
-                  "workingHours": {
-                    "type": "object"
-                  },
-                  "services": {
-                    "type": "string",
-                    "description": "JSON array of service types"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Workshop created (pending admin verification)"
-          },
-          "400": {
-            "description": "Already have a workshop or validation error"
-          },
-          "403": {
-            "description": "Not a certified workshop vendor"
-          }
-        }
-      },
-      "get": {
-        "summary": "Get my workshop profile",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Workshop profile retrieved"
-          }
-        }
-      },
-      "put": {
-        "summary": "Update my workshop profile",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "nameAr": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "address": {
-                    "type": "string"
-                  },
-                  "city": {
-                    "type": "string"
-                  },
-                  "phone": {
-                    "type": "string"
-                  },
-                  "workingHours": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Workshop profile updated"
-          }
-        }
-      }
-    },
-    "/api/workshops/profile/me/bookings": {
-      "get": {
-        "summary": "Get my workshop bookings",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of workshop bookings"
-          }
-        }
-      }
-    },
-    "/api/workshops/profile/me/logo": {
-      "post": {
-        "summary": "Upload my workshop logo",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Logo uploaded"
-          }
-        }
-      },
-      "delete": {
-        "summary": "Delete my workshop logo",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Logo deleted"
-          }
-        }
-      }
-    },
-    "/api/workshops/profile/me/images": {
-      "post": {
-        "summary": "Upload my workshop images",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "files": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "binary"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Images uploaded"
-          }
-        }
-      }
-    },
-    "/api/workshops/profile/me/images/{imageIndex}": {
-      "delete": {
-        "summary": "Delete my workshop image",
-        "tags": [
-          "🏪 Vendor | Workshop"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "imageIndex",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Image deleted"
-          }
-        }
-      }
-    },
     "/api/workshops/{id}": {
       "get": {
         "summary": "Get workshop details by ID",
         "description": "Retrieve detailed information about a specific certified workshop",
         "tags": [
-          "⚙️ Admin | Workshops"
+          "Certified Workshops"
         ],
         "security": [
           {
@@ -8745,7 +5985,7 @@
         "summary": "Get all workshops (Admin)",
         "description": "Retrieve all workshops without filtering (Admin only)",
         "tags": [
-          "📱 Customer | Workshops"
+          "Certified Workshops - Admin"
         ],
         "security": [
           {
@@ -8805,7 +6045,7 @@
         "summary": "Create new certified workshop (Admin)",
         "description": "Add a new certified workshop to the system",
         "tags": [
-          "📱 Customer | Workshops"
+          "Certified Workshops - Admin"
         ],
         "security": [
           {
@@ -8927,7 +6167,7 @@
         "summary": "Update workshop (Admin)",
         "description": "Update workshop information",
         "tags": [
-          "📱 Customer | Workshops"
+          "Certified Workshops - Admin"
         ],
         "security": [
           {
@@ -8996,7 +6236,7 @@
         "summary": "Delete workshop (Admin)",
         "description": "Delete a certified workshop (only if no active bookings)",
         "tags": [
-          "⚙️ Admin | Workshops"
+          "Certified Workshops - Admin"
         ],
         "security": [
           {
@@ -9034,7 +6274,7 @@
         "summary": "Verify/Unverify workshop (Admin)",
         "description": "Toggle workshop verification status",
         "tags": [
-          "⚙️ Admin | Workshops"
+          "Certified Workshops - Admin"
         ],
         "security": [
           {
@@ -9088,7 +6328,7 @@
         "summary": "Create a review for a workshop",
         "description": "Submit a review and rating for a workshop (requires completed booking for verified reviews)",
         "tags": [
-          "📱 Customer | Workshops"
+          "Workshop Reviews"
         ],
         "security": [
           {
@@ -9155,7 +6395,7 @@
         "summary": "Get workshop reviews",
         "description": "Retrieve all approved reviews for a workshop",
         "tags": [
-          "📱 Customer | Workshops"
+          "Workshop Reviews"
         ],
         "security": [
           {
@@ -9216,7 +6456,7 @@
         "summary": "Get review statistics",
         "description": "Get rating distribution and statistics for a workshop",
         "tags": [
-          "📱 Customer | Workshops"
+          "Workshop Reviews"
         ],
         "security": [
           {
@@ -9245,7 +6485,7 @@
         "summary": "Get workshop reviews (Admin)",
         "description": "Retrieve all reviews including unapproved ones",
         "tags": [
-          "📱 Customer | Workshops"
+          "Workshop Reviews - Admin"
         ],
         "security": [
           {
@@ -9297,7 +6537,7 @@
         "summary": "Update review approval status",
         "description": "Approve or hide a review",
         "tags": [
-          "📱 Customer | Workshops"
+          "Workshop Reviews - Admin"
         ],
         "security": [
           {
@@ -9344,7 +6584,7 @@
         "summary": "Add workshop response to review",
         "description": "Add an official response from the workshop to a review",
         "tags": [
-          "📱 Customer | Workshops"
+          "Workshop Reviews - Admin"
         ],
         "security": [
           {
@@ -9391,7 +6631,7 @@
         "summary": "Delete a review",
         "description": "Permanently delete a review",
         "tags": [
-          "⚙️ Admin | Workshops"
+          "Workshop Reviews - Admin"
         ],
         "security": [
           {
@@ -9420,7 +6660,7 @@
         "summary": "Upload workshop logo",
         "description": "Upload a logo image for a workshop (Admin only)",
         "tags": [
-          "📱 Customer | Workshops"
+          "Workshop Images - Admin"
         ],
         "security": [
           {
@@ -9466,7 +6706,7 @@
         "summary": "Delete workshop logo",
         "description": "Delete the workshop logo (Admin only)",
         "tags": [
-          "⚙️ Admin | Workshops"
+          "Workshop Images - Admin"
         ],
         "security": [
           {
@@ -9498,7 +6738,7 @@
         "summary": "Upload workshop images",
         "description": "Upload multiple images for a workshop (max 10 total, Admin only)",
         "tags": [
-          "📱 Customer | Workshops"
+          "Workshop Images - Admin"
         ],
         "security": [
           {
@@ -9549,7 +6789,7 @@
         "summary": "Delete workshop image",
         "description": "Delete a specific image by index (Admin only)",
         "tags": [
-          "⚙️ Admin | Workshops"
+          "Workshop Images - Admin"
         ],
         "security": [
           {
@@ -9589,7 +6829,7 @@
         "summary": "List all feedbacks (Admin)",
         "description": "Advanced filtering, search, and pagination for admin dashboard.",
         "tags": [
-          "⚙️ Admin | Feedback"
+          "Admin Feedback"
         ],
         "security": [
           {
@@ -9626,7 +6866,7 @@
         "summary": "Update feedback status",
         "description": "Change status (e.g. to RESOLVED). Includes automatic HandledBy assignment.",
         "tags": [
-          "⚙️ Admin | Feedback"
+          "Admin Feedback"
         ],
         "security": [
           {
@@ -9645,7 +6885,7 @@
         "summary": "Reply to a feedback",
         "description": "Post a reply to the customer's complaint or suggestion.",
         "tags": [
-          "⚙️ Admin | Feedback"
+          "Admin Feedback"
         ],
         "security": [
           {
@@ -9664,7 +6904,7 @@
         "summary": "Soft delete feedback",
         "description": "Mark feedback as deleted without removing from database.",
         "tags": [
-          "⚙️ Admin | Feedback"
+          "Admin Feedback"
         ],
         "security": [
           {
@@ -9682,7 +6922,7 @@
       "get": {
         "summary": "Get all wallets with pagination and search",
         "tags": [
-          "⚙️ Admin | Finance"
+          "Wallets"
         ],
         "security": [
           {
@@ -9757,7 +6997,7 @@
       "post": {
         "summary": "Credit a user's wallet",
         "tags": [
-          "⚙️ Admin | Finance"
+          "Wallets"
         ],
         "security": [
           {
@@ -9800,7 +7040,7 @@
       "post": {
         "summary": "Debit a user's wallet",
         "tags": [
-          "⚙️ Admin | Finance"
+          "Wallets"
         ],
         "security": [
           {
@@ -9843,7 +7083,7 @@
       "get": {
         "summary": "Get wallet transactions history",
         "tags": [
-          "⚙️ Admin | Finance"
+          "Wallets"
         ],
         "security": [
           {
@@ -9919,7 +7159,7 @@
       "get": {
         "summary": "Get points audit log",
         "tags": [
-          "⚙️ Admin | Finance"
+          "Wallets"
         ],
         "security": [
           {
@@ -9965,7 +7205,7 @@
       "post": {
         "summary": "Adjust user points (Credit/Debit)",
         "tags": [
-          "⚙️ Admin | Finance"
+          "Wallets"
         ],
         "security": [
           {
@@ -10009,7 +7249,7 @@
       "get": {
         "summary": "Get points conversion rate settings",
         "tags": [
-          "⚙️ Admin | Finance"
+          "Wallets"
         ],
         "security": [
           {
@@ -10048,7 +7288,7 @@
       "post": {
         "summary": "Update points conversion rate settings",
         "tags": [
-          "⚙️ Admin | Finance"
+          "Wallets"
         ],
         "security": [
           {
@@ -10090,7 +7330,7 @@
       "get": {
         "summary": "Get all system settings",
         "tags": [
-          "⚙️ Admin | Settings"
+          "Admin Settings"
         ],
         "security": [
           {
@@ -10126,7 +7366,7 @@
       "get": {
         "summary": "Get towing service settings",
         "tags": [
-          "⚙️ Admin | Settings"
+          "Admin Settings"
         ],
         "security": [
           {
@@ -10181,47 +7421,11 @@
         }
       }
     },
-    "/api/admin/settings/pricing": {
-      "get": {
-        "summary": "Get pricing settings (VAT rate, platform commission %)",
-        "tags": [
-          "⚙️ Admin | Settings"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Pricing settings (VAT_RATE, PLATFORM_COMMISSION_PERCENT)"
-          }
-        }
-      }
-    },
-    "/api/admin/settings/pricing/init": {
-      "post": {
-        "summary": "Create or reset VAT_RATE and PLATFORM_COMMISSION_PERCENT in DB",
-        "tags": [
-          "⚙️ Admin | Settings"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Pricing settings initialized"
-          }
-        }
-      }
-    },
     "/api/admin/settings/{key}": {
       "put": {
         "summary": "Update a system setting",
         "tags": [
-          "⚙️ Admin | Settings"
+          "Admin Settings"
         ],
         "security": [
           {
@@ -10299,11 +7503,285 @@
         }
       }
     },
+    "/api/addresses": {
+      "get": {
+        "summary": "Get user addresses - جلب عناوين المستخدم",
+        "description": "Retrieve all addresses for the authenticated user",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user addresses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Address"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create address - إضافة عنوان جديد",
+        "description": "Create a new address for the authenticated user",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Address created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageAr": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Address"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error - Missing required fields"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/addresses/{id}": {
+      "get": {
+        "summary": "Get address by ID - جلب عنوان بالمعرف",
+        "description": "Retrieve a specific address by ID (must belong to authenticated user)",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Address ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Address details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Address"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Address not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update address - تعديل عنوان",
+        "description": "Update an existing address (must belong to authenticated user)",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Address ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Address updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageAr": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Address"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Address not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete address - حذف عنوان",
+        "description": "Delete an address (must belong to authenticated user)",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Address ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Address deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageAr": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Address not found"
+          }
+        }
+      }
+    },
     "/api/vendor-onboarding/register": {
       "post": {
         "summary": "Register a new vendor (Public)",
         "tags": [
-          "🏪 Vendor | Onboarding"
+          "Vendor Onboarding"
         ],
         "requestBody": {
           "required": true,
@@ -10512,7 +7990,7 @@
       "get": {
         "summary": "List all vendor applications (Admin)",
         "tags": [
-          "🏪 Vendor | Onboarding"
+          "Vendor Onboarding"
         ],
         "security": [
           {
@@ -10545,7 +8023,7 @@
       "patch": {
         "summary": "Update vendor application status (Admin)",
         "tags": [
-          "🏪 Vendor | Onboarding"
+          "Vendor Onboarding"
         ],
         "security": [
           {

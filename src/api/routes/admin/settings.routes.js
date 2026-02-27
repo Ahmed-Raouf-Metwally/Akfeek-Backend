@@ -6,10 +6,17 @@ const requireRole = require('../../middlewares/role.middleware');
 
 /**
  * @swagger
+ * tags:
+ *   name: Admin Settings
+ *   description: System settings management for admin
+ */
+
+/**
+ * @swagger
  * /api/admin/settings:
  *   get:
  *     summary: Get all system settings
- *     tags: [⚙️ Admin | Settings]
+ *     tags: [Admin Settings]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -34,7 +41,7 @@ router.get('/', authMiddleware, requireRole('ADMIN'), settingsController.getAllS
  * /api/admin/settings/towing:
  *   get:
  *     summary: Get towing service settings
- *     tags: [⚙️ Admin | Settings]
+ *     tags: [Admin Settings]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -72,38 +79,10 @@ router.get('/towing', authMiddleware, requireRole('ADMIN'), settingsController.g
 
 /**
  * @swagger
- * /api/admin/settings/pricing:
- *   get:
- *     summary: Get pricing settings (VAT rate, platform commission %)
- *     tags: [⚙️ Admin | Settings]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Pricing settings (VAT_RATE, PLATFORM_COMMISSION_PERCENT)
- */
-router.get('/pricing', authMiddleware, requireRole('ADMIN'), settingsController.getPricingSettings);
-
-/**
- * @swagger
- * /api/admin/settings/pricing/init:
- *   post:
- *     summary: Create or reset VAT_RATE and PLATFORM_COMMISSION_PERCENT in DB
- *     tags: [⚙️ Admin | Settings]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Pricing settings initialized
- */
-router.post('/pricing/init', authMiddleware, requireRole('ADMIN'), settingsController.initPricingSettings);
-
-/**
- * @swagger
  * /api/admin/settings/{key}:
  *   put:
  *     summary: Update a system setting
- *     tags: [⚙️ Admin | Settings]
+ *     tags: [Admin Settings]
  *     security:
  *       - bearerAuth: []
  *     parameters:

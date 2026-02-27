@@ -17,7 +17,7 @@ router.use(requireRole(['TECHNICIAN']));
  *       Fetch all active car wash requests within the technician's service radius.
  *       
  *       جلب جميع طلبات غسيل السيارات النشطة في نطاق خدمة الفني
- *     tags: [🔧 Technician | Car Wash Jobs]
+ *     tags: [Technician Car Wash]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -72,7 +72,7 @@ router.get('/broadcasts', technicianCarWashController.getBroadcasts);
  *       Submit a price and ETA offer for a specific car wash job broadcast.
  *       
  *       تقديم عرض سعر ووقت وصول لطلب غسيل سيارة محدد
- *     tags: [🔧 Technician | Car Wash Jobs]
+ *     tags: [Technician Car Wash]
  *     security:
  *       - bearerAuth: []
  *     parameters:

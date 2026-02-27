@@ -46,9 +46,10 @@
  *           type: string
  *         slug:
  *           type: string
- *         vehicleType:
+ *         parentId:
  *           type: string
- *           enum: [SEDAN, HATCHBACK, COUPE, SMALL_SUV, LARGE_SEDAN, SUV, CROSSOVER, TRUCK, MOTORCYCLE, HEAVY_EQUIPMENT]
+ *           format: uuid
+ *           nullable: true
  *         icon:
  *           type: string
  *         isActive:

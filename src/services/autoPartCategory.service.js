@@ -13,24 +13,31 @@ class AutoPartCategoryService {
    * @returns {Array} List of categories
    */
   async getAllCategories(filters = {}) {
-    const { isActive, vehicleType } = filters;
-    let vehicleTypeQuery = undefined;
-    if (vehicleType) {
-      if (vehicleType === 'CAR') {
-        vehicleTypeQuery = { in: ['SEDAN', 'HATCHBACK', 'COUPE', 'SMALL_SUV', 'LARGE_SEDAN', 'SUV', 'CROSSOVER', 'TRUCK'] };
-      } else {
-        vehicleTypeQuery = vehicleType;
-      }
-    }
+    const { isActive, parentId } = filters;
 
     const where = {
       ...(isActive !== undefined && { isActive: isActive === 'true' }),
-      ...(vehicleTypeQuery && { vehicleType: vehicleTypeQuery }),
+      ...(parentId !== undefined && { parentId: parentId === 'null' ? null : parentId }),
     };
 
     const categories = await prisma.autoPartCategory.findMany({
       where,
       include: {
+        parent: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+          },
+        },
+        children: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            isActive: true,
+          },
+        },
         _count: {
           select: {
             parts: true,
@@ -52,6 +59,8 @@ class AutoPartCategoryService {
     const category = await prisma.autoPartCategory.findUnique({
       where: { id },
       include: {
+        parent: true,
+        children: true,
         _count: {
           select: {
             parts: true,
@@ -68,27 +77,24 @@ class AutoPartCategoryService {
   }
 
   /**
-   * Get category tree (Now just returns filtered list as categories are flat)
-   * @param {Object} filters
-   * @returns {Array} List of categories
+   * Get category tree (hierarchical structure)
+   * @returns {Array} Category tree
    */
-  async getCategoryTree(filters = {}) {
-    const { vehicleType } = filters;
-    let vehicleTypeQuery = undefined;
-    if (vehicleType) {
-      if (vehicleType === 'CAR') {
-        vehicleTypeQuery = { in: ['SEDAN', 'HATCHBACK', 'COUPE', 'SMALL_SUV', 'LARGE_SEDAN', 'SUV', 'CROSSOVER', 'TRUCK'] };
-      } else {
-        vehicleTypeQuery = vehicleType;
-      }
-    }
-
+  async getCategoryTree() {
+    // Get all categories
     const categories = await prisma.autoPartCategory.findMany({
-      where: {
-        isActive: true,
-        ...(vehicleTypeQuery && { vehicleType: vehicleTypeQuery }),
-      },
+      where: { isActive: true },
       include: {
+        children: {
+          where: { isActive: true },
+          include: {
+            _count: {
+              select: {
+                parts: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             parts: true,
@@ -98,7 +104,10 @@ class AutoPartCategoryService {
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
 
-    return categories;
+    // Filter to get only root categories (those without a parent)
+    const tree = categories.filter((cat) => !cat.parentId);
+
+    return tree;
   }
 
   /**
@@ -114,10 +123,15 @@ class AutoPartCategoryService {
       descriptionAr,
       icon,
       imageUrl,
-      vehicleType,
+      parentId,
       isActive,
       sortOrder,
     } = data;
+
+    // Validate parent category if provided
+    if (parentId) {
+      await this.getCategoryById(parentId);
+    }
 
     const category = await prisma.autoPartCategory.create({
       data: {
@@ -127,10 +141,13 @@ class AutoPartCategoryService {
         descriptionAr,
         icon,
         imageUrl,
-        vehicleType: vehicleType || 'SEDAN',
+        parentId: parentId || null,
         isActive: isActive !== undefined ? isActive : true,
         sortOrder: sortOrder !== undefined ? parseInt(sortOrder) : 0,
-      }
+      },
+      include: {
+        parent: true,
+      },
     });
 
     logger.info(`Auto part category created: ${category.name}`);
@@ -153,10 +170,24 @@ class AutoPartCategoryService {
       descriptionAr,
       icon,
       imageUrl,
-      vehicleType,
+      parentId,
       isActive,
       sortOrder,
     } = data;
+
+    // Prevent circular parent reference
+    if (parentId === id) {
+      throw new AppError(
+        'Category cannot be its own parent',
+        400,
+        'INVALID_PARENT'
+      );
+    }
+
+    // Validate parent if changing
+    if (parentId && parentId !== 'null') {
+      await this.getCategoryById(parentId);
+    }
 
     const category = await prisma.autoPartCategory.update({
       where: { id },
@@ -167,10 +198,15 @@ class AutoPartCategoryService {
         ...(descriptionAr !== undefined && { descriptionAr }),
         ...(icon !== undefined && { icon }),
         ...(imageUrl !== undefined && { imageUrl }),
-        ...(vehicleType !== undefined && { vehicleType }),
+        ...(parentId !== undefined && {
+          parentId: parentId === 'null' ? null : parentId,
+        }),
         ...(isActive !== undefined && { isActive }),
         ...(sortOrder !== undefined && { sortOrder: parseInt(sortOrder) }),
-      }
+      },
+      include: {
+        parent: true,
+      },
     });
 
     logger.info(`Auto part category updated: ${id}`);
@@ -183,6 +219,15 @@ class AutoPartCategoryService {
    */
   async deleteCategory(id) {
     const category = await this.getCategoryById(id);
+
+    // Check if category has child categories
+    if (category.children && category.children.length > 0) {
+      throw new AppError(
+        'Cannot delete category with sub-categories',
+        400,
+        'HAS_CHILDREN'
+      );
+    }
 
     // Check if category has parts
     if (category._count.parts > 0) {

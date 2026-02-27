@@ -197,38 +197,6 @@ class WorkshopController {
     }
 
     /**
-     * Create current vendor's workshop (VENDOR with CERTIFIED_WORKSHOP only)
-     * POST /api/workshops/profile/me
-     */
-    async createMyWorkshop(req, res, next) {
-        try {
-            const payload = { ...req.body };
-            if (payload.locationUrl) {
-                const coords = await parseGoogleMapsUrl(payload.locationUrl);
-                if (coords && coords.latitude && coords.longitude) {
-                    payload.latitude = coords.latitude;
-                    payload.longitude = coords.longitude;
-                } else {
-                    throw new Error('Invalid Google Maps URL. Could not extract coordinates.');
-                }
-                delete payload.locationUrl;
-            }
-            if (!payload.latitude || !payload.longitude) {
-                throw new Error('Location is required. Please provide a valid Google Maps URL or latitude/longitude.');
-            }
-            const workshop = await workshopService.createWorkshopByVendor(req.user.id, payload);
-            res.status(201).json({
-                success: true,
-                message: 'Workshop created successfully. It will be verified by admin.',
-                messageAr: 'تم إنشاء الورشة بنجاح. سيتم التحقق منها من قبل الإدارة.',
-                data: workshop
-            });
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    /**
      * Get current vendor's workshop (VENDOR with CERTIFIED_WORKSHOP only)
      * GET /api/workshops/profile/me
      */

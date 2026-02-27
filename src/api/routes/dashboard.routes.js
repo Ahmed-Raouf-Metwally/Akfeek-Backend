@@ -5,21 +5,7 @@ const authenticate = require('../middlewares/auth.middleware');
 const authorize = require('../middlewares/role.middleware');
 
 router.use(authenticate);
-
-/**
- * @swagger
- * /api/dashboard/stats:
- *   get:
- *     summary: Get dashboard statistics overview
- *     description: Retrieve key metrics like total users, bookings, revenue, etc.
- *     tags: [⚙️ Admin | Dashboard]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Dashboard statistics
- */
+// Admin and Vendor can see dashboard stats (Vendor sees same aggregate for now)
 router.get('/stats', authorize(['ADMIN', 'VENDOR']), dashboardController.getStats);
 
 module.exports = router;
-

@@ -17,8 +17,7 @@ class VendorController {
         const validatedData = registerVendorSchema.safeParse(req.body);
 
         if (!validatedData.success) {
-            const issues = validatedData.error.issues || [];
-            const errorDetails = issues.map(err => ({
+            const errorDetails = validatedData.error.errors.map(err => ({
                 field: err.path.join('.'),
                 message: err.message
             }));

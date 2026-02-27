@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const modelController = require('../controllers/model.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
@@ -9,35 +9,35 @@ const roleMiddleware = require('../middlewares/role.middleware');
  * /api/models:
  *   get:
  *     summary: Get all vehicle models
- *     description: Retrieve vehicle models with optional filters - ???? ??? ??????? ???????? ?? ????? ????????
- *     tags: [🔓 Brands & Models]
+ *     description: Retrieve vehicle models with optional filters - احصل على موديلات المركبات مع فلاتر اختيارية
+ *     tags: [Vehicle Models]
  *     parameters:
  *       - in: query
  *         name: brandId
  *         schema:
  *           type: string
- *         description: Filter by brand ID - ????? ??? ???? ???????
+ *         description: Filter by brand ID - تصفية حسب معرف الماركة
  *       - in: query
  *         name: year
  *         schema:
  *           type: integer
- *         description: Filter by year - ????? ??? ?????
+ *         description: Filter by year - تصفية حسب السنة
  *         example: 2023
  *       - in: query
  *         name: size
  *         schema:
  *           type: string
  *           enum: [SMALL, MEDIUM, LARGE, EXTRA_LARGE]
- *         description: Filter by size - ????? ??? ?????
+ *         description: Filter by size - تصفية حسب الحجم
  *       - in: query
  *         name: activeOnly
  *         schema:
  *           type: boolean
  *           default: true
- *         description: Only active models - ????????? ?????? ???
+ *         description: Only active models - الموديلات النشطة فقط
  *     responses:
  *       200:
- *         description: Successfully retrieved models - ?? ??? ????????? ?????
+ *         description: Successfully retrieved models - تم جلب الموديلات بنجاح
  *         content:
  *           application/json:
  *             schema:
@@ -60,7 +60,7 @@ const roleMiddleware = require('../middlewares/role.middleware');
  *                         example: "Camry"
  *                       nameAr:
  *                         type: string
- *                         example: "?????"
+ *                         example: "كامري"
  *                       year:
  *                         type: integer
  *                         example: 2023
@@ -81,7 +81,7 @@ const roleMiddleware = require('../middlewares/role.middleware');
  *                             example: "Toyota"
  *                           nameAr:
  *                             type: string
- *                             example: "??????"
+ *                             example: "تويوتا"
  *                       _count:
  *                         type: object
  *                         properties:
@@ -103,20 +103,20 @@ router.get('/', modelController.getAllModels);
  * /api/models/{id}:
  *   get:
  *     summary: Get model by ID
- *     description: Retrieve a specific vehicle model - ???? ??? ????? ????
- *     tags: [🔓 Brands & Models]
+ *     description: Retrieve a specific vehicle model - احصل على موديل محدد
+ *     tags: [Vehicle Models]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Model ID - ???? ???????
+ *         description: Model ID - معرف الموديل
  *     responses:
  *       200:
- *         description: Model found - ?? ?????? ??? ???????
+ *         description: Model found - تم العثور على الموديل
  *       404:
- *         description: Model not found - ??????? ??? ?????
+ *         description: Model not found - الموديل غير موجود
  */
 router.get('/:id', modelController.getModelById);
 
@@ -128,8 +128,8 @@ router.use(authMiddleware);
  * /api/models:
  *   post:
  *     summary: Create new model (Admin only)
- *     description: Create a new vehicle model - ????? ????? ????? ????
- *     tags: [⚙️ Admin | Brands & Models]
+ *     description: Create a new vehicle model - إنشاء موديل مركبة جديد
+ *     tags: [Vehicle Models]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -146,37 +146,37 @@ router.use(authMiddleware);
  *             properties:
  *               brandId:
  *                 type: string
- *                 description: Brand ID - ???? ???????
+ *                 description: Brand ID - معرف الماركة
  *               name:
  *                 type: string
  *                 example: "Camry"
- *                 description: Model name - ??? ???????
+ *                 description: Model name - اسم الموديل
  *               nameAr:
  *                 type: string
- *                 example: "?????"
- *                 description: Arabic model name - ??? ??????? ????????
+ *                 example: "كامري"
+ *                 description: Arabic model name - اسم الموديل بالعربية
  *               year:
  *                 type: integer
  *                 example: 2023
- *                 description: Model year - ??? ???????
+ *                 description: Model year - سنة الموديل
  *               size:
  *                 type: string
  *                 enum: [SMALL, MEDIUM, LARGE, EXTRA_LARGE]
  *                 example: "MEDIUM"
- *                 description: Vehicle size - ??? ???????
+ *                 description: Vehicle size - حجم المركبة
  *               imageUrl:
  *                 type: string
  *                 nullable: true
- *                 description: Model image URL - ???? ???? ???????
+ *                 description: Model image URL - رابط صورة الموديل
  *     responses:
  *       201:
- *         description: Model created successfully - ?? ????? ??????? ?????
+ *         description: Model created successfully - تم إنشاء الموديل بنجاح
  *       400:
- *         description: Validation error - ??? ?? ??????
+ *         description: Validation error - خطأ في التحقق
  *       404:
- *         description: Brand not found - ??????? ??? ??????
+ *         description: Brand not found - الماركة غير موجودة
  *       409:
- *         description: Model already exists - ??????? ????? ??????
+ *         description: Model already exists - الموديل موجود بالفعل
  */
 router.post('/',
     roleMiddleware(['ADMIN']),
@@ -188,8 +188,8 @@ router.post('/',
  * /api/models/{id}:
  *   patch:
  *     summary: Update model (Admin only)
- *     description: Update an existing model - ????? ????? ?????
- *     tags: [⚙️ Admin | Brands & Models]
+ *     description: Update an existing model - تحديث موديل موجود
+ *     tags: [Vehicle Models]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -198,7 +198,7 @@ router.post('/',
  *         required: true
  *         schema:
  *           type: string
- *         description: Model ID - ???? ???????
+ *         description: Model ID - معرف الموديل
  *     requestBody:
  *       content:
  *         application/json:
@@ -223,11 +223,11 @@ router.post('/',
  *                 type: boolean
  *     responses:
  *       200:
- *         description: Model updated successfully - ?? ????? ??????? ?????
+ *         description: Model updated successfully - تم تحديث الموديل بنجاح
  *       404:
- *         description: Model not found - ??????? ??? ?????
+ *         description: Model not found - الموديل غير موجود
  *       409:
- *         description: Model with these details already exists - ??????? ???? ???????? ????? ??????
+ *         description: Model with these details already exists - الموديل بهذه التفاصيل موجود بالفعل
  */
 router.patch('/:id',
     roleMiddleware(['ADMIN']),
@@ -239,8 +239,8 @@ router.patch('/:id',
  * /api/models/{id}:
  *   delete:
  *     summary: Delete model (Admin only)
- *     description: Delete a model (soft delete by default) - ??? ????? (??? ???????)
- *     tags: [⚙️ Admin | Brands & Models]
+ *     description: Delete a model (soft delete by default) - حذف موديل (حفظ افتراضي)
+ *     tags: [Vehicle Models]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -249,18 +249,18 @@ router.patch('/:id',
  *         required: true
  *         schema:
  *           type: string
- *         description: Model ID - ???? ???????
+ *         description: Model ID - معرف الموديل
  *       - in: query
  *         name: hardDelete
  *         schema:
  *           type: boolean
  *           default: false
- *         description: Permanently delete model - ??? ????? ???????
+ *         description: Permanently delete model - حذف نهائي للموديل
  *     responses:
  *       200:
- *         description: Model deleted/deactivated - ?? ???/????? ???????
+ *         description: Model deleted/deactivated - تم حذف/تعطيل الموديل
  *       404:
- *         description: Model not found - ??????? ??? ?????
+ *         description: Model not found - الموديل غير موجود
  */
 router.delete('/:id',
     roleMiddleware(['ADMIN']),
