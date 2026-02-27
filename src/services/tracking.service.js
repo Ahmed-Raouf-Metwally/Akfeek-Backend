@@ -16,7 +16,7 @@ class TrackingService {
      * @returns {Promise<object>} Updated location and ETA if on job
      */
     async updateTechnicianLocation(technicianId, locationData) {
-        const { latitude, longitude, heading, speed, accuracy, bookingId } = locationData;
+        const { latitude, longitude, heading, speed, accuracy, bookingId, technicalSupportRequestId } = locationData;
 
         // Validate coordinates
         if (!this.isValidCoordinate(latitude, longitude)) {
@@ -24,7 +24,7 @@ class TrackingService {
         }
 
         // Determine status based on whether technician is on a job
-        const status = bookingId ? 'ON_JOB' : 'ONLINE';
+        const status = (bookingId || technicalSupportRequestId) ? 'ON_JOB' : 'ONLINE';
 
         // Store location in database
         const location = await prisma.technicianLocation.create({
@@ -35,7 +35,8 @@ class TrackingService {
                 heading,
                 speed,
                 accuracy,
-                bookingId,
+                bookingId: bookingId || null,
+                technicalSupportRequestId: technicalSupportRequestId || null,
                 status
             }
         });
@@ -43,6 +44,7 @@ class TrackingService {
         logger.info('Technician location updated', {
             technicianId,
             bookingId,
+            technicalSupportRequestId,
             latitude,
             longitude
         });

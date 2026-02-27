@@ -12,7 +12,7 @@ router.use(authMiddleware);
  * /api/vendors:
  *   get:
  *     summary: Get all vendors (Admin only)
- *     tags: [Marketplace Vendors]
+ *     tags: [📱 Customer | Vendors]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -26,6 +26,15 @@ router.use(authMiddleware);
  *         schema:
  *           type: string
  *         description: Search by business name
+ *       - in: query
+ *         name: vendorType
+ *         schema:
+ *           type: string
+ *           enum: [AUTO_PARTS, COMPREHENSIVE_CARE, CERTIFIED_WORKSHOP, CAR_WASH, ADHMN_AKFEEK]
+ *       - in: query
+ *         name: isVerified
+ *         schema:
+ *           type: boolean
  *       - $ref: '#/components/parameters/PageParam'
  *       - $ref: '#/components/parameters/LimitParam'
  *     responses:
@@ -49,10 +58,35 @@ router.get('/', requireRole('ADMIN'), vendorController.getAllVendors);
 
 /**
  * @swagger
+ * /api/vendors/coupons:
+ *   get:
+ *     summary: Get all vendor coupons (Admin Only)
+ *     description: Retrieve all coupons across all vendors with optional filtering.
+ *     tags: [🏪 Vendor | Workshop]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: isActive
+ *         schema: { type: boolean }
+ *       - in: query
+ *         name: vendorId
+ *         schema: { type: string }
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: List of all coupons
+ */
+router.get('/coupons', requireRole('ADMIN'), vendorController.getAllCoupons);
+
+/**
+ * @swagger
  * /api/vendors/profile/me:
  *   get:
  *     summary: Get current user's vendor profile
- *     tags: [Marketplace Vendors]
+ *     tags: [📱 Customer | Vendors]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -72,10 +106,95 @@ router.get('/profile/me', requireRole('VENDOR'), vendorController.getMyVendorPro
 
 /**
  * @swagger
+ * /api/vendors/profile/me/comprehensive-care-bookings:
+ *   get:
+ *     summary: Get comprehensive care service bookings for current vendor
+ *     tags: [🏪 Vendor | Comprehensive Care]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of bookings
+ */
+router.get('/profile/me/comprehensive-care-bookings', requireRole('VENDOR'), vendorController.getMyComprehensiveCareBookings);
+
+/**
+ * @swagger
+ * /api/vendors/profile/me/coupons:
+ *   get:
+ *     summary: Get all coupons for current vendor
+ *     tags: [🏪 Vendor | Workshop]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of vendor coupons
+ *   post:
+ *     summary: Create new coupon for current vendor
+ *     tags: [🏪 Vendor | Workshop]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [code, discountType, discountValue]
+ *             properties:
+ *               code: { type: string }
+ *               discountType: { type: string, enum: [PERCENTAGE, FIXED] }
+ *               discountValue: { type: number }
+ *               minOrderValue: { type: number }
+ *               startDate: { type: string, format: date-time }
+ *               endDate: { type: string, format: date-time }
+ *               usageLimit: { type: integer }
+ *     responses:
+ *       201:
+ *         description: Coupon created
+ */
+router.get('/profile/me/coupons', requireRole('VENDOR'), vendorController.getMyCoupons);
+router.post('/profile/me/coupons', requireRole('VENDOR'), vendorController.createMyCoupon);
+
+/**
+ * @swagger
+ * /api/vendors/profile/me/coupons/{id}:
+ *   patch:
+ *     summary: Update vendor coupon
+ *     tags: [🏪 Vendor | Workshop]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Coupon updated
+ *   delete:
+ *     summary: Delete vendor coupon
+ *     tags: [🏪 Vendor | Workshop]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Coupon deleted
+ */
+router.patch('/profile/me/coupons/:id', requireRole('VENDOR'), vendorController.updateMyCoupon);
+router.delete('/profile/me/coupons/:id', requireRole('VENDOR'), vendorController.deleteMyCoupon);
+
+/**
+ * @swagger
  * /api/vendors/{id}:
  *   get:
  *     summary: Get vendor details by ID
- *     tags: [Marketplace Vendors]
+ *     tags: [📱 Customer | Vendors]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -104,7 +223,7 @@ router.get('/:id', vendorController.getVendorById);
  * /api/vendors/{id}/stats:
  *   get:
  *     summary: Get vendor statistics
- *     tags: [Marketplace Vendors]
+ *     tags: [📱 Customer | Vendors]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -121,10 +240,53 @@ router.get('/:id/stats', vendorController.getVendorStats);
 
 /**
  * @swagger
+ * /api/vendors/{id}/reviews:
+ *   get:
+ *     summary: Get vendor reviews
+ *     tags: [📱 Customer | Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: List of vendor reviews
+ *   post:
+ *     summary: Submit a review for a vendor
+ *     tags: [📱 Customer | Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [rating, comment]
+ *             properties:
+ *               rating: { type: integer, minimum: 1, maximum: 5 }
+ *               comment: { type: string }
+ *     responses:
+ *       201:
+ *         description: Review submitted
+ */
+router.get('/:id/reviews', vendorController.getVendorReviews);
+router.post('/:id/reviews', vendorController.submitVendorReview);
+
+/**
+ * @swagger
  * /api/vendors:
  *   post:
  *     summary: Create new vendor profile
- *     tags: [Marketplace Vendors]
+ *     tags: [📱 Customer | Vendors]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -161,7 +323,7 @@ router.post('/', vendorController.createVendor);
  * /api/vendors/{id}:
  *   put:
  *     summary: Update vendor profile
- *     tags: [Marketplace Vendors]
+ *     tags: [📱 Customer | Vendors]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -192,7 +354,7 @@ router.put('/:id', vendorController.updateVendor);
  * /api/vendors/{id}/status:
  *   put:
  *     summary: Update vendor status (Admin only)
- *     tags: [Marketplace Vendors]
+ *     tags: [📱 Customer | Vendors]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -223,7 +385,7 @@ router.put('/:id/status', requireRole('ADMIN'), vendorController.updateVendorSta
  * /api/vendors/{id}:
  *   delete:
  *     summary: Delete vendor (Admin only)
- *     tags: [Marketplace Vendors]
+ *     tags: [📱 Customer | Vendors]
  *     security:
  *       - bearerAuth: []
  *     parameters:

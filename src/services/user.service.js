@@ -1,3 +1,4 @@
+const bcrypt = require('bcrypt');
 const prisma = require('../utils/database/prisma');
 const { AppError } = require('../api/middlewares/error.middleware');
 const logger = require('../utils/logger/logger');
@@ -290,6 +291,36 @@ class UserService {
     logger.info(`User ${userId} status updated to: ${status}`);
 
     return user;
+  }
+
+  /**
+   * Change user password
+   * @param {string} userId
+   * @param {string} currentPassword
+   * @param {string} newPassword
+   */
+  async changePassword(userId, currentPassword, newPassword) {
+    if (!currentPassword || !newPassword) {
+      throw new AppError('Current and new passwords are required', 400, 'VALIDATION_ERROR');
+    }
+    if (newPassword.length < 8) {
+      throw new AppError('New password must be at least 8 characters', 400, 'VALIDATION_ERROR');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, passwordHash: true },
+    });
+    if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) {
+      throw new AppError('Current password is incorrect', 400, 'INVALID_PASSWORD');
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+    logger.info(`Password changed for user ${userId}`);
   }
 
   /**

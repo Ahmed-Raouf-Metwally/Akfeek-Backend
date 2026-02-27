@@ -1,5 +1,5 @@
 const prisma = require('../../utils/database/prisma');
-const { getSettingsByCategory, updateSystemSetting } = require('../../utils/systemSettings');
+const { getSettingsByCategory, updateSystemSetting, ensurePricingSettings } = require('../../utils/systemSettings');
 const { AppError } = require('../middlewares/error.middleware');
 
 class SettingsController {
@@ -25,6 +25,51 @@ class SettingsController {
             res.json({
                 success: true,
                 data: formattedSettings
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Get pricing settings (VAT, platform commission)
+     * GET /api/admin/settings/pricing
+     */
+    async getPricingSettings(req, res, next) {
+        try {
+            const settings = await getSettingsByCategory('PRICING');
+
+            const formattedSettings = settings.map(s => ({
+                key: s.key,
+                value: s.value,
+                type: s.type,
+                description: s.description,
+                descriptionAr: s.descriptionAr,
+                isEditable: s.isEditable,
+                updatedAt: s.updatedAt
+            }));
+
+            res.json({
+                success: true,
+                data: formattedSettings
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Ensure pricing settings exist in DB (VAT_RATE, PLATFORM_COMMISSION_PERCENT). Creates them if missing.
+     * POST /api/admin/settings/pricing/init
+     */
+    async initPricingSettings(req, res, next) {
+        try {
+            const settings = await ensurePricingSettings();
+            res.json({
+                success: true,
+                message: 'Pricing settings initialized',
+                messageAr: 'تم تهيئة إعدادات التسعير',
+                data: settings.map(s => ({ key: s.key, value: s.value, updatedAt: s.updatedAt }))
             });
         } catch (error) {
             next(error);

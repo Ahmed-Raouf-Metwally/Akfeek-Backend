@@ -5,7 +5,21 @@ const authenticate = require('../middlewares/auth.middleware');
 const authorize = require('../middlewares/role.middleware');
 
 router.use(authenticate);
-// Only Admin should see full dashboard stats
-router.get('/stats', authorize('ADMIN'), dashboardController.getStats);
+
+/**
+ * @swagger
+ * /api/dashboard/stats:
+ *   get:
+ *     summary: Get dashboard statistics overview
+ *     description: Retrieve key metrics like total users, bookings, revenue, etc.
+ *     tags: [⚙️ Admin | Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard statistics
+ */
+router.get('/stats', authorize(['ADMIN', 'VENDOR']), dashboardController.getStats);
 
 module.exports = router;
+

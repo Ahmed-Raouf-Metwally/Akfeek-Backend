@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { AppError } = require('../api/middlewares/error.middleware');
+const { getVatRate } = require('../utils/pricing');
 
 exports.createOrder = async (userId, data) => {
   const { items, shippingAddress, paymentMethod } = data;
@@ -42,7 +43,8 @@ exports.createOrder = async (userId, data) => {
   }
 
   const shippingCost = 25.00; // Flat rate for now
-  const tax = subtotal * 0.15; // 15% VAT
+  const vatRate = await getVatRate();
+  const tax = Math.round(subtotal * vatRate * 100) / 100;
   const totalAmount = subtotal + tax + shippingCost;
   const discount = 0;
 
@@ -146,11 +148,11 @@ exports.getVendorOrders = async (userId, query) => {
   const where = {
     items: {
       some: {
-         vendorId: vendorProfile.id
+        vendorId: vendorProfile.id
       }
     }
   };
-  
+
   if (status) where.status = status; // Filter by global order status, or maybe item status? Usually vendors care about their item status.
 
   const [orders, total] = await Promise.all([
@@ -247,8 +249,8 @@ exports.updateOrderStatus = async (id, status, currentUser) => {
       where: { id },
       data: { status }
     });
-  } 
-  
+  }
+
   throw new AppError('Unauthorized', 403);
 };
 
@@ -273,5 +275,102 @@ exports.updateOrderItemStatus = async (orderId, itemId, status, currentUser) => 
   return await prisma.marketplaceOrderItem.update({
     where: { id: itemId },
     data: { status }
+  });
+};
+
+exports.updateOrder = async (orderId, userId, data, currentUser) => {
+  const { items, shippingAddress, paymentMethod, notes } = data;
+
+  // 1. Fetch existing order
+  const order = await prisma.marketplaceOrder.findUnique({
+    where: { id: orderId },
+    include: { items: true }
+  });
+
+  if (!order) throw new AppError('Order not found', 404);
+
+  // 2. Authorization & Status Check
+  if (currentUser.role !== 'ADMIN') {
+    if (order.customerId !== userId) throw new AppError('Unauthorized', 403);
+    if (order.status !== 'PENDING' || order.paymentStatus !== 'PENDING') {
+      throw new AppError('Order cannot be modified after payment or processing', 400);
+    }
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    // 3. Update Address / Basic Info if provided
+    const updateData = {};
+    if (shippingAddress) {
+      updateData.shippingAddress = shippingAddress.address;
+      updateData.shippingCity = shippingAddress.city;
+      updateData.shippingCountry = shippingAddress.country || 'SA';
+      updateData.recipientName = shippingAddress.name;
+      updateData.recipientPhone = shippingAddress.phone;
+    }
+    if (paymentMethod) updateData.paymentMethod = paymentMethod;
+    if (notes !== undefined) updateData.notes = notes;
+
+    // 4. Update Items if provided
+    if (items) {
+      // Revert old stock
+      for (const oldItem of order.items) {
+        await tx.autoPart.update({
+          where: { id: oldItem.autoPartId },
+          data: { stockQuantity: { increment: oldItem.quantity } }
+        });
+      }
+
+      // Delete old items
+      await tx.marketplaceOrderItem.deleteMany({ where: { orderId } });
+
+      // Validate and calculate new items
+      let subtotal = 0;
+      const orderItemsData = [];
+
+      for (const item of items) {
+        const part = await tx.autoPart.findUnique({
+          where: { id: item.autoPartId }
+        });
+
+        if (!part) throw new AppError(`Product not found: ${item.autoPartId}`, 404);
+        if (part.stockQuantity < item.quantity) {
+          throw new AppError(`Insufficient stock for ${part.name}. Available: ${part.stockQuantity}`, 400);
+        }
+
+        const itemTotal = Number(part.price) * item.quantity;
+        subtotal += itemTotal;
+
+        orderItemsData.push({
+          autoPartId: part.id,
+          vendorId: part.vendorId,
+          quantity: item.quantity,
+          unitPrice: part.price,
+          totalPrice: itemTotal,
+          status: 'PENDING'
+        });
+
+        // Decrement new stock
+        await tx.autoPart.update({
+          where: { id: part.id },
+          data: { stockQuantity: { decrement: item.quantity } }
+        });
+      }
+
+      const shippingCost = 25.00;
+      const vatRate = await getVatRate();
+      const tax = Math.round(subtotal * vatRate * 100) / 100;
+      const totalAmount = subtotal + tax + shippingCost;
+
+      updateData.subtotal = subtotal;
+      updateData.tax = tax;
+      updateData.totalAmount = totalAmount;
+      updateData.items = { create: orderItemsData };
+    }
+
+    return await tx.marketplaceOrder.update({
+      where: { id: orderId },
+      data: updateData,
+      include: { items: true }
+    });
   });
 };

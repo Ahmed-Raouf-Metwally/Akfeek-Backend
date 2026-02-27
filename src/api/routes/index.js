@@ -8,7 +8,6 @@ const modelRoutes = require('./models.routes');
 const userRoutes = require('./users.routes');
 const vehicleRoutes = require('./vehicles.routes');
 const serviceRoutes = require('./services.routes');
-const productRoutes = require('./products.routes');
 const bookingRoutes = require('./bookings.routes');
 const broadcastRoutes = require('./broadcasts.routes');
 const inspectionRoutes = require('./inspections.routes');
@@ -22,12 +21,16 @@ const addressRoutes = require('./addresses.routes');
 const adminSettingsRoutes = require('./admin/settings.routes');
 const towingRoutes = require('./towing.routes');
 const technicianTowingRoutes = require('./technicianTowing.routes');
+const feedbackRoutes = require('./feedback.routes');
+const feedbackAdminRoutes = require('./admin/feedback.admin.routes');
+const technicalSupportRoutes = require('./technicalSupport.routes');
 
 // Auto Parts Marketplace routes
 const vendorRoutes = require('./vendors.routes');
 const autoPartCategoryRoutes = require('./autoPartCategories.routes');
 const autoPartRoutes = require('./autoParts.routes');
 const marketplaceOrderRoutes = require('./marketplaceOrders.routes');
+const cartRoutes = require('./cart.routes');
 const workshopRoutes = require('./workshops.routes');
 
 // ... existing routes
@@ -40,6 +43,7 @@ router.use('/vendors', vendorRoutes);
 router.use('/auto-part-categories', autoPartCategoryRoutes);
 router.use('/auto-parts', autoPartRoutes);
 router.use('/marketplace-orders', marketplaceOrderRoutes);
+router.use('/cart', cartRoutes);
 
 // Certified Workshops routes
 router.use('/workshops', workshopRoutes);
@@ -65,12 +69,15 @@ router.use('/technician/carwash', technicianCarWashRoutes);
 const mobileCarServiceRoutes = require('./mobileCarService.routes');
 router.use('/mobile-car-service', mobileCarServiceRoutes);
 
+// Comprehensive Care Service (العناية الشاملة)
+const comprehensiveCareRoutes = require('./comprehensiveCare.routes');
+router.use('/comprehensive-care', comprehensiveCareRoutes);
+
 // Protected routes (authentication required)
 // These will have auth middleware applied in individual route files
 router.use('/users', userRoutes);
 router.use('/vehicles', vehicleRoutes);
 router.use('/services', serviceRoutes);
-router.use('/products', productRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/broadcasts', broadcastRoutes);
 router.use('/inspections', inspectionRoutes);
@@ -81,16 +88,29 @@ router.use('/wallets', walletRoutes);
 router.use('/ratings', ratingRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/addresses', addressRoutes);
+router.use('/feedback', feedbackRoutes);
+router.use('/technical-support-requests', technicalSupportRoutes);
 router.use('/activity', require('./activity.routes'));
 
 // Tracking routes (real-time location)
 const trackingRoutes = require('./tracking.routes');
 router.use('/technician/tracking', trackingRoutes);
+
+// فني اكفيك (خدمات عامة): حجوزاتي المعينة لي + طلبات الدعم الفني المعينة لي
+const technicianRoutes = require('./technician.routes');
+router.use('/technician', technicianRoutes);
+
 // Note: Customer tracking endpoints (/api/bookings/:id/track) are in bookings.routes.js
+
+// Vendor Onboarding Routes
+const vendorOnboardingRoutes = require('../../modules/vendor/vendor.routes');
+router.use('/vendor-onboarding', vendorOnboardingRoutes);
 
 // Admin routes
 router.use('/admin/settings', adminSettingsRoutes);
+router.use('/admin/feedback', feedbackAdminRoutes);
 router.use('/dashboard', require('./dashboard.routes'));
+router.use('/admin/finance', require('./admin/finance.routes'));
 
 // Auto Parts Marketplace routes
 router.use('/vendors', vendorRoutes);

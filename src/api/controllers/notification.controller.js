@@ -27,18 +27,6 @@ class NotificationController {
           skip,
           take: limit,
           orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            type: true,
-            title: true,
-            titleAr: true,
-            message: true,
-            messageAr: true,
-            bookingId: true,
-            isRead: true,
-            readAt: true,
-            createdAt: true,
-          },
         }),
         prisma.notification.count({ where }),
       ]);
@@ -47,7 +35,6 @@ class NotificationController {
 
       res.json({
         success: true,
-        message: '',
         data: items,
         pagination: { page, limit, total, totalPages },
       });
@@ -57,17 +44,68 @@ class NotificationController {
   }
 
   /**
-   * Get single notification by id (must belong to user)
+   * Get ALL notifications in the system (Admin only)
+   * GET /api/admin/notifications?page=1&limit=20&userId=xxx
+   */
+  async getAllNotifications(req, res, next) {
+    try {
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+      const userId = req.query.userId;
+      const skip = (page - 1) * limit;
+
+      const where = {};
+      if (userId) where.userId = userId;
+
+      const [items, total] = await Promise.all([
+        prisma.notification.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                profile: { select: { firstName: true, lastName: true } },
+              },
+            },
+          },
+        }),
+        prisma.notification.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(total / limit) || 1;
+
+      res.json({
+        success: true,
+        data: items,
+        pagination: { page, limit, total, totalPages },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get single notification by id (must belong to user or be admin)
    * GET /api/notifications/:id
    */
   async getById(req, res, next) {
     try {
       const { id } = req.params;
       const userId = req.user.id;
+      const isAdmin = req.user.role === 'ADMIN';
+
+      const where = isAdmin ? { id } : { id, userId };
 
       const notification = await prisma.notification.findFirst({
-        where: { id, userId },
-        include: { booking: { select: { id: true, bookingNumber: true, status: true } } },
+        where,
+        include: {
+          booking: { select: { id: true, bookingNumber: true, status: true } },
+          user: isAdmin ? { select: { email: true, profile: { select: { firstName: true, lastName: true } } } } : false
+        },
       });
 
       if (!notification) {
@@ -88,9 +126,12 @@ class NotificationController {
     try {
       const { id } = req.params;
       const userId = req.user.id;
+      const isAdmin = req.user.role === 'ADMIN';
+
+      const where = isAdmin ? { id } : { id, userId };
 
       const notification = await prisma.notification.findFirst({
-        where: { id, userId },
+        where,
       });
 
       if (!notification) {

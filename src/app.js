@@ -3,12 +3,33 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
+const { fullSpec, mobileSpec, technicianSpec, vendorSpec, adminSpec } = require('./config/swagger');
 const routes = require('./api/routes');
 const errorMiddleware = require('./api/middlewares/error.middleware');
 const logger = require('./utils/logger/logger');
 
 const app = express();
+
+// ================================================================================================
+// CORS – must be first so preflight (OPTIONS) gets CORS headers before Helmet
+// ================================================================================================
+const allowedOriginsRaw = process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000';
+const allowedOrigins = allowedOriginsRaw.split(',').map((o) => o.trim()).filter(Boolean);
+if (allowedOrigins.length === 0) allowedOrigins.push('*');
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const normalized = origin.replace(/\/$/, '');
+    const ok = allowedOrigins.includes('*') || allowedOrigins.some((o) => o.replace(/\/$/, '') === normalized);
+    callback(null, ok);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language', 'Accept', 'X-Requested-With'],
+  optionsSuccessStatus: 204,
+  preflightContinue: false,
+}));
 
 // ================================================================================================
 // SECURITY & MIDDLEWARE
@@ -26,24 +47,6 @@ app.use(helmet({
   }
 }));
 
-// CORS configuration
-const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['*'];
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language']
-}));
-
 // HTTP request logging
 app.use(morgan('combined', { stream: logger.stream }));
 
@@ -58,29 +61,117 @@ app.use('/uploads', express.static('uploads'));
 // SWAGGER DOCUMENTATION
 // ================================================================================================
 
-// Swagger UI
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+// ── Step 1: Serve JSON specs at dedicated endpoints (BEFORE static assets)
+app.get('/api-docs.json',            (req, res) => res.json(fullSpec));
+app.get('/api-docs/mobile.json',     (req, res) => res.json(mobileSpec));
+app.get('/api-docs/technician.json', (req, res) => res.json(technicianSpec));
+app.get('/api-docs/vendor.json',     (req, res) => res.json(vendorSpec));
+app.get('/api-docs/admin.json',      (req, res) => res.json(adminSpec));
+
+// ── Step 2: Shared static assets (CSS, JS bundles) served ONCE from /api-docs
+app.use('/api-docs', swaggerUi.serve);
+
+// ── Step 3: Shared UI options
+const sharedUiOptions = {
   customCss: `
     .swagger-ui .topbar { display: none }
     .swagger-ui .info { margin: 20px 0 }
-    .swagger-ui .info .title { font-size: 32px; color: #1976d2 }
+    .swagger-ui .info .title { font-size: 28px; color: #1976d2; font-weight: 700 }
+    .swagger-ui .scheme-container { background: #f8f9fa; padding: 16px; border-radius: 8px }
+    .swagger-ui .opblock-tag { font-size: 15px }
   `,
-  customSiteTitle: 'AutoService API Docs - أكفيك',
   customfavIcon: '/favicon.ico',
+};
+
+// ── Step 4: Each page loads its OWN spec via `url` — this is the key fix.
+//    Passing `null` as spec + swaggerOptions.url makes swagger-ui fetch the
+//    spec from the URL instead of embedding the full spec in the HTML.
+
+app.get('/api-docs', swaggerUi.setup(null, {
+  ...sharedUiOptions,
+  customSiteTitle: '🚗 Akfeek API — Full Reference',
   swaggerOptions: {
+    url: '/api-docs.json',
     persistAuthorization: true,
     displayRequestDuration: true,
     docExpansion: 'none',
     filter: true,
-    showExtensions: true,
-    showCommonExtensions: true
-  }
+    tryItOutEnabled: true,
+  },
 }));
 
-// Swagger JSON endpoint
-app.get('/api-docs.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
+app.get('/api-docs/mobile', swaggerUi.setup(null, {
+  ...sharedUiOptions,
+  customSiteTitle: '📱 Akfeek — Customer Mobile App',
+  swaggerOptions: {
+    url: '/api-docs/mobile.json',
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    filter: true,
+    tryItOutEnabled: true,
+  },
+}));
+
+app.get('/api-docs/technician', swaggerUi.setup(null, {
+  ...sharedUiOptions,
+  customSiteTitle: '🔧 Akfeek — Technician App',
+  swaggerOptions: {
+    url: '/api-docs/technician.json',
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    filter: true,
+    tryItOutEnabled: true,
+  },
+}));
+
+app.get('/api-docs/vendor', swaggerUi.setup(null, {
+  ...sharedUiOptions,
+  customSiteTitle: '🏪 Akfeek — Vendor / Workshop Portal',
+  swaggerOptions: {
+    url: '/api-docs/vendor.json',
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    filter: true,
+    tryItOutEnabled: true,
+  },
+}));
+
+app.get('/api-docs/admin', swaggerUi.setup(null, {
+  ...sharedUiOptions,
+  customSiteTitle: '⚙️ Akfeek — Admin Dashboard',
+  swaggerOptions: {
+    url: '/api-docs/admin.json',
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    filter: true,
+    tryItOutEnabled: true,
+  },
+}));
+
+// ── Index page listing all swagger docs
+app.get('/api-docs-index', (req, res) => {
+  const host = `${req.protocol}://${req.get('host')}`;
+  res.json({
+    message: 'Akfeek API Documentation Index — فهرس وثائق أكفيك',
+    docs: {
+      '🚗 Full Reference':      `${host}/api-docs`,
+      '📱 Customer Mobile':     `${host}/api-docs/mobile`,
+      '🔧 Technician App':      `${host}/api-docs/technician`,
+      '🏪 Vendor Portal':       `${host}/api-docs/vendor`,
+      '⚙️ Admin Dashboard':     `${host}/api-docs/admin`,
+    },
+    json: {
+      full:        `${host}/api-docs.json`,
+      mobile:      `${host}/api-docs/mobile.json`,
+      technician:  `${host}/api-docs/technician.json`,
+      vendor:      `${host}/api-docs/vendor.json`,
+      admin:       `${host}/api-docs/admin.json`,
+    },
+  });
 });
 
 // ================================================================================================
