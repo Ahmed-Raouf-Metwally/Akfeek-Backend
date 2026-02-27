@@ -1,0 +1,2104 @@
+{
+  "openapi": "3.0.0",
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development — بيئة التطوير"
+    },
+    {
+      "url": "https://akfeek-backend.developteam.site",
+      "description": "Production — بيئة الإنتاج"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token — أدخل التوكن بعد كلمة Bearer مثال: `Bearer eyJhbGci...`"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "string",
+            "example": "Error message"
+          },
+          "errorAr": {
+            "type": "string",
+            "example": "رسالة الخطأ"
+          },
+          "code": {
+            "type": "string",
+            "example": "VALIDATION_ERROR"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "Success": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Operation successful"
+          },
+          "messageAr": {
+            "type": "string",
+            "example": "تمت العملية بنجاح"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "example": 100
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 10
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string",
+            "example": "Home"
+          },
+          "labelAr": {
+            "type": "string",
+            "nullable": true,
+            "example": "المنزل"
+          },
+          "street": {
+            "type": "string",
+            "example": "King Fahd Road"
+          },
+          "streetAr": {
+            "type": "string",
+            "nullable": true,
+            "example": "طريق الملك فهد"
+          },
+          "city": {
+            "type": "string",
+            "example": "Riyadh"
+          },
+          "cityAr": {
+            "type": "string",
+            "nullable": true,
+            "example": "الرياض"
+          },
+          "state": {
+            "type": "string",
+            "nullable": true
+          },
+          "stateAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "postalCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "12345"
+          },
+          "country": {
+            "type": "string",
+            "example": "SA",
+            "default": "SA"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "example": 24.7136
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "example": 46.6753
+          },
+          "isDefault": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AddressInput": {
+        "type": "object",
+        "required": [
+          "label",
+          "street",
+          "city",
+          "latitude",
+          "longitude"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Home"
+          },
+          "labelAr": {
+            "type": "string",
+            "example": "المنزل"
+          },
+          "street": {
+            "type": "string",
+            "example": "King Fahd Road"
+          },
+          "streetAr": {
+            "type": "string",
+            "example": "طريق الملك فهد"
+          },
+          "city": {
+            "type": "string",
+            "example": "Riyadh"
+          },
+          "cityAr": {
+            "type": "string",
+            "example": "الرياض"
+          },
+          "state": {
+            "type": "string"
+          },
+          "stateAr": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string",
+            "example": "12345"
+          },
+          "country": {
+            "type": "string",
+            "example": "SA",
+            "default": "SA"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "example": 24.7136
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "example": 46.6753
+          },
+          "isDefault": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "Feedback": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "COMPLAINT",
+              "SUGGESTION"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "DELIVERY",
+              "PAYMENT",
+              "PRODUCT",
+              "UI_UX",
+              "OTHER"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isAnonymous": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VendorProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "businessName": {
+            "type": "string"
+          },
+          "businessNameAr": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "descriptionAr": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_APPROVAL",
+              "ACTIVE",
+              "SUSPENDED",
+              "REJECTED"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "logo": {
+            "type": "string"
+          },
+          "contactEmail": {
+            "type": "string"
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AutoPartCategory": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "SEDAN",
+              "HATCHBACK",
+              "COUPE",
+              "SMALL_SUV",
+              "LARGE_SEDAN",
+              "SUV",
+              "CROSSOVER",
+              "TRUCK",
+              "MOTORCYCLE",
+              "HEAVY_EQUIPMENT"
+            ]
+          },
+          "icon": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AutoPart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vendorId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "price": {
+            "type": "number"
+          },
+          "stockQuantity": {
+            "type": "integer"
+          },
+          "isApproved": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutoPartImage"
+            }
+          }
+        }
+      },
+      "AutoPartImage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AutoPartCompatibility": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "autoPartId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vehicleModelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "yearRange": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "LanguageHeader": {
+        "name": "Accept-Language",
+        "in": "header",
+        "description": "اللغة المفضلة | Preferred language",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "ar",
+            "en"
+          ],
+          "default": "ar"
+        }
+      },
+      "PageParam": {
+        "name": "page",
+        "in": "query",
+        "description": "رقم الصفحة | Page number",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "LimitParam": {
+        "name": "limit",
+        "in": "query",
+        "description": "عدد العناصر في الصفحة | Items per page",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "مطلوب مصادقة | Authentication required",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Authentication required",
+              "errorAr": "مطلوب مصادقة",
+              "code": "UNAUTHORIZED"
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "تم رفض الوصول | Access denied",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Access denied",
+              "errorAr": "تم رفض الوصول",
+              "code": "FORBIDDEN"
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "المورد غير موجود | Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Resource not found",
+              "errorAr": "المورد غير موجود",
+              "code": "NOT_FOUND"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "خطأ في التحقق من البيانات | Validation error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Validation failed",
+              "errorAr": "فشل التحقق",
+              "code": "VALIDATION_ERROR",
+              "details": {
+                "field": "Invalid value"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "info": {
+    "title": "🔧 Akfeek — Technician Mobile App",
+    "version": "1.0.0",
+    "description": "\n# تطبيق أكفيك — موبايل الفني\n\n**لمطور موبايل الفني فقط** — هذه الوثيقة تحتوي على كل الـ endpoints التي يحتاجها تطبيق الفني.\n\n## رحلة الفني\n\n| الخطوة | Endpoint |\n|---|---|\n| 1. دخول | `POST /api/auth/login` (role: TECHNICIAN) |\n| 2. وظائفي | `GET /api/technician/bookings` |\n| 3. طلبات السحب | `GET /api/technician/towing/broadcasts` |\n| 4. طلبات الغسيل | `GET /api/technician/carwash/broadcasts` |\n| 5. بث الموقع | `POST /api/technician/tracking/location` |\n\n> كل الـ endpoints تتطلب توكن بـ role = **TECHNICIAN**\n  ",
+    "contact": {
+      "name": "Akfeek API Support",
+      "email": "support@akfeek.com"
+    }
+  },
+  "tags": [
+    {
+      "name": "🔓 Auth",
+      "description": "تسجيل الدخول والتسجيل والـ OTP — مشترك لجميع أنواع المستخدمين | Login, register, OTP — shared for all user types"
+    },
+    {
+      "name": "🔓 Brands & Models",
+      "description": "ماركات وموديلات السيارات (بيانات عامة لا تحتاج توكن) | Vehicle brands & models — public data, no auth required"
+    },
+    {
+      "name": "🔧 Technician | My Jobs",
+      "description": "الحجوزات المعينة للفني (حجوزات عامة + دعم فني) | Assigned bookings & technical support requests"
+    },
+    {
+      "name": "🔧 Technician | Towing Jobs",
+      "description": "طلبات السحب المعينة للفني | Assigned towing requests for technician"
+    },
+    {
+      "name": "🔧 Technician | Car Wash Jobs",
+      "description": "طلبات الغسيل المعينة للفني | Assigned car wash requests for technician"
+    },
+    {
+      "name": "🔧 Technician | Location",
+      "description": "بث الموقع الجغرافي للفني في الوقت الفعلي | Real-time technician GPS broadcasting"
+    }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register new user",
+        "description": "Create a new user account (Customer, Technician, or Supplier)\n\nإنشاء حساب مستخدم جديد (عميل، فني، أو مورد)\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password",
+                  "role",
+                  "firstName",
+                  "lastName"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "ahmed@example.com",
+                    "description": "User email - البريد الإلكتروني"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "example": "+966501234567",
+                    "description": "Phone number with country code - رقم الهاتف مع رمز الدولة"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "example": "StrongPass123!",
+                    "description": "Password (min 8 chars) - كلمة المرور (8 أحرف على الأقل)"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "CUSTOMER",
+                      "TECHNICIAN",
+                      "SUPPLIER"
+                    ],
+                    "example": "CUSTOMER",
+                    "description": "User role - دور المستخدم"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "example": "Ahmed",
+                    "description": "First name - الاسم الأول"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "example": "Al-Mutairi",
+                    "description": "Last name - اسم العائلة"
+                  },
+                  "preferredLanguage": {
+                    "type": "string",
+                    "enum": [
+                      "AR",
+                      "EN"
+                    ],
+                    "default": "AR",
+                    "example": "AR",
+                    "description": "Preferred language - اللغة المفضلة"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully - تم التسجيل بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Registration successful"
+                    },
+                    "messageAr": {
+                      "type": "string",
+                      "example": "تم التسجيل بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string"
+                            },
+                            "profile": {
+                              "type": "object"
+                            }
+                          }
+                        },
+                        "token": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "409": {
+            "description": "Email or phone already exists - البريد الإلكتروني أو الهاتف موجود بالفعل",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "User login",
+        "description": "Authenticate user with email/phone and password, return JWT token\n\nمصادقة المستخدم بالبريد الإلكتروني/الهاتف وكلمة المرور، وإرجاع رمز JWT\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "identifier",
+                  "password"
+                ],
+                "properties": {
+                  "identifier": {
+                    "type": "string",
+                    "example": "ahmed@example.com",
+                    "description": "Email or phone number - البريد الإلكتروني أو رقم الهاتف"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "StrongPass123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful - تم تسجيل الدخول بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object"
+                        },
+                        "token": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials - بيانات اعتماد غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/send-otp": {
+      "post": {
+        "summary": "Send OTP to phone",
+        "description": "Send OTP code to user's phone number for verification\n\nإرسال رمز OTP إلى رقم هاتف المستخدم للتحقق\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "+966501234567"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent successfully - تم إرسال OTP بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify-otp": {
+      "post": {
+        "summary": "Verify OTP",
+        "description": "Verify phone number with OTP code\n\nالتحقق من رقم الهاتف برمز OTP\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "code"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "+966501234567"
+                  },
+                  "code": {
+                    "type": "string",
+                    "example": "123456"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified - تم التحقق من OTP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid OTP - رمز OTP غير صحيح"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Get current user",
+        "description": "Get authenticated user's profile information\n\nالحصول على معلومات ملف المستخدم المصادق عليه\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved - تم استرجاع ملف المستخدم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/track": {
+      "get": {
+        "summary": "Track technician location",
+        "description": "Customer tracks technician's real-time location",
+        "tags": [
+          "🔧 Technician | Location"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tracking information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "booking": {
+                          "type": "object"
+                        },
+                        "technician": {
+                          "type": "object",
+                          "properties": {
+                            "currentLocation": {
+                              "type": "object",
+                              "properties": {
+                                "latitude": {
+                                  "type": "number"
+                                },
+                                "longitude": {
+                                  "type": "number"
+                                },
+                                "heading": {
+                                  "type": "number"
+                                },
+                                "speed": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "eta": {
+                          "type": "object",
+                          "properties": {
+                            "distanceKm": {
+                              "type": "number"
+                            },
+                            "durationMinutes": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/location-history": {
+      "get": {
+        "summary": "Get location history",
+        "description": "Retrieve technician's route history for completed job",
+        "tags": [
+          "🔧 Technician | Location"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "startTime",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endTime",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Location history points"
+          }
+        }
+      }
+    },
+    "/api/brands": {
+      "get": {
+        "summary": "Get all vehicle brands",
+        "description": "Retrieve a list of all vehicle brands (Toyota, BMW, etc.) with optional filters - ???? ??? ????? ????? ?????? ????????",
+        "tags": [
+          "🔓 Brands & Models"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "includeModels",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Include models for each brand - ????? ??????? ?? ?????"
+          },
+          {
+            "in": "query",
+            "name": "activeOnly",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "description": "Only return active brands - ??? ???????? ?????? ???"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved brands - ?? ??? ???????? ?????",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "example": "uuid-here"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Toyota"
+                          },
+                          "nameAr": {
+                            "type": "string",
+                            "example": "??????"
+                          },
+                          "logo": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "https://example.com/toyota-logo.png"
+                          },
+                          "isActive": {
+                            "type": "boolean",
+                            "example": true
+                          },
+                          "_count": {
+                            "type": "object",
+                            "properties": {
+                              "models": {
+                                "type": "integer",
+                                "example": 5
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/brands/{id}": {
+      "get": {
+        "summary": "Get brand by ID",
+        "description": "Retrieve a specific brand with all its models - ???? ??? ????? ????? ?? ???? ?????????",
+        "tags": [
+          "🔓 Brands & Models"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID - ???? ???????"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brand found - ?? ?????? ??? ???????"
+          },
+          "404": {
+            "description": "Brand not found - ??????? ??? ??????",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Brand not found"
+                    },
+                    "errorAr": {
+                      "type": "string",
+                      "example": "??????? ??? ??????"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "BRAND_NOT_FOUND"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models": {
+      "get": {
+        "summary": "Get all vehicle models",
+        "description": "Retrieve vehicle models with optional filters - ???? ??? ??????? ???????? ?? ????? ????????",
+        "tags": [
+          "🔓 Brands & Models"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brandId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by brand ID - ????? ??? ???? ???????"
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by year - ????? ??? ?????",
+            "example": 2023
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SMALL",
+                "MEDIUM",
+                "LARGE",
+                "EXTRA_LARGE"
+              ]
+            },
+            "description": "Filter by size - ????? ??? ?????"
+          },
+          {
+            "in": "query",
+            "name": "activeOnly",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "description": "Only active models - ????????? ?????? ???"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved models - ?? ??? ????????? ?????",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "brandId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Camry"
+                          },
+                          "nameAr": {
+                            "type": "string",
+                            "example": "?????"
+                          },
+                          "year": {
+                            "type": "integer",
+                            "example": 2023
+                          },
+                          "size": {
+                            "type": "string",
+                            "enum": [
+                              "SMALL",
+                              "MEDIUM",
+                              "LARGE",
+                              "EXTRA_LARGE"
+                            ],
+                            "example": "MEDIUM"
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "brand": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "example": "Toyota"
+                              },
+                              "nameAr": {
+                                "type": "string",
+                                "example": "??????"
+                              }
+                            }
+                          },
+                          "_count": {
+                            "type": "object",
+                            "properties": {
+                              "userVehicles": {
+                                "type": "integer",
+                                "example": 5
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "filters": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/{id}": {
+      "get": {
+        "summary": "Get model by ID",
+        "description": "Retrieve a specific vehicle model - ???? ??? ????? ????",
+        "tags": [
+          "🔓 Brands & Models"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Model ID - ???? ???????"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Model found - ?? ?????? ??? ???????"
+          },
+          "404": {
+            "description": "Model not found - ??????? ??? ?????"
+          }
+        }
+      }
+    },
+    "/api/technician/bookings": {
+      "get": {
+        "summary": "Get my assigned bookings (Technician)",
+        "description": "الحجوزات العامة المعينة للفني (غير الونش والغسيل)\nReturns general bookings assigned to the authenticated technician.\n",
+        "tags": [
+          "🔧 Technician | My Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by booking status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "CONFIRMED",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of assigned bookings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/technician/technical-support-requests": {
+      "get": {
+        "summary": "Get my assigned technical support requests (Technician)",
+        "description": "طلبات الدعم الفني المعينة للفني المسجل دخوله\nReturns technical support requests assigned to the authenticated technician.\n",
+        "tags": [
+          "🔧 Technician | My Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of assigned support requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/technician/carwash/broadcasts": {
+      "get": {
+        "summary": "Get active car wash broadcasts",
+        "description": "Fetch all active car wash requests within the technician's service radius.\n\nجلب جميع طلبات غسيل السيارات النشطة في نطاق خدمة الفني\n",
+        "tags": [
+          "🔧 Technician | Car Wash Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active broadcasts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "broadcasts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "customer": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "avatar": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "vehicle": {
+                                "type": "object",
+                                "properties": {
+                                  "make": {
+                                    "type": "string"
+                                  },
+                                  "model": {
+                                    "type": "string"
+                                  },
+                                  "year": {
+                                    "type": "integer"
+                                  },
+                                  "plateNumber": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "location": {
+                                "type": "object",
+                                "properties": {
+                                  "address": {
+                                    "type": "string"
+                                  },
+                                  "distance": {
+                                    "type": "number"
+                                  },
+                                  "eta": {
+                                    "type": "number"
+                                  }
+                                }
+                              },
+                              "serviceType": {
+                                "type": "string"
+                              },
+                              "estimatedBudget": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/technician/carwash/{broadcastId}/offers": {
+      "post": {
+        "summary": "Submit an offer for a car wash request",
+        "description": "Submit a price and ETA offer for a specific car wash job broadcast.\n\nتقديم عرض سعر ووقت وصول لطلب غسيل سيارة محدد\n",
+        "tags": [
+          "🔧 Technician | Car Wash Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcastId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the broadcast to offer on"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "bidAmount",
+                  "estimatedArrival"
+                ],
+                "properties": {
+                  "bidAmount": {
+                    "type": "number",
+                    "description": "Offered price in SAR",
+                    "example": 150
+                  },
+                  "estimatedArrival": {
+                    "type": "number",
+                    "description": "Estimated arrival time in minutes",
+                    "example": 15
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Optional message to customer",
+                    "example": "I have premium wax tools"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Offer submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/technician/towing/broadcasts": {
+      "get": {
+        "summary": "Get active towing broadcasts",
+        "description": "Get all active towing requests that the technician can bid on",
+        "tags": [
+          "🔧 Technician | Towing Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active broadcasts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "broadcasts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "customer": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "avatar": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "vehicle": {
+                                "type": "object"
+                              },
+                              "pickupLocation": {
+                                "type": "object"
+                              },
+                              "destinationLocation": {
+                                "type": "object"
+                              },
+                              "distance": {
+                                "type": "number",
+                                "example": 5.2
+                              },
+                              "estimatedArrival": {
+                                "type": "number",
+                                "example": 15
+                              },
+                              "estimatedPrice": {
+                                "type": "number",
+                                "example": 75
+                              },
+                              "urgency": {
+                                "type": "string",
+                                "example": "HIGH"
+                              },
+                              "vehicleCondition": {
+                                "type": "string"
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "myOffer": {
+                                "type": "object",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/technician/towing/broadcasts/{broadcastId}/offer": {
+      "post": {
+        "summary": "Submit offer for towing request",
+        "tags": [
+          "🔧 Technician | Towing Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcastId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "bidAmount"
+                ],
+                "properties": {
+                  "bidAmount": {
+                    "type": "number",
+                    "example": 180,
+                    "description": "Your bid amount in SAR"
+                  },
+                  "message": {
+                    "type": "string",
+                    "example": "I'm nearby, can arrive in 8 minutes"
+                  },
+                  "estimatedArrival": {
+                    "type": "number",
+                    "example": 8,
+                    "description": "Estimated arrival time in minutes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Offer submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Offer submitted successfully"
+                    },
+                    "messageAr": {
+                      "type": "string",
+                      "example": "تم إرسال العرض بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "offer": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "broadcastId": {
+                              "type": "string"
+                            },
+                            "bidAmount": {
+                              "type": "number"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "example": "PENDING"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/technician/towing/jobs": {
+      "get": {
+        "summary": "Get assigned towing jobs",
+        "tags": [
+          "🔧 Technician | Towing Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of assigned jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "jobs": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "bookingNumber": {
+                                "type": "string",
+                                "example": "TWG-20260127-001"
+                              },
+                              "status": {
+                                "type": "string",
+                                "example": "TECHNICIAN_ASSIGNED"
+                              },
+                              "customer": {
+                                "type": "object"
+                              },
+                              "vehicle": {
+                                "type": "object"
+                              },
+                              "pickupLocation": {
+                                "type": "object"
+                              },
+                              "destinationLocation": {
+                                "type": "object"
+                              },
+                              "agreedPrice": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/technician/towing/jobs/{jobId}/status": {
+      "patch": {
+        "summary": "Update job status",
+        "description": "Update the status of an assigned towing job",
+        "tags": [
+          "🔧 Technician | Towing Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "TECHNICIAN_EN_ROUTE",
+                      "TECHNICIAN_ARRIVED",
+                      "IN_PROGRESS",
+                      "COMPLETED"
+                    ],
+                    "example": "TECHNICIAN_EN_ROUTE"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated successfully"
+          }
+        }
+      }
+    },
+    "/api/technician/tracking/location": {
+      "post": {
+        "summary": "Update technician location",
+        "description": "Technician updates their GPS location (called every 5-10 seconds)",
+        "tags": [
+          "🔧 Technician | Location"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "latitude",
+                  "longitude"
+                ],
+                "properties": {
+                  "latitude": {
+                    "type": "number",
+                    "example": 24.7136
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "example": 46.6753
+                  },
+                  "heading": {
+                    "type": "number",
+                    "description": "Direction in degrees  (0-360)",
+                    "example": 180
+                  },
+                  "speed": {
+                    "type": "number",
+                    "description": "Speed in km/h",
+                    "example": 45.5
+                  },
+                  "accuracy": {
+                    "type": "number",
+                    "description": "GPS accuracy in meters",
+                    "example": 10
+                  },
+                  "bookingId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Current job booking ID (if on active job)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Location updated successfully"
+          }
+        }
+      }
+    },
+    "/api/users/technician-profile": {
+      "put": {
+        "summary": "Update technician profile",
+        "description": "Update technician-specific profile fields\n\nتحديث بيانات الفني\n",
+        "tags": [
+          "🔧 Technician | My Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "licenseNumber": {
+                    "type": "string"
+                  },
+                  "yearsExperience": {
+                    "type": "integer"
+                  },
+                  "specializations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "isAvailable": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Technician profile updated"
+          },
+          "403": {
+            "description": "User is not a technician"
+          }
+        }
+      }
+    }
+  }
+}
