@@ -497,6 +497,7 @@ async function getMyBookings(req, res, next) {
           status: true,
           totalPrice: true,
           createdAt: true,
+          customerId: true,
           vehicle: {
             select: {
               id: true,
@@ -510,9 +511,44 @@ async function getMyBookings(req, res, next) {
               }
             }
           },
+          customer: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              profile: { select: { firstName: true, lastName: true } }
+            }
+          },
+          workshop: {
+            select: {
+              id: true,
+              name: true,
+              nameAr: true,
+              vendor: {
+                select: {
+                  id: true,
+                  businessName: true,
+                  businessNameAr: true
+                }
+              }
+            }
+          },
           services: {
             include: {
-              service: { select: { id: true, name: true, nameAr: true } }
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  nameAr: true,
+                  vendor: {
+                    select: {
+                      id: true,
+                      businessName: true,
+                      businessNameAr: true
+                    }
+                  }
+                }
+              }
             }
           }
         }

@@ -1,5 +1,6 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const { getPlatformCommissionPercent } = require('../../utils/pricing');
 
 /**
  * Get all invoices (Admin). Paginated list with customer/booking summary.
@@ -69,45 +70,84 @@ async function getAllInvoices(req, res, next) {
   }
 }
 
+const invoiceInclude = {
+  customer: {
+    select: {
+      id: true,
+      email: true,
+      phone: true,
+      profile: { select: { firstName: true, lastName: true } },
+    },
+  },
+  booking: {
+    select: {
+      id: true,
+      bookingNumber: true,
+      status: true,
+      scheduledDate: true,
+    },
+  },
+  lineItems: {
+    orderBy: { createdAt: 'asc' },
+  },
+  payments: {
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      paymentNumber: true,
+      amount: true,
+      method: true,
+      status: true,
+      processedAt: true,
+      createdAt: true,
+    },
+  },
+};
+
+/** Convert Prisma Decimal to number for JSON response (avoids 500 on serialization) */
+function serializeInvoice(inv) {
+  if (!inv) return inv;
+  const toNum = (v) => (v == null ? v : (typeof v === 'number' ? v : Number(v)));
+  return {
+    ...inv,
+    subtotal: toNum(inv.subtotal),
+    tax: toNum(inv.tax),
+    discount: toNum(inv.discount),
+    totalAmount: toNum(inv.totalAmount),
+    paidAmount: toNum(inv.paidAmount),
+    lineItems: (inv.lineItems || []).map((li) => ({
+      ...li,
+      unitPrice: toNum(li.unitPrice),
+      totalPrice: toNum(li.totalPrice),
+    })),
+    payments: (inv.payments || []).map((p) => ({
+      ...p,
+      amount: toNum(p.amount),
+    })),
+  };
+}
+
 /**
- * Get single invoice by id (Admin).
- * GET /api/invoices/:id
+ * Get single invoice by id or by bookingId (Admin).
+ * GET /api/invoices/:id  — id can be invoice id or booking id (one invoice per booking).
  */
 async function getInvoiceById(req, res, next) {
   try {
     const { id } = req.params;
-    const invoice = await prisma.invoice.findUnique({
+    let invoice = await prisma.invoice.findUnique({
       where: { id },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            email: true,
-            phone: true,
-            profile: { select: { firstName: true, lastName: true } },
-          },
-        },
-        booking: {
-          select: {
-            id: true,
-            bookingNumber: true,
-            status: true,
-            scheduledDate: true,
-          },
-        },
-        payments: {
-          orderBy: { createdAt: 'desc' },
-          include: {
-            walletTransaction: { select: { id: true, transactionNumber: true, amount: true, description: true, createdAt: true } },
-            pointsTransaction: { select: { id: true, amount: true, description: true, balanceAfter: true, createdAt: true } },
-          },
-        },
-      },
+      include: invoiceInclude,
     });
+    if (!invoice) {
+      invoice = await prisma.invoice.findFirst({
+        where: { bookingId: id },
+        include: invoiceInclude,
+      });
+    }
     if (!invoice) {
       throw new AppError('Invoice not found', 404, 'NOT_FOUND');
     }
-    res.json({ success: true, message: '', data: invoice });
+    res.json({ success: true, message: '', data: serializeInvoice(invoice) });
   } catch (error) {
     next(error);
   }
@@ -129,7 +169,13 @@ async function markInvoicePaid(req, res, next) {
       throw new AppError('Invalid payment method', 400, 'VALIDATION_ERROR');
     }
 
-    const invoice = await prisma.invoice.findUnique({ where: { id }, include: { customer: { select: { id: true } } } });
+    let invoice = await prisma.invoice.findUnique({ where: { id }, include: { customer: { select: { id: true } } } });
+    if (!invoice) {
+      invoice = await prisma.invoice.findFirst({
+        where: { bookingId: id },
+        include: { customer: { select: { id: true } } },
+      });
+    }
     if (!invoice) throw new AppError('Invoice not found', 404, 'NOT_FOUND');
     if (invoice.status === 'PAID') {
       return res.json({ success: true, message: 'الفاتورة مدفوعة بالفعل', data: invoice });
@@ -137,6 +183,8 @@ async function markInvoicePaid(req, res, next) {
 
     const amount = Number(invoice.totalAmount) || 0;
     if (amount <= 0) throw new AppError('Invoice amount must be positive', 400, 'VALIDATION_ERROR');
+
+    const defaultCommissionPercent = await getPlatformCommissionPercent();
 
     const result = await prisma.$transaction(async (tx) => {
       // 1) إنشاء سجل الدفع دائماً
@@ -189,9 +237,9 @@ async function markInvoicePaid(req, res, next) {
         });
       }
 
-      // 3) تحديث الفاتورة
+      // 3) تحديث الفاتورة (استخدم invoice.id لأن الـ id في الرابط قد يكون bookingId)
       const updatedInvoice = await tx.invoice.update({
-        where: { id },
+        where: { id: invoice.id },
         data: {
           status: 'PAID',
           paidAmount: amount,
@@ -237,6 +285,86 @@ async function markInvoicePaid(req, res, next) {
           where: { id: wallet.id },
           data: { pointsBalance: pointsAfter },
         });
+      }
+
+      // 5) إيداع حصة الفيندور في محفظته (من الحجز المرتبط بالفاتورة)
+      const booking = await tx.booking.findUnique({
+        where: { id: invoice.bookingId },
+        include: {
+          workshop: {
+            select: {
+              vendorId: true,
+              vendor: { select: { userId: true, commissionPercent: true } },
+            },
+          },
+          services: {
+            take: 1,
+            include: { service: { select: { vendorId: true } } },
+          },
+        },
+      });
+
+      let vendorUserId = null;
+      let commissionPercent = defaultCommissionPercent;
+      if (booking?.workshop?.vendorId && booking.workshop.vendor) {
+        vendorUserId = booking.workshop.vendor.userId;
+        if (booking.workshop.vendor.commissionPercent != null) {
+          commissionPercent = Number(booking.workshop.vendor.commissionPercent);
+        }
+      } else if (booking?.services?.[0]?.service?.vendorId) {
+        const vendorProfile = await tx.vendorProfile.findUnique({
+          where: { id: booking.services[0].service.vendorId },
+          select: { userId: true, commissionPercent: true },
+        });
+        if (vendorProfile) {
+          vendorUserId = vendorProfile.userId;
+          if (vendorProfile.commissionPercent != null) {
+            commissionPercent = Number(vendorProfile.commissionPercent);
+          }
+        }
+      }
+
+      if (vendorUserId) {
+        const subtotal = Number(booking?.subtotal) ?? Number(invoice.subtotal) ?? amount;
+        const platformCommission = Math.round(subtotal * (commissionPercent / 100) * 100) / 100;
+        const vendorEarnings = Math.round((subtotal - platformCommission) * 100) / 100;
+        if (vendorEarnings > 0) {
+          let vendorWallet = await tx.wallet.findUnique({ where: { userId: vendorUserId } });
+          if (!vendorWallet) {
+            vendorWallet = await tx.wallet.create({
+              data: { userId: vendorUserId, availableBalance: 0, pendingBalance: 0 },
+            });
+          }
+          const balanceBefore = Number(vendorWallet.availableBalance) || 0;
+          const balanceAfter = Math.round((balanceBefore + vendorEarnings) * 100) / 100;
+          const txnNumber = `TXN-V-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+          await tx.transaction.create({
+            data: {
+              transactionNumber: txnNumber,
+              walletId: vendorWallet.id,
+              userId: vendorUserId,
+              type: 'EARNING',
+              amount: vendorEarnings,
+              balanceBefore,
+              balanceAfter,
+              description: `إيراد من فاتورة ${invoice.invoiceNumber || invoice.id}`,
+              status: 'COMPLETED',
+              paymentId: payment.id,
+              metadata: {
+                paymentId: payment.id,
+                invoiceId: invoice.id,
+                bookingId: invoice.bookingId,
+                platformCommission,
+                vendorEarnings,
+              },
+              performedById: req.user?.id,
+            },
+          });
+          await tx.wallet.update({
+            where: { id: vendorWallet.id },
+            data: { availableBalance: { increment: vendorEarnings } },
+          });
+        }
       }
 
       return { payment, invoice: updatedInvoice };

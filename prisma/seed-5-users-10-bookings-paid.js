@@ -55,6 +55,15 @@ async function main() {
     return;
   }
 
+  // ── 2b) ورشة معتمدة مرتبطة بفيندور (لعرض مقدم الخدمة/الفيندور في الحجوزات)
+  const workshop = await prisma.certifiedWorkshop.findFirst({
+    where: { vendorId: { not: null }, isActive: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  if (!workshop) {
+    console.log('⚠️  لا توجد ورشة معتمدة مرتبطة بفيندور. شغّل seed الورش/الفيندورات أولاً.');
+  }
+
   const createdUsers = [];
   let bookingSeq = 1;
   let invoiceSeq = 1;
@@ -126,6 +135,7 @@ async function main() {
           bookingNumber,
           customerId: user.id,
           vehicleId: vehicle.id,
+          workshopId: workshop?.id ?? null,
           scheduledDate,
           scheduledTime: b % 2 === 0 ? '10:00' : '14:00',
           status: 'COMPLETED',
@@ -218,6 +228,20 @@ async function main() {
     }
 
     console.log(`     → ${BOOKINGS_PER_USER} حجوزات مكتملة + فواتير مدفوعة + دفعات`);
+  }
+
+  // ربط الحجوزات القديمة (BKG-5U-*) التي بدون ورشة بأول ورشة معتمدة لها فيندور
+  if (workshop) {
+    const updated = await prisma.booking.updateMany({
+      where: {
+        bookingNumber: { startsWith: 'BKG-5U-' },
+        workshopId: null,
+      },
+      data: { workshopId: workshop.id },
+    });
+    if (updated.count > 0) {
+      console.log(`\n  📌 تم ربط ${updated.count} حجز سابق بالورشة (مقدم الخدمة).`);
+    }
   }
 
   console.log(`\n✅ انتهى: ${createdUsers.length} مستخدمين، ${createdUsers.length * BOOKINGS_PER_USER} حجز، كل حجز له فاتورة ودفعة واحدة مدفوعة.`);

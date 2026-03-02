@@ -22,6 +22,7 @@
         "prisma:seed:winches": "node prisma/seed-winches-for-towing-vendors.js",
         "prisma:seed:mobileworkshops": "node prisma/seed-mobile-workshops-for-vendors.js",
         "prisma:seed:mobileworkshop-services": "node prisma/seed-5-services-per-mobile-workshop.js",
+        "prisma:seed:backfill-vendor-wallet": "node prisma/seed-backfill-vendor-wallet-paid-invoices.js",
         "openapi": "node generate-openapi.js",
         "test:order-flow": "node scripts/test-order-flow.js",
         "test": "jest --coverage",
