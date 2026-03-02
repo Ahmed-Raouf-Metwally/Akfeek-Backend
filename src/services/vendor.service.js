@@ -13,10 +13,14 @@ class VendorService {
    * @returns {Array} List of vendors
    */
   async getAllVendors(filters = {}) {
-    const { status, search, isVerified } = filters;
+    const { status, search, isVerified, vendorType, page = 1, limit = 12 } = filters;
+
+    const skip = (Math.max(1, parseInt(page)) - 1) * Math.min(100, Math.max(1, parseInt(limit)));
+    const take = Math.min(100, Math.max(1, parseInt(limit)));
 
     const where = {
       ...(status && { status }),
+      ...(vendorType && { vendorType }),
       ...(isVerified !== undefined && { isVerified: isVerified === 'true' }),
     };
 
@@ -26,36 +30,49 @@ class VendorService {
         { businessName: { contains: searchTerm } },
         { businessNameAr: { contains: searchTerm } },
         { contactEmail: { contains: searchTerm } },
+        { contactPhone: { contains: searchTerm } },
+        { city: { contains: searchTerm } },
       ];
     }
 
-    const vendors = await prisma.vendorProfile.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            phone: true,
-            status: true,
-            profile: {
-              select: {
-                firstName: true,
-                lastName: true,
+    const [vendors, total] = await Promise.all([
+      prisma.vendorProfile.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              status: true,
+              profile: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                },
               },
             },
           },
-        },
-        _count: {
-          select: {
-            parts: true,
+          _count: {
+            select: { parts: true },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.vendorProfile.count({ where }),
+    ]);
 
-    return vendors;
+    return {
+      data: vendors,
+      pagination: {
+        page: parseInt(page),
+        limit: take,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / take)),
+      },
+    };
   }
 
   /**
@@ -88,11 +105,81 @@ class VendorService {
             stockQuantity: true,
             isApproved: true,
             isActive: true,
+            images: { select: { url: true }, take: 1 },
+          },
+        },
+        comprehensiveCareServices: {
+          take: 20,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            type: true,
+            category: true,
+            isActive: true,
+            estimatedDuration: true,
+            imageUrl: true,
+            pricing: {
+              select: { vehicleType: true, basePrice: true, isActive: true },
+              take: 3,
+            },
+          },
+        },
+        winch: {
+          select: {
+            id: true, name: true, nameAr: true, plateNumber: true,
+            vehicleModel: true, year: true, capacity: true,
+            imageUrl: true, city: true,
+            isAvailable: true, isActive: true, isVerified: true,
+            basePrice: true, pricePerKm: true, minPrice: true, currency: true,
+            totalTrips: true, averageRating: true, totalReviews: true,
+          },
+        },
+        mobileWorkshop: {
+          select: {
+            id: true, name: true, nameAr: true, description: true,
+            vehicleType: true, vehicleModel: true, year: true, plateNumber: true,
+            servicesOffered: true,
+            city: true, serviceRadius: true,
+            imageUrl: true, vehicleImageUrl: true,
+            isAvailable: true, isActive: true, isVerified: true,
+            basePrice: true, pricePerKm: true, hourlyRate: true, minPrice: true, currency: true,
+            totalJobs: true, averageRating: true, totalReviews: true,
+            services: {
+              where: { isActive: true },
+              orderBy: { createdAt: 'asc' },
+              select: { id: true, serviceType: true, name: true, nameAr: true, description: true, price: true, currency: true, estimatedDuration: true },
+            },
+          },
+        },
+        workshop: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            city: true,
+            cityAr: true,
+            phone: true,
+            email: true,
+            address: true,
+            logo: true,
+            averageRating: true,
+            totalReviews: true,
+            totalBookings: true,
+            isVerified: true,
+            isActive: true,
+            workshopServices: {
+              where: { isActive: true },
+              orderBy: { createdAt: 'asc' },
+              select: { id: true, serviceType: true, name: true, nameAr: true, description: true, price: true, currency: true, estimatedDuration: true },
+            },
           },
         },
         _count: {
           select: {
             parts: true,
+            comprehensiveCareServices: true,
           },
         },
       },
@@ -154,40 +241,25 @@ class VendorService {
       vendorType,
     } = data;
 
-    // Check if user already has a vendor profile
-    const existing = await prisma.vendorProfile.findUnique({
-      where: { userId },
-    });
-
+    // Validate the linked user
+    const existing = await prisma.vendorProfile.findUnique({ where: { userId } });
     if (existing) {
-      throw new AppError(
-        'User already has a vendor profile',
-        400,
-        'VENDOR_EXISTS'
-      );
+      throw new AppError('User already has a vendor profile', 400, 'VENDOR_EXISTS');
     }
 
-    // Check if user exists and has VENDOR role
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new AppError('User not found', 404, 'USER_NOT_FOUND');
     }
-
+    // Accept VENDOR role or users being promoted; if not VENDOR yet, update their role
     if (user.role !== 'VENDOR') {
-      throw new AppError(
-        'User must have VENDOR role',
-        400,
-        'INVALID_USER_ROLE'
-      );
+      await prisma.user.update({ where: { id: userId }, data: { role: 'VENDOR' } });
     }
 
     const vendor = await prisma.vendorProfile.create({
       data: {
         userId,
-        ...(vendorType && { vendorType: ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH'].includes(vendorType) ? vendorType : 'AUTO_PARTS' }),
+        ...(vendorType && { vendorType: ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'MOBILE_WORKSHOP', 'TOWING_SERVICE'].includes(vendorType) ? vendorType : 'AUTO_PARTS' }),
         businessName,
         businessNameAr,
         description,
@@ -243,9 +315,18 @@ class VendorService {
       logo,
       banner,
       vendorType,
+      commissionPercent,
     } = data;
 
-    const validVendorTypes = ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH'];
+    // Validate commissionPercent only when a real value is provided (not empty/null)
+    if (commissionPercent !== undefined && commissionPercent !== null && commissionPercent !== '') {
+      const pct = parseFloat(commissionPercent);
+      if (isNaN(pct) || pct < 0 || pct > 100) {
+        throw new AppError('commissionPercent must be a number between 0 and 100', 400, 'VALIDATION_ERROR');
+      }
+    }
+
+    const validVendorTypes = ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'MOBILE_WORKSHOP', 'TOWING_SERVICE'];
     const vendor = await prisma.vendorProfile.update({
       where: { id },
       data: {
@@ -263,6 +344,12 @@ class VendorService {
         ...(logo !== undefined && { logo }),
         ...(banner !== undefined && { banner }),
         ...(vendorType !== undefined && validVendorTypes.includes(vendorType) && { vendorType }),
+        // commissionPercent: null = use global setting; a number = override for this vendor
+        ...(commissionPercent !== undefined && {
+          commissionPercent: commissionPercent === null || commissionPercent === ''
+            ? null
+            : parseFloat(commissionPercent),
+        }),
       },
       include: {
         user: {
@@ -355,28 +442,29 @@ class VendorService {
   }
 
   /**
-   * Delete vendor (Admin only - soft delete by setting status to REJECTED)
+   * Delete vendor (Admin only) — حذف فعلي من قاعدة البيانات
+   * يزيل VendorProfile وجميع البيانات المرتبطة (كوبونات، تقييمات، مستندات، قطع غيار، إلخ).
+   * الورشة/الونش/الورشة المتنقلة تُفصل (vendorId = null) ولا تُحذف.
    * @param {string} id - Vendor profile ID
    */
   async deleteVendor(id) {
-    await this.getVendorById(id);
+    const vendor = await this.getVendorById(id);
 
-    // Soft delete by setting status to REJECTED and deactivating all parts
     await prisma.$transaction(async (tx) => {
-      // Deactivate all vendor's parts
-      await tx.autoPart.updateMany({
+      // فصل عناصر الطلبات التي تشير للفيندور (إن لم يكن عليها onDelete في الـ schema)
+      await tx.marketplaceOrderItem.updateMany({
         where: { vendorId: id },
-        data: { isActive: false },
+        data: { vendorId: null },
       });
 
-      // Update vendor status
-      await tx.vendorProfile.update({
+      // حذف الفيندور — Prisma/DB ستطبق Cascade على (Coupon, VendorReview, VendorDocument, AutoPart, AutoPartVendor)
+      // و SetNull على (CertifiedWorkshop, Winch, MobileWorkshop, Service, BookingAutoPart)
+      await tx.vendorProfile.delete({
         where: { id },
-        data: { status: 'REJECTED', isVerified: false },
       });
     });
 
-    logger.info(`Vendor deleted (soft): ${id}`);
+    logger.info(`Vendor deleted (hard) from database: ${id} (${vendor.businessName})`);
   }
 
   /**

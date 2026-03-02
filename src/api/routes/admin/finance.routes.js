@@ -291,4 +291,16 @@ router.get('/points/settings', controller.getPointsSettings);
  */
 router.post('/points/settings', controller.updatePointsSettings);
 
+/**
+ * GET /api/admin/finance/commission-report
+ * تقرير العمولة والضريبة بفلتر تاريخ
+ * Query: from (YYYY-MM-DD), to (YYYY-MM-DD)
+ */
+router.get('/commission-report', controller.getCommissionReport);
+
+/**
+ * GET /api/admin/finance/refunds — قائمة الاستردادات (معاملات نوع REFUND)
+ */
+router.get('/refunds', controller.getRefunds);
+
 module.exports = router;

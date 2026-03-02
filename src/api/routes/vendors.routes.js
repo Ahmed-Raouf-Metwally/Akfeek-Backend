@@ -1,8 +1,36 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const vendorController = require('../controllers/vendor.controller');
+const couponController = require('../controllers/coupon.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
+
+// ── Vendor image upload (logo / banner) ────────────────────────────────────
+const vendorUploadDir = path.join(__dirname, '../../../uploads/vendors');
+if (!fs.existsSync(vendorUploadDir)) fs.mkdirSync(vendorUploadDir, { recursive: true });
+
+const vendorStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(vendorUploadDir, req.params.id);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${file.fieldname}-${Date.now()}${ext}`);
+  },
+});
+const vendorUpload = multer({
+  storage: vendorStorage,
+  fileFilter: (req, file, cb) => {
+    const ok = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.mimetype);
+    cb(ok ? null : new Error('Only images allowed'), ok);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 // All vendor routes require authentication
 router.use(authMiddleware);
@@ -74,6 +102,20 @@ router.get('/profile/me', requireRole('VENDOR'), vendorController.getMyVendorPro
  * GET /api/vendors/profile/me/comprehensive-care-bookings - List bookings for vendor's comprehensive care services
  */
 router.get('/profile/me/comprehensive-care-bookings', requireRole('VENDOR'), vendorController.getMyComprehensiveCareBookings);
+
+/** GET /api/vendors/profile/me/coupons — كوبونات الفيندور الحالي */
+router.get('/profile/me/coupons', requireRole('VENDOR'), couponController.getMyCoupons);
+/** POST /api/vendors/profile/me/coupons */
+router.post('/profile/me/coupons', requireRole('VENDOR'), couponController.createCoupon);
+/** PATCH /api/vendors/profile/me/coupons/:id */
+router.patch('/profile/me/coupons/:id', requireRole('VENDOR'), couponController.updateCoupon);
+/** DELETE /api/vendors/profile/me/coupons/:id */
+router.delete('/profile/me/coupons/:id', requireRole('VENDOR'), couponController.deleteCoupon);
+
+/**
+ * GET /api/vendors/coupons — كل الكوبونات (أدمن فقط). يجب أن يكون قبل /:id
+ */
+router.get('/coupons', requireRole('ADMIN'), couponController.getAllCoupons);
 
 /**
  * @swagger
@@ -242,5 +284,104 @@ router.put('/:id/status', requireRole('ADMIN'), vendorController.updateVendorSta
  *         description: Vendor deleted
  */
 router.delete('/:id', requireRole('ADMIN'), vendorController.deleteVendor);
+
+// ── Vendor Reviews ─────────────────────────────────────────────────────────
+router.get('/:id/reviews', vendorController.getVendorReviews);
+router.post('/:id/reviews', vendorController.submitVendorReview);
+
+// ── Vendor Documents ────────────────────────────────────────────────────────
+const vendorDocDir = path.join(__dirname, '../../../uploads/vendor-docs');
+if (!fs.existsSync(vendorDocDir)) fs.mkdirSync(vendorDocDir, { recursive: true });
+
+const docStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(vendorDocDir, req.params.id);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `doc-${Date.now()}${ext}`);
+  },
+});
+const docUpload = multer({
+  storage: docStorage,
+  fileFilter: (req, file, cb) => {
+    const ok = ['image/jpeg','image/jpg','image/png','image/webp','application/pdf'].includes(file.mimetype);
+    cb(ok ? null : new Error('Only images and PDF allowed'), ok);
+  },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+});
+
+router.get('/:id/documents', requireRole('ADMIN', 'VENDOR'), async (req, res, next) => {
+  try {
+    const prisma = require('../../utils/database/prisma');
+    const docs = await prisma.vendorDocument.findMany({
+      where: { vendorId: req.params.id },
+      orderBy: { uploadedAt: 'desc' },
+    });
+    res.json({ success: true, data: docs });
+  } catch (err) { next(err); }
+});
+
+router.post(
+  '/:id/documents',
+  requireRole('ADMIN', 'VENDOR'),
+  docUpload.single('file'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+      const prisma = require('../../utils/database/prisma');
+      const { docType = 'OTHER', name } = req.body;
+      const fileUrl = `/uploads/vendor-docs/${req.params.id}/${req.file.filename}`;
+      const doc = await prisma.vendorDocument.create({
+        data: {
+          vendorId: req.params.id,
+          docType,
+          name: name || req.file.originalname,
+          fileUrl,
+          fileSize: req.file.size,
+          mimeType: req.file.mimetype,
+        },
+      });
+      res.status(201).json({ success: true, data: doc });
+    } catch (err) { next(err); }
+  },
+);
+
+router.delete('/:id/documents/:docId', requireRole('ADMIN', 'VENDOR'), async (req, res, next) => {
+  try {
+    const prisma = require('../../utils/database/prisma');
+    const doc = await prisma.vendorDocument.findUnique({ where: { id: req.params.docId } });
+    if (!doc || doc.vendorId !== req.params.id)
+      return res.status(404).json({ success: false, error: 'Document not found' });
+    const filePath = path.join(__dirname, '../../../', doc.fileUrl);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    await prisma.vendorDocument.delete({ where: { id: req.params.docId } });
+    res.json({ success: true, message: 'Document deleted' });
+  } catch (err) { next(err); }
+});
+
+// ── Vendor Image Upload ─────────────────────────────────────────────────────
+router.post(
+  '/:id/upload-image',
+  requireRole('ADMIN', 'VENDOR'),
+  vendorUpload.single('image'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) return res.status(400).json({ success: false, error: 'No image uploaded' });
+      const { type = 'logo' } = req.body; // type: 'logo' | 'banner'
+      const prisma = require('../../utils/database/prisma');
+      const imageUrl = `/uploads/vendors/${req.params.id}/${req.file.filename}`;
+      const vendor = await prisma.vendorProfile.update({
+        where: { id: req.params.id },
+        data: type === 'banner' ? { banner: imageUrl } : { logo: imageUrl },
+      });
+      res.json({ success: true, imageUrl, data: vendor });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 module.exports = router;

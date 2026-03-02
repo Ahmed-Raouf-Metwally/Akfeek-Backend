@@ -76,8 +76,9 @@ model User {
   // Notifications & Ratings
   notifications   Notification[]
   activityLogs    ActivityLog[]
-  ratingsGiven    Rating[]       @relation("RaterRatings")
-  ratingsReceived Rating[]       @relation("RateeRatings")
+  ratingsGiven    Rating[]        @relation("RaterRatings")
+  ratingsReceived Rating[]        @relation("RateeRatings")
+  vendorReviews   VendorReview[]  @relation("VendorReviews")
 
   // Location Tracking
   technicianLocations TechnicianLocation[] @relation("TechnicianLocations")
@@ -395,6 +396,8 @@ enum VendorType {
   COMPREHENSIVE_CARE  // فيندور العناية الشاملة
   CERTIFIED_WORKSHOP  // فيندور الورش المعتمدة
   CAR_WASH            // فيندور خدمة الغسيل
+  MOBILE_WORKSHOP     // مقدم خدمة الورش المتنقلة
+  TOWING_SERVICE      // مقدم خدمة السحب والونش
 }
 
 model VendorProfile {
@@ -426,6 +429,9 @@ model VendorProfile {
   logo   String?
   banner String?
 
+  // Commission — نسبة عمولة التطبيق الخاصة بهذا الفيندور (تتجاوز الإعداد العام إذا كانت محددة)
+  commissionPercent Float? // مثال: 8.5 تعني 8.5% — null يعني استخدام الإعداد العام
+
   // Verification & Status
   status     VendorStatus @default(PENDING_APPROVAL)
   isVerified Boolean      @default(false)
@@ -446,10 +452,78 @@ model VendorProfile {
   bookingAutoParts BookingAutoPart[] // Bookings where this vendor supplied parts
   comprehensiveCareServices Service[] @relation("VendorComprehensiveCareServices") // خدمات العناية الشاملة
   workshop         CertifiedWorkshop? // فيندور الورش المعتمدة: ورشة واحدة مرتبطة به
+  winch            Winch?             // فيندور الونش: سيارة سحب واحدة مرتبطة به
+  mobileWorkshop   MobileWorkshop?    // فيندور الورش المتنقلة: ورشة متنقلة واحدة مرتبطة به
+
+  reviews   VendorReview[]
+  documents VendorDocument[]
+  coupons   Coupon[]
 
   @@index([userId])
   @@index([status])
   @@index([isVerified])
+}
+
+enum CouponDiscountType {
+  PERCENT
+  FIXED
+}
+
+model Coupon {
+  id             String            @id @default(uuid())
+  vendorId       String
+  vendor         VendorProfile     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  code           String            // كود الكوبون (فريد ضمن نفس الفيندور)
+  discountType   CouponDiscountType @default(PERCENT)
+  discountValue  Decimal           @db.Decimal(10, 2)
+  minOrderAmount Decimal?          @db.Decimal(10, 2)
+  validFrom      DateTime          @default(now())
+  validUntil     DateTime
+  maxUses        Int?              // null = غير محدود
+  usedCount      Int               @default(0)
+  isActive       Boolean           @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([vendorId, code])
+  @@index([vendorId])
+  @@index([isActive])
+  @@index([validFrom, validUntil])
+}
+
+model VendorReview {
+  id       String        @id @default(uuid())
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User          @relation("VendorReviews", fields: [userId], references: [id], onDelete: Cascade)
+
+  rating  Int     @db.SmallInt // 1-5
+  comment String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([vendorId, userId]) // مستخدم واحد = تقييم واحد لكل فيندور
+  @@index([vendorId])
+  @@index([userId])
+}
+
+model VendorDocument {
+  id       String        @id @default(uuid())
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  docType   String  // COMMERCIAL_LICENSE | TAX_CERTIFICATE | INSURANCE | VEHICLE_REGISTRATION | DRIVER_LICENSE | IDENTITY_CARD | CERTIFICATION | OTHER
+  name      String  // اسم المستند المعروض
+  fileUrl   String  // المسار النسبي للملف
+  fileSize  Int?    // الحجم بالبايت
+  mimeType  String? // image/jpeg | application/pdf ...
+
+  uploadedAt DateTime @default(now())
+
+  @@index([vendorId])
+  @@index([docType])
 }
 
 model AutoPartCategory {
@@ -693,13 +767,35 @@ model CertifiedWorkshop {
   vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
 
   // Relations
-  bookings Booking[]
-  reviews  WorkshopReview[]
+  bookings         Booking[]
+  reviews          WorkshopReview[]
+  workshopServices CertifiedWorkshopService[]
 
   @@index([isActive, isVerified])
   @@index([city])
   @@index([averageRating])
   @@index([vendorId])
+}
+
+model CertifiedWorkshopService {
+  id         String            @id @default(uuid())
+  workshopId String
+  workshop   CertifiedWorkshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  serviceType       String              // ENGINE_REPAIR, BRAKE, OIL_CHANGE, TIRE, AC, ELECTRICAL, SUSPENSION, BODY_REPAIR, PAINTING, DIAGNOSIS, BATTERY, TRANSMISSION, GENERAL, CUSTOM
+  name              String
+  nameAr            String?
+  description       String?  @db.Text
+  price             Float
+  currency          String   @default("SAR")
+  estimatedDuration Int?                // بالدقائق
+  isActive          Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workshopId])
+  @@index([serviceType])
 }
 
 model WorkshopReview {
@@ -736,6 +832,140 @@ model WorkshopReview {
   @@index([userId])
   @@index([rating])
   @@index([createdAt])
+}
+
+// ================================================================================================
+// WINCH / TOWING VEHICLES
+// ================================================================================================
+
+model Winch {
+  id          String  @id @default(uuid())
+  name        String              // اسم مركبة السحب
+  nameAr      String?
+  plateNumber String  @unique     // رقم اللوحة
+  vehicleModel String?            // موديل السيارة مثلاً: Ford F-150
+  year        Int?
+  capacity    Float?              // طاقة السحب بالطن
+  description String? @db.Text
+  imageUrl    String?
+
+  // Location
+  city      String?
+  latitude  Float?
+  longitude Float?
+
+  // Status
+  isAvailable Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  isVerified  Boolean  @default(false)
+  verifiedAt  DateTime?
+
+  // Pricing — التسعير
+  basePrice      Float?  // سعر الرحلة الأساسي (رسوم ثابتة عند الطلب) بالريال
+  pricePerKm     Float?  // سعر كل كيلومتر إضافي بالريال
+  minPrice       Float?  // الحد الأدنى للرحلة
+  currency       String? @default("SAR")
+
+  // Stats
+  totalTrips    Int    @default(0)
+  averageRating Float? @default(0)
+  totalReviews  Int    @default(0)
+
+  // ربط بفيندور نوعه TOWING_SERVICE — فيندور واحد = وينش واحد
+  vendorId String?        @unique
+  vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([isAvailable])
+  @@index([vendorId])
+  @@index([city])
+}
+
+// ================================================================================================
+// MOBILE WORKSHOP — ورشة متنقلة مرتبطة بفيندور MOBILE_WORKSHOP
+// ================================================================================================
+
+model MobileWorkshop {
+  id          String  @id @default(uuid())
+  name        String
+  nameAr      String?
+  description String? @db.Text
+
+  // Vehicle / Equipment
+  vehicleType  String?           // نوع المركبة: Van, Pickup, Truck...
+  vehicleModel String?           // موديل المركبة: Ford Transit
+  year         Int?
+  plateNumber  String? @unique   // رقم لوحة المركبة
+
+  // Services Offered — مفصّل في جدول MobileWorkshopService
+  servicesOffered Json? // للتوافق القديم فقط — الأسعار التفصيلية في MobileWorkshopService
+
+  // Coverage
+  city          String?
+  latitude      Float?
+  longitude     Float?
+  serviceRadius Float?           // نطاق الخدمة بالكيلومتر
+
+  // Pricing
+  basePrice    Float?            // سعر الزيارة الأساسي
+  pricePerKm   Float?            // سعر كل كيلومتر
+  hourlyRate   Float?            // سعر الساعة
+  minPrice     Float?
+  currency     String? @default("SAR")
+
+  // Media
+  imageUrl        String?        // صورة الفني / الشعار
+  vehicleImageUrl String?        // صورة المركبة
+
+  // Status
+  isAvailable Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  isVerified  Boolean  @default(false)
+  verifiedAt  DateTime?
+
+  // Stats
+  totalJobs     Int    @default(0)
+  averageRating Float? @default(0)
+  totalReviews  Int    @default(0)
+
+  // ربط بفيندور نوعه MOBILE_WORKSHOP
+  vendorId String?        @unique
+  vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  // خدمات مفصّلة مع أسعار
+  services MobileWorkshopService[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([isAvailable])
+  @@index([vendorId])
+  @@index([city])
+}
+
+model MobileWorkshopService {
+  id               String         @id @default(uuid())
+  mobileWorkshopId String
+  mobileWorkshop   MobileWorkshop @relation(fields: [mobileWorkshopId], references: [id], onDelete: Cascade)
+
+  serviceType  String              // OIL_CHANGE, TIRE, BATTERY, BRAKE, AC, ELECTRICAL, ENGINE, SUSPENSION, DIAGNOSIS, GENERAL, CUSTOM
+  name         String              // اسم الخدمة (مخصص)
+  nameAr       String?
+  description  String? @db.Text   // تفاصيل الخدمة
+  price        Float               // سعر الخدمة
+  currency     String  @default("SAR")
+  estimatedDuration Int?           // المدة بالدقائق
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([mobileWorkshopId])
+  @@index([serviceType])
 }
 
 // ================================================================================================
@@ -1260,6 +1490,10 @@ model Payment {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  // ربط بحركة المحفظة (عند الدفع من المحفظة) وبحركة النقاط
+  walletTransaction   Transaction?       @relation("PaymentWalletTransaction")
+  pointsTransaction   PointTransaction?  @relation("PaymentPointsTransaction")
+
   @@index([invoiceId])
   @@index([customerId])
   @@index([status])
@@ -1324,6 +1558,8 @@ model Transaction {
   // Related Entities
   supplyRequestId String?        @unique
   supplyRequest   SupplyRequest? @relation(fields: [supplyRequestId], references: [id])
+  paymentId       String?        @unique
+  payment         Payment?       @relation("PaymentWalletTransaction", fields: [paymentId], references: [id])
 
   metadata Json? // Additional context
 
@@ -1337,6 +1573,7 @@ model Transaction {
   @@index([userId])
   @@index([type])
   @@index([createdAt])
+  @@index([paymentId])
 }
 
 enum PointTransactionType {
@@ -1363,6 +1600,8 @@ model PointTransaction {
   description String?
   referenceId String?
   metadata    Json?
+  paymentId   String?  @unique
+  payment     Payment? @relation("PaymentPointsTransaction", fields: [paymentId], references: [id])
 
   performedById String? @map("performedBy")
   performedBy   User?   @relation("PointTransactionPerformer", fields: [performedById], references: [id])
@@ -1372,6 +1611,7 @@ model PointTransaction {
   @@index([walletId])
   @@index([userId])
   @@index([createdAt])
+  @@index([paymentId])
 }
 
 // ================================================================================================
@@ -1755,8 +1995,8 @@ model FeedbackAuditLog {
 
   oldStatus FeedbackStatus?
   newStatus FeedbackStatus
-  changedBy String
-  changer   User            @relation(fields: [changedBy], references: [id])
+  changedBy String?
+  changer   User?           @relation(fields: [changedBy], references: [id])
 
   notes     String?  @db.Text
   createdAt DateTime @default(now())

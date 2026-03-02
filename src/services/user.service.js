@@ -204,28 +204,37 @@ class UserService {
    */
   async getAllUsers(filters = {}, pagination = {}) {
     const { role, status, search } = filters;
-    const { page = 1, limit = 10 } = pagination;
+    const rawPage  = parseInt(pagination.page)  || 1;
+    const rawLimit = parseInt(pagination.limit) || 10;
+    const safePage  = Math.max(1, rawPage);
+    const safeLimit = Math.min(100, Math.max(1, rawLimit));
+    const skip = (safePage - 1) * safeLimit;
 
-    const skip = (page - 1) * limit;
-
+    const s = typeof search === 'string' ? search.trim() : '';
     const where = {
-      ...(role && { role }),
+      ...(role   && { role }),
       ...(status && { status }),
-      ...(search && {
+      ...(s && {
         OR: [
-          { email: { contains: search } },
-          { phone: { contains: search } },
-          { profile: { firstName: { contains: search } } },
-          { profile: { lastName: { contains: search } } }
-        ]
-      })
+          { email: { contains: s } },
+          { phone: { contains: s } },
+          {
+            profile: {
+              OR: [
+                { firstName: { contains: s } },
+                { lastName:  { contains: s } },
+              ],
+            },
+          },
+        ],
+      }),
     };
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
         skip,
-        take: limit,
+        take: safeLimit,
         select: {
           id: true,
           email: true,
@@ -249,19 +258,19 @@ class UserService {
             }
           }
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       }),
-      prisma.user.count({ where })
+      prisma.user.count({ where }),
     ]);
 
     return {
       users,
       pagination: {
-        page,
-        limit,
+        page: safePage,
+        limit: safeLimit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+      },
     };
   }
 

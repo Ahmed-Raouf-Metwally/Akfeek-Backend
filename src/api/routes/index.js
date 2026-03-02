@@ -24,6 +24,11 @@ const technicianTowingRoutes = require('./technicianTowing.routes');
 const feedbackRoutes = require('./feedback.routes');
 const feedbackAdminRoutes = require('./admin/feedback.admin.routes');
 
+// Winch routes
+const winchRoutes = require('./winches.routes');
+// Mobile Workshop routes
+const mobileWorkshopRoutes = require('./mobileWorkshops.routes');
+
 // Auto Parts Marketplace routes
 const vendorRoutes = require('./vendors.routes');
 const autoPartCategoryRoutes = require('./autoPartCategories.routes');
@@ -46,6 +51,11 @@ router.use('/cart', cartRoutes);
 
 // Certified Workshops routes
 router.use('/workshops', workshopRoutes);
+
+// Winch / Towing vehicles
+router.use('/winches', winchRoutes);
+// Mobile Workshops
+router.use('/mobile-workshops', mobileWorkshopRoutes);
 
 // Public routes (no authentication required)
 router.use('/auth', authRoutes);

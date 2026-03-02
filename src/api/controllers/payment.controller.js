@@ -39,7 +39,15 @@ class PaymentController {
             status: true,
             processedAt: true,
             createdAt: true,
-            invoice: { select: { invoiceNumber: true, totalAmount: true } },
+            invoice: { select: { id: true, invoiceNumber: true, totalAmount: true, bookingId: true } },
+            customer: {
+              select: {
+                id: true,
+                email: true,
+                phone: true,
+                profile: { select: { firstName: true, lastName: true } },
+              },
+            },
           },
         }),
         prisma.payment.count({ where }),
@@ -75,6 +83,8 @@ class PaymentController {
         include: {
           invoice: { select: { id: true, invoiceNumber: true, totalAmount: true, bookingId: true } },
           customer: { select: { id: true, email: true, profile: { select: { firstName: true, lastName: true } } } },
+          walletTransaction: { select: { id: true, transactionNumber: true, amount: true, description: true, createdAt: true } },
+          pointsTransaction: { select: { id: true, amount: true, description: true, balanceAfter: true, createdAt: true } },
         },
       });
 

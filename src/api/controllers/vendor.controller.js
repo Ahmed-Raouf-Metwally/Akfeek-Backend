@@ -1,4 +1,6 @@
 const vendorService = require('../../services/vendor.service');
+const bcrypt = require('bcrypt');
+const prisma = require('../../utils/database/prisma');
 
 /**
  * Vendor Controller
@@ -11,16 +13,20 @@ class VendorController {
    */
   async getAllVendors(req, res, next) {
     try {
-      const { status, search, isVerified } = req.query;
-      const vendors = await vendorService.getAllVendors({
+      const { status, search, isVerified, vendorType, page, limit } = req.query;
+      const result = await vendorService.getAllVendors({
         status,
         search,
         isVerified,
+        vendorType,
+        page: page || 1,
+        limit: limit || 12,
       });
 
       res.json({
         success: true,
-        data: vendors,
+        data: result.data,
+        pagination: result.pagination,
       });
     } catch (error) {
       next(error);
@@ -89,10 +95,45 @@ class VendorController {
    */
   async createVendor(req, res, next) {
     try {
-      // If admin, use userId from request body; otherwise use authenticated user's ID
-      const userId = req.user.role === 'ADMIN' && req.body.userId 
-        ? req.body.userId 
-        : req.user.id;
+      let userId;
+
+      if (req.user.role === 'ADMIN') {
+        if (req.body.newAccount) {
+          // Create a brand-new user with VENDOR role, then link
+          const { email, password, firstName, lastName } = req.body.newAccount;
+          if (!email || !password) {
+            return res.status(400).json({ success: false, error: 'Email and password are required for new account creation' });
+          }
+          const existing = await prisma.user.findFirst({ where: { email } });
+          if (existing) {
+            return res.status(409).json({ success: false, error: 'البريد الإلكتروني مسجل مسبقاً. استخدم بريداً آخر أو اختر "ربط بمستخدم موجود".' });
+          }
+          const hashedPassword = await bcrypt.hash(password, 10);
+          const newUser = await prisma.user.create({
+            data: {
+              email,
+              passwordHash: hashedPassword,
+              role: 'VENDOR',
+              status: 'ACTIVE',
+              profile: {
+                create: {
+                  firstName: firstName || '',
+                  lastName: lastName || '',
+                },
+              },
+            },
+          });
+          userId = newUser.id;
+        } else {
+          userId = req.body.userId || null;
+        }
+      } else {
+        userId = req.user.id;
+      }
+
+      if (!userId) {
+        return res.status(400).json({ success: false, error: 'يجب تحديد مستخدم أو إنشاء حساب جديد' });
+      }
 
       const vendor = await vendorService.createVendor(userId, req.body);
 
@@ -188,6 +229,91 @@ class VendorController {
         message: 'Vendor deleted successfully',
         messageAr: 'تم حذف المورد بنجاح',
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/vendors/:id/reviews
+   */
+  async getVendorReviews(req, res, next) {
+    try {
+      const { id } = req.params;
+      const page  = Math.max(1, parseInt(req.query.page)  || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+      const skip  = (page - 1) * limit;
+
+      const [reviews, total, agg] = await Promise.all([
+        prisma.vendorReview.findMany({
+          where: { vendorId: id },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                profile: { select: { firstName: true, lastName: true, avatar: true } },
+              },
+            },
+          },
+        }),
+        prisma.vendorReview.count({ where: { vendorId: id } }),
+        prisma.vendorReview.aggregate({
+          where: { vendorId: id },
+          _avg: { rating: true },
+        }),
+      ]);
+
+      res.json({
+        success: true,
+        data: reviews,
+        averageRating: agg._avg.rating ?? 0,
+        totalReviews: total,
+        pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/vendors/:id/reviews
+   */
+  async submitVendorReview(req, res, next) {
+    try {
+      const { id: vendorId } = req.params;
+      const userId = req.user.id;
+      const { rating, comment } = req.body;
+
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ success: false, error: 'Rating must be between 1 and 5' });
+      }
+
+      // Upsert — update if exists, create if not
+      const review = await prisma.vendorReview.upsert({
+        where: { vendorId_userId: { vendorId, userId } },
+        update: { rating: parseInt(rating), comment: comment || null },
+        create: { vendorId, userId, rating: parseInt(rating), comment: comment || null },
+      });
+
+      // Recalculate vendor averageRating & totalReviews
+      const agg = await prisma.vendorReview.aggregate({
+        where: { vendorId },
+        _avg: { rating: true },
+        _count: { id: true },
+      });
+      await prisma.vendorProfile.update({
+        where: { id: vendorId },
+        data: {
+          averageRating: Math.round((agg._avg.rating ?? 0) * 10) / 10,
+          totalReviews: agg._count.id,
+        },
+      });
+
+      res.status(201).json({ success: true, data: review });
     } catch (error) {
       next(error);
     }

@@ -3,6 +3,7 @@ const router = express.Router();
 const workshopController = require('../controllers/workshop.controller');
 const workshopReviewController = require('../controllers/workshopReview.controller');
 const workshopImageController = require('../controllers/workshopImage.controller');
+const workshopServiceController = require('../controllers/workshopService.controller');
 const { upload } = require('../../utils/imageUpload');
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
@@ -76,6 +77,11 @@ router.get('/', workshopController.getAllWorkshops);
 router.get('/profile/me', requireRole('VENDOR'), workshopController.getMyWorkshop);
 router.put('/profile/me', requireRole('VENDOR'), workshopController.updateMyWorkshop);
 router.get('/profile/me/bookings', requireRole('VENDOR'), workshopController.getMyWorkshopBookings);
+// Vendor: إدارة الخدمات (مع الأسعار) — نوع الخدمة، اسم، سعر، مدة، وصف
+router.get('/profile/me/services', requireRole('VENDOR'), workshopServiceController.getMyServices);
+router.post('/profile/me/services', requireRole('VENDOR'), workshopServiceController.addMyService);
+router.put('/profile/me/services/:svcId', requireRole('VENDOR'), workshopServiceController.updateMyService);
+router.delete('/profile/me/services/:svcId', requireRole('VENDOR'), workshopServiceController.removeMyService);
 
 /**
  * @swagger
@@ -717,5 +723,13 @@ router.delete('/:id/images/:imageIndex', requireRole('ADMIN'), workshopImageCont
  *         description: Workshop has no logo
  */
 router.delete('/:id/logo', requireRole('ADMIN'), workshopImageController.deleteLogo);
+
+// ================================================================================================
+// WORKSHOP SERVICES (Pricing)
+// ================================================================================================
+router.get('/:id/services',                     workshopServiceController.getServices);
+router.post('/:id/services',                    requireRole('ADMIN'), workshopServiceController.addService);
+router.put('/:id/services/:svcId',              requireRole('ADMIN'), workshopServiceController.updateService);
+router.delete('/:id/services/:svcId',           requireRole('ADMIN'), workshopServiceController.removeService);
 
 module.exports = router;

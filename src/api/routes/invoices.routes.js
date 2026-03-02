@@ -17,4 +17,9 @@ router.get('/', requireRole('ADMIN'), invoiceController.getAllInvoices);
  */
 router.get('/:id', requireRole('ADMIN'), invoiceController.getInvoiceById);
 
+/**
+ * PATCH /api/invoices/:id/mark-paid - Mark invoice as paid (Admin).
+ */
+router.patch('/:id/mark-paid', requireRole('ADMIN'), invoiceController.markInvoicePaid);
+
 module.exports = router;

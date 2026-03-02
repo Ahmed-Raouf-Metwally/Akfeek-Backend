@@ -1,5 +1,6 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const { getPlatformCommissionPercent } = require('../../utils/pricing');
 
 /**
  * Get all bookings (Admin). Paginated list with customer/vehicle summary.
@@ -29,6 +30,11 @@ async function getAllBookings(req, res, next) {
           scheduledDate: true,
           scheduledTime: true,
           status: true,
+          subtotal: true,
+          laborFee: true,
+          deliveryFee: true,
+          partsTotal: true,
+          discount: true,
           totalPrice: true,
           createdAt: true,
           customer: {
@@ -57,6 +63,36 @@ async function getAllBookings(req, res, next) {
               id: true,
               email: true,
               profile: { select: { firstName: true, lastName: true } },
+            },
+          },
+          workshop: {
+            select: {
+              id: true,
+              name: true,
+              nameAr: true,
+              vendor: {
+                select: {
+                  id: true,
+                  businessName: true,
+                  businessNameAr: true,
+                },
+              },
+            },
+          },
+          services: {
+            take: 3,
+            select: {
+              service: {
+                select: {
+                  vendor: {
+                    select: {
+                      id: true,
+                      businessName: true,
+                      businessNameAr: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -326,13 +362,30 @@ async function createBooking(req, res, next) {
       const totalPrice = unitPrice * quantity;
       subtotal += totalPrice;
       const estimatedMinutes = service.estimatedDuration != null ? Number(service.estimatedDuration) : null;
-      bookingServiceData.push({ serviceId, quantity, unitPrice, totalPrice, estimatedMinutes });
+      const vendorId = service.vendorId || null;
+      bookingServiceData.push({ serviceId, quantity, unitPrice, totalPrice, estimatedMinutes, vendorId });
     }
 
     const totalEstimatedMinutes = bookingServiceData.reduce((sum, s) => sum + (s.estimatedMinutes ?? 0), 0);
 
-    const tax = Math.round(subtotal * 0.15 * 100) / 100;
-    const totalPrice = subtotal + flatbedFee + tax;
+    // لا نضيف ضريبة قيمة مضافة على الحجوزات — الإجمالي = المجموع الجزئي + الرسوم فقط
+    const tax = 0;
+    const totalPrice = Math.round((subtotal + flatbedFee) * 100) / 100;
+
+    // احسب عمولة الفيندور الخاص لو موجودة، وإلا استخدم العمولة العامة
+    const vendorIdsInBooking = [...new Set(bookingServiceData.map(s => s.vendorId).filter(Boolean))];
+    let effectiveCommissionPercent = await getPlatformCommissionPercent();
+    if (vendorIdsInBooking.length > 0) {
+      const vendorProfile = await prisma.vendorProfile.findFirst({
+        where: { id: vendorIdsInBooking[0] },
+        select: { commissionPercent: true },
+      });
+      if (vendorProfile?.commissionPercent != null) {
+        effectiveCommissionPercent = vendorProfile.commissionPercent;
+      }
+    }
+    const platformCommission = Math.round(subtotal * effectiveCommissionPercent / 100 * 100) / 100;
+    const vendorEarnings = Math.round((subtotal - platformCommission) * 100) / 100;
 
     const booking = await prisma.booking.create({
       data: {
@@ -356,6 +409,11 @@ async function createBooking(req, res, next) {
         tax,
         totalPrice,
         notes: notes || null,
+        metadata: {
+          commissionPercent: effectiveCommissionPercent,
+          platformCommission,
+          vendorEarnings,
+        },
         services: {
           create: bookingServiceData.map(({ serviceId, quantity, unitPrice, totalPrice: tp, estimatedMinutes: em }) => ({
             serviceId,
@@ -477,4 +535,42 @@ async function getMyBookings(req, res, next) {
   }
 }
 
-module.exports = { getAllBookings, getBookingById, createBooking, getMyBookings };
+/**
+ * Update booking status (Admin).
+ * PATCH /api/bookings/:id/status
+ * Body: { status, reason? }
+ */
+async function updateBookingStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { status, reason } = req.body;
+
+    const booking = await prisma.booking.findUnique({ where: { id } });
+    if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+
+    const oldStatus = booking.status;
+
+    const updated = await prisma.booking.update({
+      where: { id },
+      data: { status },
+    });
+
+    // Record history
+    await prisma.bookingStatusHistory.create({
+      data: {
+        bookingId: id,
+        fromStatus: oldStatus,
+        toStatus: status,
+        reason: reason || null,
+        changedBy: req.user?.id || null,
+        timestamp: new Date(),
+      },
+    }).catch(() => null); // ignore if model doesn't exist
+
+    res.json({ success: true, message: 'تم تحديث الحالة', data: updated });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { getAllBookings, getBookingById, createBooking, getMyBookings, updateBookingStatus };

@@ -76,6 +76,12 @@ router.get('/:id', bookingController.getBookingById);
  */
 router.post('/', bookingController.createBooking);
 
+/**
+ * PATCH /api/bookings/:id/status - Update booking status (Admin).
+ * Body: { status, reason? }
+ */
+router.patch('/:id/status', requireRole('ADMIN'), bookingController.updateBookingStatus);
+
 // Real-time tracking endpoints (for customers)
 const trackingController = require('../controllers/tracking.controller');
 router.get('/:bookingId/track', trackingController.getTrackingInfo);
