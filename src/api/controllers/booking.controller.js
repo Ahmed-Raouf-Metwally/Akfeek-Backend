@@ -95,6 +95,12 @@ async function getAllBookings(req, res, next) {
               },
             },
           },
+          invoice: {
+            select: {
+              id: true,
+              lineItems: { select: { totalPrice: true } },
+            },
+          },
         },
       }),
       prisma.booking.count({ where }),
@@ -550,7 +556,13 @@ async function getMyBookings(req, res, next) {
                 }
               }
             }
-          }
+          },
+          invoice: {
+            select: {
+              id: true,
+              lineItems: { select: { totalPrice: true } },
+            },
+          },
         }
       }),
       prisma.booking.count({ where })

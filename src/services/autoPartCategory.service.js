@@ -77,37 +77,42 @@ class AutoPartCategoryService {
   }
 
   /**
-   * Get category tree (hierarchical structure)
-   * @returns {Array} Category tree
+   * Get category tree (hierarchical structure).
+   * @param {Object} options - Optional filter
+   * @param {string} [options.vehicleType] - 'CAR' | 'MOTORCYCLE' — يعيد فقط الشجرة تحت الفئة الجذرية لهذا النوع
+   * @returns {Array} Category tree (roots with children; each root has id for parentId)
    */
-  async getCategoryTree() {
-    // Get all categories
-    const categories = await prisma.autoPartCategory.findMany({
-      where: { isActive: true },
+  async getCategoryTree(options = {}) {
+    const { vehicleType } = options;
+
+    const where = { isActive: true };
+    // الفئات الجذرية فقط (بدون parent)
+    const rootWhere = { ...where, parentId: null };
+    if (vehicleType && ['CAR', 'MOTORCYCLE'].includes(vehicleType.toUpperCase())) {
+      rootWhere.rootType = vehicleType.toUpperCase();
+    }
+
+    const roots = await prisma.autoPartCategory.findMany({
+      where: rootWhere,
       include: {
         children: {
           where: { isActive: true },
           include: {
-            _count: {
-              select: {
-                parts: true,
+            children: {
+              where: { isActive: true },
+              include: {
+                _count: { select: { parts: true } },
               },
             },
+            _count: { select: { parts: true } },
           },
         },
-        _count: {
-          select: {
-            parts: true,
-          },
-        },
+        _count: { select: { parts: true } },
       },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
 
-    // Filter to get only root categories (those without a parent)
-    const tree = categories.filter((cat) => !cat.parentId);
-
-    return tree;
+    return roots;
   }
 
   /**
@@ -124,12 +129,18 @@ class AutoPartCategoryService {
       icon,
       imageUrl,
       parentId,
+      rootType,
       isActive,
       sortOrder,
     } = data;
 
-    // Validate parent category if provided
-    if (parentId) {
+    // الفئة الجذرية: إما parentId فارغ وrootType CAR/MOTORCYCLE، وإما parentId معرّف للفئة الأب
+    const isRoot = !parentId || parentId === 'null' || parentId === '';
+    const finalRootType = isRoot && rootType && ['CAR', 'MOTORCYCLE'].includes(rootType.toUpperCase())
+      ? rootType.toUpperCase()
+      : null;
+
+    if (parentId && !isRoot) {
       await this.getCategoryById(parentId);
     }
 
@@ -142,6 +153,7 @@ class AutoPartCategoryService {
         icon,
         imageUrl,
         parentId: parentId || null,
+        rootType: finalRootType,
         isActive: isActive !== undefined ? isActive : true,
         sortOrder: sortOrder !== undefined ? parseInt(sortOrder) : 0,
       },
@@ -161,7 +173,7 @@ class AutoPartCategoryService {
    * @returns {Object} Updated category
    */
   async updateCategory(id, data) {
-    await this.getCategoryById(id);
+    const existing = await this.getCategoryById(id);
 
     const {
       name,
@@ -171,6 +183,7 @@ class AutoPartCategoryService {
       icon,
       imageUrl,
       parentId,
+      rootType,
       isActive,
       sortOrder,
     } = data;
@@ -189,6 +202,16 @@ class AutoPartCategoryService {
       await this.getCategoryById(parentId);
     }
 
+    const willBeRoot = parentId !== undefined
+      ? (parentId === 'null' || parentId === '' || !parentId)
+      : !existing.parentId;
+    const rootTypeValue = rootType !== undefined && ['CAR', 'MOTORCYCLE'].includes(String(rootType).toUpperCase())
+      ? String(rootType).toUpperCase()
+      : null;
+    const updateRootType = rootType !== undefined
+      ? (willBeRoot ? rootTypeValue : null)
+      : undefined;
+
     const category = await prisma.autoPartCategory.update({
       where: { id },
       data: {
@@ -201,6 +224,7 @@ class AutoPartCategoryService {
         ...(parentId !== undefined && {
           parentId: parentId === 'null' ? null : parentId,
         }),
+        ...(updateRootType !== undefined && { rootType: updateRootType }),
         ...(isActive !== undefined && { isActive }),
         ...(sortOrder !== undefined && { sortOrder: parseInt(sortOrder) }),
       },

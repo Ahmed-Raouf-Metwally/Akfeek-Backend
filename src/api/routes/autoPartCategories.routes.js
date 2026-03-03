@@ -32,28 +32,37 @@ router.get('/', autoPartCategoryController.getAllCategories);
  * /api/auto-part-categories/tree:
  *   get:
  *     summary: Get category tree hierarchy
+ *     description: |
+ *       يعيد الشجرة الهرمية. الفئات الجذرية لها id و rootType (CAR | MOTORCYCLE).
+ *       استخدم vehicleType لتصفية: قطع غيار سيارات (CAR) أو دراجات نارية (MOTORCYCLE).
  *     tags: [Auto Part Categories]
+ *     parameters:
+ *       - name: vehicleType
+ *         in: query
+ *         description: CAR = قطع غيار سيارات، MOTORCYCLE = قطع غيار دراجات نارية
+ *         schema:
+ *           type: string
+ *           enum: [CAR, MOTORCYCLE]
  *     responses:
  *       200:
- *         description: Category hierarchical tree
+ *         description: Category hierarchical tree (roots have id for parentId)
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
+ *                 success: { type: boolean }
  *                 data:
  *                   type: array
  *                   items:
- *                     allOf:
- *                       - $ref: '#/components/schemas/AutoPartCategory'
- *                       - type: object
- *                         properties:
- *                           children:
- *                             type: array
- *                             items:
- *                               $ref: '#/components/schemas/AutoPartCategory'
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string, format: uuid }
+ *                       name: { type: string }
+ *                       nameAr: { type: string }
+ *                       rootType: { type: string, enum: [CAR, MOTORCYCLE] }
+ *                       parentId: { type: string, nullable: true }
+ *                       children: { type: array }
  */
 router.get('/tree', autoPartCategoryController.getCategoryTree);
 
@@ -101,6 +110,11 @@ router.use(requireRole('ADMIN'));
  *                 type: string
  *               parentId:
  *                 type: string
+ *                 description: معرف الفئة الأب (مثلاً id لفئة "قطع غيار سيارات" أو "قطع غيار دراجات نارية")
+ *               rootType:
+ *                 type: string
+ *                 enum: [CAR, MOTORCYCLE]
+ *                 description: للفئة الجذرية فقط — CAR أو MOTORCYCLE
  *               icon:
  *                 type: string
  *     responses:
@@ -134,6 +148,10 @@ router.post('/', autoPartCategoryController.createCategory);
  *                 type: string
  *               nameAr:
  *                 type: string
+ *               parentId:
+ *                 type: string
+ *                 nullable: true
+ *                 description: id الفئة الأب (null للجذر)
  *               icon:
  *                 type: string
  *     responses:

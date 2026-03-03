@@ -39,7 +39,15 @@ class PaymentController {
             status: true,
             processedAt: true,
             createdAt: true,
-            invoice: { select: { id: true, invoiceNumber: true, totalAmount: true, bookingId: true } },
+            invoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                totalAmount: true,
+                bookingId: true,
+                lineItems: { select: { totalPrice: true } },
+              },
+            },
             customer: {
               select: {
                 id: true,
@@ -55,10 +63,24 @@ class PaymentController {
 
       const totalPages = Math.ceil(total / limit) || 1;
 
+      const data = items.map((p) => ({
+        ...p,
+        amount: p.amount != null ? Number(p.amount) : p.amount,
+        invoice: p.invoice
+          ? {
+              ...p.invoice,
+              totalAmount: p.invoice.totalAmount != null ? Number(p.invoice.totalAmount) : p.invoice.totalAmount,
+              lineItems: (p.invoice.lineItems || []).map((li) => ({
+                totalPrice: li.totalPrice != null ? Number(li.totalPrice) : li.totalPrice,
+              })),
+            }
+          : p.invoice,
+      }));
+
       res.json({
         success: true,
         message: '',
-        data: items,
+        data,
         pagination: { page, limit, total, totalPages },
       });
     } catch (error) {

@@ -3,7 +3,7 @@
   "info": {
     "title": "AutoService (أكفيك) API",
     "version": "1.0.0",
-    "description": "\n# AutoService API Documentation\n\nComprehensive car services platform supporting 4 service models:\n1. **Direct Booking** (Fixed Services) - Car Wash, Polishing\n2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement\n3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance\n4. **Ekfik Lifecycle** (Inspection Services) - Valet & Comprehensive Repair\n\n---\n\nمنصة شاملة لخدمات السيارات تدعم 4 نماذج خدمة:\n1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع\n2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر\n3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق\n4. **دورة الفحص** (خدمات الفحص) - الفحص الشامل والإصلاح\n\n---\n\n## Features / المميزات\n\n- ✅ Bilingual support (Arabic/English) - دعم اللغتين\n- ✅ Real-time updates via Socket.io - تحديثات فورية\n- ✅ Multiple payment gateways - بوابات دفع متعددة\n- ✅ Supply chain integration - تكامل سلسلة التوريد\n- ✅ Geolocation-based services - خدمات الموقع الجغرافي\n\n## Authentication / المصادقة\n\nAll protected endpoints require Bearer token in Authorization header:\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n      ",
+    "description": "\n# AutoService API Documentation\n\nComprehensive car services platform supporting 4 service models:\n1. **Direct Booking** (Fixed Services) - Car Wash, Polishing\n2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement\n3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance\n4. **Ekfik Lifecycle** (Inspection Services) - Valet & Comprehensive Repair\n\n---\n\nمنصة شاملة لخدمات السيارات تدعم 4 نماذج خدمة:\n1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع\n2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر\n3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق\n4. **دورة الفحص** (خدمات الفحص) - الفحص الشامل والإصلاح\n\n---\n\n## Features / المميزات\n\n- ✅ Bilingual support (Arabic/English) - دعم اللغتين\n- ✅ Real-time updates via Socket.io - تحديثات فورية\n- ✅ Multiple payment gateways - بوابات دفع متعددة\n- ✅ Supply chain integration - تكامل سلسلة التوريد\n- ✅ Geolocation-based services - خدمات الموقع الجغرافي\n\n## Postman / اختبار الـ API\n\n- **استيراد المواصفات:** في Postman اختر File → Import ثم إما:\n  - الرابط (مع تشغيل السيرفر): `http://localhost:3000/api-docs.json`\n  - أو الملف: `openapi.json` (من جذر المشروع بعد تشغيل `npm run openapi`)\n- **المصادقة:** في تبويب Authorization اختر Type: Bearer Token وأدخل الـ JWT بعد تسجيل الدخول من `POST /api/auth/login`.\n\n## Authentication / المصادقة\n\nAll protected endpoints require Bearer token in Authorization header:\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n      ",
     "contact": {
       "name": "AutoService API Support",
       "email": "support@autoservice.com",
@@ -614,10 +614,6 @@
     {
       "name": "Services",
       "description": "Service catalog - كتالوج الخدمات"
-    },
-    {
-      "name": "Products",
-      "description": "Product catalog (E-Commerce model) - كتالوج المنتجات"
     },
     {
       "name": "Bookings",
@@ -1686,6 +1682,73 @@
       }
     },
     "/api/bookings": {
+      "get": {
+        "summary": "List all bookings (Admin)",
+        "description": "Get paginated list of all bookings. Admin only.\nقائمة الحجوزات مع الصفحات - للمسؤول فقط.\n",
+        "tags": [
+          "Bookings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by booking status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "CONFIRMED",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of bookings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      },
       "post": {
         "summary": "Create new booking",
         "description": "Create a new booking with optional workshop and delivery method",
@@ -1764,6 +1827,201 @@
           },
           "404": {
             "description": "Workshop not found"
+          }
+        }
+      }
+    },
+    "/api/bookings/my": {
+      "get": {
+        "summary": "My bookings (current user)",
+        "description": "Get current user's bookings (customer appointments). Includes workshop/vendor info.\nحجوزاتي - حجوزات المستخدم الحالي مع بيانات الورشة/الفيندور.\n",
+        "tags": [
+          "Bookings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "CONFIRMED",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current user bookings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}": {
+      "get": {
+        "summary": "Get booking by ID",
+        "description": "Get single booking details. Admin or booking owner.",
+        "tags": [
+          "Bookings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}/status": {
+      "patch": {
+        "summary": "Update booking status (Admin)",
+        "description": "Update booking status. Admin only.\nتحديث حالة الحجز - للمسؤول فقط.\n",
+        "tags": [
+          "Bookings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "CONFIRMED",
+                      "IN_PROGRESS",
+                      "COMPLETED",
+                      "CANCELLED"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Optional reason for status change"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Booking status updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
           }
         }
       }
@@ -2853,6 +3111,213 @@
         }
       }
     },
+    "/api/invoices": {
+      "get": {
+        "summary": "List all invoices (Admin)",
+        "description": "Get paginated list of invoices. Admin only.\nقائمة الفواتير مع الصفحات - للمسؤول فقط.\n",
+        "tags": [
+          "Invoices"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by invoice status - تصفية حسب الحالة",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PENDING",
+                "PAID",
+                "PARTIALLY_PAID",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of invoices - قائمة الفواتير",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/invoices/{id}": {
+      "get": {
+        "summary": "Get invoice by ID",
+        "description": "Get single invoice details by ID or by bookingId. Admin only.\nتفاصيل فاتورة بالمعرف أو معرف الحجز - للمسؤول فقط.\n",
+        "tags": [
+          "Invoices"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Invoice ID or Booking ID - معرف الفاتورة أو الحجز",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice details - تفاصيل الفاتورة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "Invoice with booking",
+                      "lineItems": null,
+                      "payments": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/invoices/{id}/mark-paid": {
+      "patch": {
+        "summary": "Mark invoice as paid (Admin)",
+        "description": "Mark an invoice as paid. Creates payment record, credits vendor wallet, awards customer points.\nتحديد الفاتورة كمدفوعة - يسجل الدفع ويودع رصيد الفيندور ويمنح النقاط للعميل.\n",
+        "tags": [
+          "Invoices"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Invoice ID - معرف الفاتورة",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "CARD",
+                      "MADA",
+                      "CASH",
+                      "WALLET",
+                      "BANK_TRANSFER"
+                    ],
+                    "description": "Payment method - طريقة الدفع"
+                  },
+                  "paidAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Payment date - تاريخ الدفع"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice marked as paid - تم تحديد الفاتورة كمدفوعة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object"
+                    },
+                    "payment": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
     "/api/marketplace-orders": {
       "post": {
         "summary": "Create new order",
@@ -3447,7 +3912,8 @@
                 "REPAIR",
                 "EMERGENCY",
                 "INSPECTION",
-                "CUSTOMIZATION"
+                "CUSTOMIZATION",
+                "COMPREHENSIVE_CARE"
               ]
             }
           },
@@ -4986,6 +5452,79 @@
           },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create user (Admin only) - e.g. vendor account",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password",
+                  "firstName",
+                  "lastName",
+                  "role"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "CUSTOMER",
+                      "TECHNICIAN",
+                      "SUPPLIER",
+                      "VENDOR",
+                      "ADMIN"
+                    ]
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "preferredLanguage": {
+                    "type": "string",
+                    "enum": [
+                      "AR",
+                      "EN"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "409": {
+            "description": "Email or phone already registered"
           }
         }
       }

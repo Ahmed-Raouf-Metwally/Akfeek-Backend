@@ -7,18 +7,106 @@ const bookingController = require('../controllers/booking.controller');
 router.use(authMiddleware);
 
 /**
- * GET /api/bookings - List all bookings (Admin). Paginated.
- * Query: page, limit, status
+ * @swagger
+ * /api/bookings:
+ *   get:
+ *     summary: List all bookings (Admin)
+ *     description: |
+ *       Get paginated list of all bookings. Admin only.
+ *       قائمة الحجوزات مع الصفحات - للمسؤول فقط.
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/PageParam'
+ *       - $ref: '#/components/parameters/LimitParam'
+ *       - name: status
+ *         in: query
+ *         description: Filter by booking status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED]
+ *     responses:
+ *       200:
+ *         description: List of bookings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { type: array, items: { type: object } }
+ *                 pagination: { $ref: '#/components/schemas/Pagination' }
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
  */
 router.get('/', requireRole('ADMIN'), bookingController.getAllBookings);
 
 /**
- * GET /api/bookings/my - Current user's bookings (customer: my appointments). Query: page, limit, status
+ * @swagger
+ * /api/bookings/my:
+ *   get:
+ *     summary: My bookings (current user)
+ *     description: |
+ *       Get current user's bookings (customer appointments). Includes workshop/vendor info.
+ *       حجوزاتي - حجوزات المستخدم الحالي مع بيانات الورشة/الفيندور.
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/PageParam'
+ *       - $ref: '#/components/parameters/LimitParam'
+ *       - name: status
+ *         in: query
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED]
+ *     responses:
+ *       200:
+ *         description: Current user bookings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { type: array, items: { type: object } }
+ *                 pagination: { $ref: '#/components/schemas/Pagination' }
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.get('/my', bookingController.getMyBookings);
 
 /**
- * GET /api/bookings/:id - Get one booking by id (Admin or owner).
+ * @swagger
+ * /api/bookings/{id}:
+ *   get:
+ *     summary: Get booking by ID
+ *     description: Get single booking details. Admin or booking owner.
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Booking details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { type: object }
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
  */
 router.get('/:id', bookingController.getBookingById);
 
@@ -77,8 +165,49 @@ router.get('/:id', bookingController.getBookingById);
 router.post('/', bookingController.createBooking);
 
 /**
- * PATCH /api/bookings/:id/status - Update booking status (Admin).
- * Body: { status, reason? }
+ * @swagger
+ * /api/bookings/{id}/status:
+ *   patch:
+ *     summary: Update booking status (Admin)
+ *     description: |
+ *       Update booking status. Admin only.
+ *       تحديث حالة الحجز - للمسؤول فقط.
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED]
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for status change
+ *     responses:
+ *       200:
+ *         description: Booking status updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { type: object }
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
  */
 router.patch('/:id/status', requireRole('ADMIN'), bookingController.updateBookingStatus);
 

@@ -33,6 +33,13 @@ Comprehensive car services platform supporting 4 service models:
 - ✅ Supply chain integration - تكامل سلسلة التوريد
 - ✅ Geolocation-based services - خدمات الموقع الجغرافي
 
+## Postman / اختبار الـ API
+
+- **استيراد المواصفات:** في Postman اختر File → Import ثم إما:
+  - الرابط (مع تشغيل السيرفر): \`http://localhost:3000/api-docs.json\`
+  - أو الملف: \`openapi.json\` (من جذر المشروع بعد تشغيل \`npm run openapi\`)
+- **المصادقة:** في تبويب Authorization اختر Type: Bearer Token وأدخل الـ JWT بعد تسجيل الدخول من \`POST /api/auth/login\`.
+
 ## Authentication / المصادقة
 
 All protected endpoints require Bearer token in Authorization header:

@@ -48,6 +48,7 @@ async function getAllInvoices(req, res, next) {
               status: true,
             },
           },
+          lineItems: { select: { totalPrice: true } },
         },
       }),
       prisma.invoice.count({ where }),
@@ -55,9 +56,21 @@ async function getAllInvoices(req, res, next) {
 
     const totalPages = Math.ceil(total / limit) || 1;
 
+    const data = items.map((inv) => {
+      const toNum = (v) => (v == null ? v : Number(v));
+      const lineItemsTotal = (inv.lineItems || []).reduce((s, li) => s + toNum(li.totalPrice), 0);
+      return {
+        ...inv,
+        totalAmount: toNum(inv.totalAmount),
+        paidAmount: toNum(inv.paidAmount),
+        lineItems: (inv.lineItems || []).map((li) => ({ totalPrice: toNum(li.totalPrice) })),
+        effectiveTotal: inv.lineItems?.length ? lineItemsTotal : toNum(inv.totalAmount),
+      };
+    });
+
     res.json({
       success: true,
-      data: items,
+      data,
       pagination: {
         page,
         limit,
@@ -85,6 +98,54 @@ const invoiceInclude = {
       bookingNumber: true,
       status: true,
       scheduledDate: true,
+      workshop: {
+        select: {
+          id: true,
+          vendorId: true,
+          vendor: {
+            select: {
+              id: true,
+              userId: true,
+              businessName: true,
+              businessNameAr: true,
+              taxNumber: true,
+              commercialLicense: true,
+              contactPhone: true,
+              contactEmail: true,
+              address: true,
+              city: true,
+              country: true,
+              user: { select: { id: true, email: true, phone: true } },
+            },
+          },
+        },
+      },
+      services: {
+        take: 1,
+        select: {
+          service: {
+            select: {
+              vendorId: true,
+              vendor: {
+                select: {
+                  id: true,
+                  userId: true,
+                  businessName: true,
+                  businessNameAr: true,
+                  taxNumber: true,
+                  commercialLicense: true,
+                  contactPhone: true,
+                  contactEmail: true,
+                  address: true,
+                  city: true,
+                  country: true,
+                  user: { select: { id: true, email: true, phone: true } },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   },
   lineItems: {
@@ -108,8 +169,10 @@ const invoiceInclude = {
 function serializeInvoice(inv) {
   if (!inv) return inv;
   const toNum = (v) => (v == null ? v : (typeof v === 'number' ? v : Number(v)));
+  const vendor = inv.booking?.workshop?.vendor ?? inv.booking?.services?.[0]?.service?.vendor ?? null;
   return {
     ...inv,
+    vendor,
     subtotal: toNum(inv.subtotal),
     tax: toNum(inv.tax),
     discount: toNum(inv.discount),
