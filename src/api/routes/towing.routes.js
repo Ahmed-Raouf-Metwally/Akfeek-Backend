@@ -6,16 +6,17 @@ const authMiddleware = require('../middlewares/auth.middleware');
 /**
  * @swagger
  * tags:
- *   name: Towing Service
- *   description: Emergency towing service endpoints - خدمة السحب الطارئة
+ *   name: 4. الوينشات (Towing/Winch)
+ *   description: CRUD الوينشات + حجز السحب: طلب → عروض → قبول.
  */
 
 /**
  * @swagger
  * /api/bookings/towing/request:
  *   post:
- *     summary: Create towing request
- *     tags: [Towing Service]
+ *     summary: إنشاء طلب سحب (ونش) — Create towing request
+ *     description: إنشاء طلب سحب وبثه. ثم GET عروض ثم POST قبول عرض.
+ *     tags: [4. الوينشات (Winches/Towing)]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -131,7 +132,7 @@ router.post('/request', authMiddleware, towingController.createRequest);
  * /api/bookings/towing/{broadcastId}/offers:
  *   get:
  *     summary: Get offers for towing request
- *     tags: [Towing Service]
+ *     tags: [4. الوينشات (Winches/Towing)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -219,7 +220,7 @@ router.get('/:broadcastId/offers', authMiddleware, towingController.getOffers);
  * /api/bookings/towing/{broadcastId}/offers/{offerId}/accept:
  *   post:
  *     summary: Accept technician offer
- *     tags: [Towing Service]
+ *     tags: [4. الوينشات (Winches/Towing)]
  *     security:
  *       - bearerAuth: []
  *     parameters:

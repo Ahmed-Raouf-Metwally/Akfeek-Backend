@@ -10,15 +10,18 @@ router.use(requireRole(['CUSTOMER']));
 
 /**
  * @swagger
+ * tags:
+ *   name: 2. ورش الغسيل (Car Wash)
+ *   description: حجز غسيل السيارة: طلب → عروض → قبول.
+ */
+
+/**
+ * @swagger
  * /api/bookings/carwash/request:
  *   post:
- *     summary: Create a car wash request
- *     description: |
- *       Create a new car wash request and broadcast it to nearby technicians.
- *       The request will be broadcasted to available car wash service providers in the area.
- *       
- *       إنشاء طلب غسيل سيارة جديد وإرساله إلى الفنيين القريبين
- *     tags: [Car Wash Service]
+ *     summary: إنشاء طلب غسيل — Create car wash request
+ *     description: إنشاء طلب غسيل وبثه للفنيين. ثم GET عروض ثم POST قبول عرض.
+ *     tags: [2. ورش الغسيل (Car Wash)]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -126,7 +129,7 @@ router.post('/request', carWashController.requestWash);
  *       Each offer includes technician details, bid amount, and estimated arrival time.
  *       
  *       الحصول على جميع العروض المقدمة من الفنيين لطلب غسيل السيارة
- *     tags: [Car Wash Service]
+ *     tags: [2. ورش الغسيل (Car Wash)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -247,7 +250,7 @@ router.get('/:broadcastId/offers', carWashController.getOffers);
  *       This will assign the technician to the booking and close the broadcast.
  *       
  *       قبول عرض محدد من فني لخدمة غسيل السيارة
- *     tags: [Car Wash Service]
+ *     tags: [2. ورش الغسيل (Car Wash)]
  *     security:
  *       - bearerAuth: []
  *     parameters:

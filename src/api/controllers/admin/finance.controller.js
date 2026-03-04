@@ -587,14 +587,10 @@ async function getCommissionReport(req, res, next) {
     const fromDate = fromRaw ? new Date(fromRaw + 'T00:00:00.000Z') : null;
     const toDate   = toRaw   ? new Date(toRaw   + 'T23:59:59.999Z') : null;
 
-    const [commSetting, vatSetting] = await Promise.all([
-      prisma.systemSettings.findUnique({ where: { key: 'PLATFORM_COMMISSION_PERCENT' } }).catch(() => null),
-      prisma.systemSettings.findUnique({ where: { key: 'VAT_RATE'                  } }).catch(() => null),
-    ]);
-
-    const defaultCommissionPercent = commSetting?.value != null ? parseFloat(commSetting.value) : 10;
-    let   defaultVatRate           = vatSetting?.value   != null ? parseFloat(vatSetting.value)  : 15;
+    const vatSetting = await prisma.systemSettings.findUnique({ where: { key: 'VAT_RATE' } }).catch(() => null);
+    let defaultVatRate = vatSetting?.value != null ? parseFloat(vatSetting.value) : 15;
     if (defaultVatRate > 0 && defaultVatRate <= 1) defaultVatRate = defaultVatRate * 100;
+    // نسبة العمولة تُحدَّد لكل فيندور (VendorProfile.commissionPercent) وليس من إعداد عام
 
     const dateFilter = {};
     if (fromDate) dateFilter.gte = fromDate;
@@ -613,6 +609,7 @@ async function getCommissionReport(req, res, next) {
           id: true,
           bookingNumber: true,
           status: true,
+          platformCommissionPercent: true,
           subtotal: true,
           laborFee: true,
           deliveryFee: true,
@@ -625,6 +622,11 @@ async function getCommissionReport(req, res, next) {
             select: {
               email: true,
               profile: { select: { firstName: true, lastName: true } },
+            },
+          },
+          workshop: {
+            select: {
+              vendor: { select: { commissionPercent: true } },
             },
           },
           invoice: {
@@ -657,6 +659,12 @@ async function getCommissionReport(req, res, next) {
               profile: { select: { firstName: true, lastName: true } },
             },
           },
+          items: {
+            select: {
+              totalPrice: true,
+              vendor: { select: { commissionPercent: true } },
+            },
+          },
         },
       }),
       prisma.marketplaceOrder.count({ where: orderWhere }),
@@ -673,11 +681,10 @@ async function getCommissionReport(req, res, next) {
         Number(b.deliveryFee ?? 0) +
         Number(b.partsTotal ?? 0) -
         Number(b.discount ?? 0);
-      let meta = {};
-      try {
-        meta = typeof b.metadata === 'string' ? (JSON.parse(b.metadata || '{}') || {}) : (b.metadata ?? {});
-      } catch (_) { /* ignore */ }
-      const commP = meta.commissionPercent != null ? Number(meta.commissionPercent) : defaultCommissionPercent;
+      // نسبة العمولة من الحجز (مخزنة عند الإنشاء) أو من الفيندور المرتبط بالورشة — لا نستخدم إعداداً عاماً
+      const commP = b.platformCommissionPercent != null
+        ? Number(b.platformCommissionPercent)
+        : (b.workshop?.vendor?.commissionPercent != null ? Number(b.workshop.vendor.commissionPercent) : 0);
       const commission = price * commP / 100;
       const vat        = commission * defaultVatRate / 100;
       totalRevenue    += price;
@@ -704,9 +711,16 @@ async function getCommissionReport(req, res, next) {
 
     const orderRows = marketplaceOrders.map((o) => {
       const price = Number(o.totalAmount ?? 0);
-      const commP = defaultCommissionPercent;
-      const commission = price * commP / 100;
-      const vat        = commission * defaultVatRate / 100;
+      // عمولة طلب المتجر = مجموع (عمولة كل صنف حسب فيندوره)
+      let commission = 0;
+      const items = o.items || [];
+      for (const it of items) {
+        const itemTotal = Number(it.totalPrice ?? 0);
+        const vendorPct = it.vendor?.commissionPercent != null ? Number(it.vendor.commissionPercent) : 0;
+        commission += itemTotal * vendorPct / 100;
+      }
+      const effectivePct = price > 0 ? (commission / price) * 100 : 0;
+      const vat = commission * defaultVatRate / 100;
       totalRevenue    += price;
       totalCommission += commission;
       totalVat        += vat;
@@ -716,7 +730,7 @@ async function getCommissionReport(req, res, next) {
         orderNumber:   o.orderNumber,
         status:        o.status,
         totalPrice:    price,
-        commissionPercent: commP,
+        commissionPercent: items.length ? effectivePct : null,
         commission,
         vatRate:       defaultVatRate,
         vat,
@@ -745,7 +759,6 @@ async function getCommissionReport(req, res, next) {
           totalCommission:         Math.round(totalCommission * 100) / 100,
           totalVat:                Math.round(totalVat        * 100) / 100,
           totalNetCommission:      Math.round((totalCommission - totalVat) * 100) / 100,
-          defaultCommissionPercent,
           vatRate: defaultVatRate,
           periodFrom: fromRaw ?? null,
           periodTo:   toRaw   ?? null,

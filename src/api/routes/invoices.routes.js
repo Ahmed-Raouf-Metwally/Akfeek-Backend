@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
+const { requireAdminOrPermission } = require('../middlewares/permission.middleware');
 const invoiceController = require('../controllers/invoice.controller');
 
 router.use(authMiddleware);
@@ -42,7 +43,7 @@ router.use(authMiddleware);
  *       403:
  *         $ref: '#/components/responses/ForbiddenError'
  */
-router.get('/', requireRole('ADMIN'), invoiceController.getAllInvoices);
+router.get('/', requireAdminOrPermission('invoices'), invoiceController.getAllInvoices);
 
 /**
  * @swagger
@@ -76,7 +77,7 @@ router.get('/', requireRole('ADMIN'), invoiceController.getAllInvoices);
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  */
-router.get('/:id', requireRole('ADMIN'), invoiceController.getInvoiceById);
+router.get('/:id', requireAdminOrPermission('invoices'), invoiceController.getInvoiceById);
 
 /**
  * @swagger
@@ -125,6 +126,6 @@ router.get('/:id', requireRole('ADMIN'), invoiceController.getInvoiceById);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.patch('/:id/mark-paid', requireRole('ADMIN'), invoiceController.markInvoicePaid);
+router.patch('/:id/mark-paid', requireAdminOrPermission('invoices'), invoiceController.markInvoicePaid);
 
 module.exports = router;

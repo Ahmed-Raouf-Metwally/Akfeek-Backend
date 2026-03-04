@@ -1115,18 +1115,23 @@ model BookingService {
   bookingId String
   booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-  serviceId String
-  service   Service @relation(fields: [serviceId], references: [id])
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id])
+
+  // عند الحجز من خدمات الورش: ربط الخدمة المعروضة من الورشة (CertifiedWorkshopService)
+  workshopServiceId String?
+  workshopService   CertifiedWorkshopService? @relation(fields: [workshopServiceId], references: [id], onDelete: SetNull)
 
   quantity          Int     @default(1)
   unitPrice         Decimal @db.Decimal(10, 2)
   totalPrice        Decimal @db.Decimal(10, 2)
-  estimatedMinutes  Int?    // وقت الخدمة بالدقائق (من Service.estimatedDuration)
+  estimatedMinutes  Int?    // وقت الخدمة بالدقائق (من Service أو CertifiedWorkshopService)
 
   createdAt DateTime @default(now())
 
   @@index([bookingId])
   @@index([serviceId])
+  @@index([workshopServiceId])
 }
 
 // Spare parts on a booking (e.g. Mobile Car Service)

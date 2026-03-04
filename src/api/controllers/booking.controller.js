@@ -48,7 +48,9 @@ async function getAllBookings(req, res, next) {
           vehicle: {
             select: {
               id: true,
-              plateNumber: true,
+              plateDigits: true,
+              plateLettersEn: true,
+              plateLettersAr: true,
               vehicleModel: {
                 select: {
                   name: true,
@@ -378,16 +380,26 @@ async function createBooking(req, res, next) {
     const tax = 0;
     const totalPrice = Math.round((subtotal + flatbedFee) * 100) / 100;
 
-    // احسب عمولة الفيندور الخاص لو موجودة، وإلا استخدم العمولة العامة
-    const vendorIdsInBooking = [...new Set(bookingServiceData.map(s => s.vendorId).filter(Boolean))];
+    // نسبة عمولة المنصة: من الفيندور (ورشة أو خدمة) إن وُجدت، وإلا الافتراضية — تُخزّن في الحجز لعدم تأثر الحجوزات القديمة بتغيير النسبة لاحقاً
     let effectiveCommissionPercent = await getPlatformCommissionPercent();
-    if (vendorIdsInBooking.length > 0) {
-      const vendorProfile = await prisma.vendorProfile.findFirst({
-        where: { id: vendorIdsInBooking[0] },
-        select: { commissionPercent: true },
+    if (workshopId) {
+      const workshop = await prisma.certifiedWorkshop.findUnique({
+        where: { id: workshopId },
+        select: { vendor: { select: { commissionPercent: true } } },
       });
-      if (vendorProfile?.commissionPercent != null) {
-        effectiveCommissionPercent = vendorProfile.commissionPercent;
+      if (workshop?.vendor?.commissionPercent != null) {
+        effectiveCommissionPercent = Number(workshop.vendor.commissionPercent);
+      }
+    } else {
+      const vendorIdsInBooking = [...new Set(bookingServiceData.map(s => s.vendorId).filter(Boolean))];
+      if (vendorIdsInBooking.length > 0) {
+        const vendorProfile = await prisma.vendorProfile.findFirst({
+          where: { id: vendorIdsInBooking[0] },
+          select: { commissionPercent: true },
+        });
+        if (vendorProfile?.commissionPercent != null) {
+          effectiveCommissionPercent = vendorProfile.commissionPercent;
+        }
       }
     }
     const platformCommission = Math.round(subtotal * effectiveCommissionPercent / 100 * 100) / 100;
@@ -414,6 +426,7 @@ async function createBooking(req, res, next) {
         discount: 0,
         tax,
         totalPrice,
+        platformCommissionPercent: effectiveCommissionPercent,
         notes: notes || null,
         metadata: {
           commissionPercent: effectiveCommissionPercent,
@@ -507,7 +520,9 @@ async function getMyBookings(req, res, next) {
           vehicle: {
             select: {
               id: true,
-              plateNumber: true,
+              plateDigits: true,
+              plateLettersEn: true,
+              plateLettersAr: true,
               vehicleModel: {
                 select: {
                   name: true,

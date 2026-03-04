@@ -368,10 +368,14 @@ async function markInvoicePaid(req, res, next) {
       });
 
       let vendorUserId = null;
-      let commissionPercent = defaultCommissionPercent;
+      // نسبة العمولة: من الحجز إن وُجدت (حتى لا تتأثر الحجوزات القديمة بتغيير النسبة لاحقاً)، وإلا من الفيندور أو الافتراضية
+      let commissionPercent =
+        booking?.platformCommissionPercent != null
+          ? Number(booking.platformCommissionPercent)
+          : defaultCommissionPercent;
       if (booking?.workshop?.vendorId && booking.workshop.vendor) {
         vendorUserId = booking.workshop.vendor.userId;
-        if (booking.workshop.vendor.commissionPercent != null) {
+        if (booking?.platformCommissionPercent == null && booking.workshop.vendor.commissionPercent != null) {
           commissionPercent = Number(booking.workshop.vendor.commissionPercent);
         }
       } else if (booking?.services?.[0]?.service?.vendorId) {
@@ -381,7 +385,7 @@ async function markInvoicePaid(req, res, next) {
         });
         if (vendorProfile) {
           vendorUserId = vendorProfile.userId;
-          if (vendorProfile.commissionPercent != null) {
+          if (booking?.platformCommissionPercent == null && vendorProfile.commissionPercent != null) {
             commissionPercent = Number(vendorProfile.commissionPercent);
           }
         }

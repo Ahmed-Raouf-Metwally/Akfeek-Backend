@@ -70,6 +70,12 @@ router.get('/profile', userController.getProfile);
 router.put('/profile', userController.updateProfile);
 
 /**
+ * صلاحيات المستخدم الحالي — للأدمن كل الصلاحيات، للموظف ما منحه الأدمن فقط (لإظهار/إخفاء أقسام الداشبورد).
+ * GET /api/users/me/permissions
+ */
+router.get('/me/permissions', userController.getMyPermissions);
+
+/**
  * @swagger
  * /api/users/technician-profile:
  *   put:

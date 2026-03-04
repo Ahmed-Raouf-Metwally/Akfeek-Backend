@@ -211,24 +211,15 @@ class UserService {
     const skip = (safePage - 1) * safeLimit;
 
     const s = typeof search === 'string' ? search.trim() : '';
-    const where = {
-      ...(role   && { role }),
-      ...(status && { status }),
-      ...(s && {
-        OR: [
-          { email: { contains: s } },
-          { phone: { contains: s } },
-          {
-            profile: {
-              OR: [
-                { firstName: { contains: s } },
-                { lastName:  { contains: s } },
-              ],
-            },
-          },
-        ],
-      }),
-    };
+    const where = {};
+    if (role) where.role = role;
+    if (status) where.status = status;
+    if (s) {
+      where.OR = [
+        { email: { contains: s } },
+        { phone: { contains: s } },
+      ];
+    }
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({

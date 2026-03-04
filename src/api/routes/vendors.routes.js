@@ -7,6 +7,7 @@ const vendorController = require('../controllers/vendor.controller');
 const couponController = require('../controllers/coupon.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
+const { requireAdminOrPermission } = require('../middlewares/permission.middleware');
 
 // ── Vendor image upload (logo / banner) ────────────────────────────────────
 const vendorUploadDir = path.join(__dirname, '../../../uploads/vendors');
@@ -39,8 +40,8 @@ router.use(authMiddleware);
  * @swagger
  * /api/vendors:
  *   get:
- *     summary: Get all vendors (Admin only)
- *     tags: [Marketplace Vendors]
+ *     summary: قائمة الفيندورات (أدمن) — List all vendors (Admin only) [CRUD - Read List]
+ *     tags: [Vendors (الفيندور)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -48,12 +49,23 @@ router.use(authMiddleware);
  *         name: status
  *         schema:
  *           type: string
+ *           enum: [PENDING_APPROVAL, ACTIVE, SUSPENDED, REJECTED]
  *         description: Filter by vendor status
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
  *         description: Search by business name
+ *       - in: query
+ *         name: isVerified
+ *         schema:
+ *           type: boolean
+ *         description: Filter by verification
+ *       - in: query
+ *         name: vendorType
+ *         schema:
+ *           type: string
+ *         description: Filter by vendor type
  *       - $ref: '#/components/parameters/PageParam'
  *       - $ref: '#/components/parameters/LimitParam'
  *     responses:
@@ -73,14 +85,14 @@ router.use(authMiddleware);
  *                 pagination:
  *                   $ref: '#/components/schemas/Pagination'
  */
-router.get('/', requireRole('ADMIN'), vendorController.getAllVendors);
+router.get('/', requireAdminOrPermission('vendors'), vendorController.getAllVendors);
 
 /**
  * @swagger
  * /api/vendors/profile/me:
  *   get:
  *     summary: Get current user's vendor profile
- *     tags: [Marketplace Vendors]
+ *     tags: [Vendors (الفيندور)]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -99,7 +111,24 @@ router.get('/', requireRole('ADMIN'), vendorController.getAllVendors);
 router.get('/profile/me', requireRole('VENDOR'), vendorController.getMyVendorProfile);
 
 /**
- * GET /api/vendors/profile/me/comprehensive-care-bookings - List bookings for vendor's comprehensive care services
+ * @swagger
+ * /api/vendors/profile/me/comprehensive-care-bookings:
+ *   get:
+ *     summary: حجوزات العناية الشاملة للفيندور — Comprehensive care bookings (الفيندور) [قسم 3]
+ *     description: قائمة حجوزات الخدمات الخاصة بالعناية الشاملة لهذا الفيندور. List bookings for this vendor's comprehensive care services.
+ *     tags: [3. العناية الشاملة (Comprehensive Care)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/PageParam'
+ *       - $ref: '#/components/parameters/LimitParam'
+ *       - name: status
+ *         in: query
+ *         schema: { type: string }
+ *         description: Filter by booking status
+ *     responses:
+ *       200:
+ *         description: List of comprehensive care bookings
  */
 router.get('/profile/me/comprehensive-care-bookings', requireRole('VENDOR'), vendorController.getMyComprehensiveCareBookings);
 
@@ -115,14 +144,14 @@ router.delete('/profile/me/coupons/:id', requireRole('VENDOR'), couponController
 /**
  * GET /api/vendors/coupons — كل الكوبونات (أدمن فقط). يجب أن يكون قبل /:id
  */
-router.get('/coupons', requireRole('ADMIN'), couponController.getAllCoupons);
+router.get('/coupons', requireAdminOrPermission('vendors'), couponController.getAllCoupons);
 
 /**
  * @swagger
  * /api/vendors/{id}:
  *   get:
- *     summary: Get vendor details by ID
- *     tags: [Marketplace Vendors]
+ *     summary: عرض الفيندور بالمعرف — Get vendor by ID [CRUD - Read One]
+ *     tags: [Vendors (الفيندور)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -151,7 +180,7 @@ router.get('/:id', vendorController.getVendorById);
  * /api/vendors/{id}/stats:
  *   get:
  *     summary: Get vendor statistics
- *     tags: [Marketplace Vendors]
+ *     tags: [Vendors (الفيندور)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -170,8 +199,8 @@ router.get('/:id/stats', vendorController.getVendorStats);
  * @swagger
  * /api/vendors:
  *   post:
- *     summary: Create new vendor profile
- *     tags: [Marketplace Vendors]
+ *     summary: إضافة فيندور — Create vendor [CRUD - Create]
+ *     tags: [Vendors (الفيندور)]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -207,8 +236,8 @@ router.post('/', vendorController.createVendor);
  * @swagger
  * /api/vendors/{id}:
  *   put:
- *     summary: Update vendor profile
- *     tags: [Marketplace Vendors]
+ *     summary: تحديث الفيندور — Update vendor [CRUD - Update]
+ *     tags: [Vendors (الفيندور)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -217,6 +246,7 @@ router.post('/', vendorController.createVendor);
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
  *     requestBody:
  *       required: true
  *       content:
@@ -226,8 +256,29 @@ router.post('/', vendorController.createVendor);
  *             properties:
  *               businessName:
  *                 type: string
+ *               businessNameAr:
+ *                 type: string
  *               description:
  *                 type: string
+ *               descriptionAr:
+ *                 type: string
+ *               contactEmail:
+ *                 type: string
+ *               contactPhone:
+ *                 type: string
+ *               taxNumber:
+ *                 type: string
+ *               commercialLicense:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               city:
+ *                 type: string
+ *               country:
+ *                 type: string
+ *               commissionPercent:
+ *                 type: number
+ *                 description: نسبة عمولة المنصة لهذا الفيندور (اختياري)
  *     responses:
  *       200:
  *         description: Vendor updated
@@ -239,7 +290,7 @@ router.put('/:id', vendorController.updateVendor);
  * /api/vendors/{id}/status:
  *   put:
  *     summary: Update vendor status (Admin only)
- *     tags: [Marketplace Vendors]
+ *     tags: [Vendors (الفيندور)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -263,14 +314,14 @@ router.put('/:id', vendorController.updateVendor);
  *       200:
  *         description: Status updated
  */
-router.put('/:id/status', requireRole('ADMIN'), vendorController.updateVendorStatus);
+router.put('/:id/status', requireAdminOrPermission('vendors'), vendorController.updateVendorStatus);
 
 /**
  * @swagger
  * /api/vendors/{id}:
  *   delete:
  *     summary: Delete vendor (Admin only)
- *     tags: [Marketplace Vendors]
+ *     tags: [Vendors (الفيندور)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -283,7 +334,7 @@ router.put('/:id/status', requireRole('ADMIN'), vendorController.updateVendorSta
  *       200:
  *         description: Vendor deleted
  */
-router.delete('/:id', requireRole('ADMIN'), vendorController.deleteVendor);
+router.delete('/:id', requireAdminOrPermission('vendors'), vendorController.deleteVendor);
 
 // ── Vendor Reviews ─────────────────────────────────────────────────────────
 router.get('/:id/reviews', vendorController.getVendorReviews);

@@ -1,13 +1,14 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const { hasPermission } = require('../middlewares/permission.middleware');
 
 /**
  * Payment Controller
- * List payments for current user (customer) or all for admin
+ * List payments for current user (customer) or all for admin/employee with permission
  */
 class PaymentController {
   /**
-   * Get payments - customer: own payments; admin: all (paginated)
+   * Get payments - customer: own payments; admin or employee with 'payments': all (paginated)
    * GET /api/payments?page=1&limit=10&status=COMPLETED
    */
   async list(req, res, next) {
@@ -18,8 +19,9 @@ class PaymentController {
       const status = req.query.status || null;
       const skip = (page - 1) * limit;
 
+      const canSeeAll = user.role === 'ADMIN' || (user.role === 'EMPLOYEE' && (await hasPermission(user.id, 'payments')));
       const where = {};
-      if (user.role !== 'ADMIN') {
+      if (!canSeeAll) {
         where.customerId = user.id;
       }
       if (status) where.status = status;

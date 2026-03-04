@@ -108,6 +108,7 @@ router.use('/vendor-onboarding', vendorOnboardingRoutes);
 // Admin routes
 router.use('/admin/settings', adminSettingsRoutes);
 router.use('/admin/feedback', feedbackAdminRoutes);
+router.use('/admin/employees', require('./admin/employees.routes'));
 router.use('/dashboard', require('./dashboard.routes'));
 router.use('/admin/finance', require('./admin/finance.routes'));
 

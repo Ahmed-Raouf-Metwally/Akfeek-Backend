@@ -34,10 +34,107 @@ const mwUpload = multer({
 
 router.use(auth);
 
+/**
+ * @swagger
+ * /api/mobile-workshops:
+ *   get:
+ *     summary: قائمة الورش المتنقلة — List all mobile workshops [CRUD - Read List]
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: List of mobile workshops
+ */
 router.get('/',     ctrl.getAll);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/{id}:
+ *   get:
+ *     summary: عرض ورشة متنقلة بالمعرف — Get mobile workshop by ID [CRUD - Read One]
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Mobile workshop details
+ */
 router.get('/:id',  ctrl.getById);
+
+/**
+ * @swagger
+ * /api/mobile-workshops:
+ *   post:
+ *     summary: إضافة ورشة متنقلة (أدمن) — Create mobile workshop [CRUD - Create]
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               vendorId: { type: string, format: uuid }
+ *               name: { type: string }
+ *               nameAr: { type: string }
+ *               description: { type: string }
+ *               notes: { type: string }
+ *     responses:
+ *       201:
+ *         description: Mobile workshop created
+ */
 router.post('/',    role('ADMIN'), ctrl.create);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/{id}:
+ *   put:
+ *     summary: تحديث ورشة متنقلة (أدمن) — Update mobile workshop [CRUD - Update]
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               vendorId: { type: string }
+ *               name: { type: string }
+ *               nameAr: { type: string }
+ *               description: { type: string }
+ *               notes: { type: string }
+ *     responses:
+ *       200:
+ *         description: Mobile workshop updated
+ */
 router.put('/:id',  role('ADMIN'), ctrl.update);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/{id}:
+ *   delete:
+ *     summary: حذف ورشة متنقلة (أدمن) — Delete mobile workshop [CRUD - Delete]
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Mobile workshop deleted
+ */
 router.delete('/:id', role('ADMIN'), ctrl.remove);
 
 // رفع صورة: صورة الفني/الشعار (type=logo) أو صورة المركبة (type=vehicle)
@@ -64,9 +161,76 @@ router.post(
   }
 );
 
-// Services per workshop
+/**
+ * @swagger
+ * /api/mobile-workshops/{id}/services:
+ *   post:
+ *     summary: إضافة خدمة لورشة متنقلة (أدمن)
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: { type: string }
+ *               nameAr: { type: string }
+ *               price: { type: number }
+ *               description: { type: string }
+ *     responses:
+ *       201:
+ *         description: Service added
+ */
 router.post('/:id/services',             role('ADMIN'), ctrl.addService);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/{id}/services/{svcId}:
+ *   put:
+ *     summary: تحديث خدمة ورشة متنقلة (أدمن)
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: svcId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Service updated
+ */
 router.put('/:id/services/:svcId',       role('ADMIN'), ctrl.updateService);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/{id}/services/{svcId}:
+ *   delete:
+ *     summary: حذف خدمة ورشة متنقلة (أدمن)
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: svcId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Service removed
+ */
 router.delete('/:id/services/:svcId',    role('ADMIN'), ctrl.removeService);
 
 module.exports = router;

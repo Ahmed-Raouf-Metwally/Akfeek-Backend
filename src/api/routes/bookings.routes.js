@@ -2,9 +2,19 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
+const { requireAdminOrPermission } = require('../middlewares/permission.middleware');
 const bookingController = require('../controllers/booking.controller');
 
 router.use(authMiddleware);
+
+/**
+ * @swagger
+ * tags:
+ *   name: Bookings
+ *   description: |
+ *     حجز الخدمات — الورش المعتمدة (Certified Workshop) والعناية الشاملة (Comprehensive Care) عبر POST /api/bookings.
+ *     ورش الغسيل والوينشات والورش المتنقلة لها اند بوينتات منفصلة (Car Wash, Towing, Mobile Workshop).
+ */
 
 /**
  * @swagger
@@ -42,7 +52,7 @@ router.use(authMiddleware);
  *       403:
  *         $ref: '#/components/responses/ForbiddenError'
  */
-router.get('/', requireRole('ADMIN'), bookingController.getAllBookings);
+router.get('/', requireAdminOrPermission('bookings'), bookingController.getAllBookings);
 
 /**
  * @swagger
@@ -114,9 +124,16 @@ router.get('/:id', bookingController.getBookingById);
  * @swagger
  * /api/bookings:
  *   post:
- *     summary: Create new booking
- *     description: Create a new booking with optional workshop and delivery method
- *     tags: [Bookings]
+ *     summary: Create booking (الورش المعتمدة / العناية الشاملة)
+ *     description: |
+ *       إنشاء حجز جديد. يُستخدم لنوعين من الخدمات:
+ *
+ *       **1) الورش المعتمدة (Certified Workshop):** أرسل workshopId + deliveryMethod + serviceIds (خدمات الورشة).
+ *
+ *       **2) العناية الشاملة (Comprehensive Care):** أرسل serviceIds فقط (بدون workshopId وبدون deliveryMethod). serviceIds = خدمات تابعة لفيندور عناية شاملة.
+ *
+ *       Create a new booking. Used for (1) Certified Workshop — send workshopId, deliveryMethod, serviceIds; (2) Comprehensive Care — send only serviceIds (no workshopId).
+ *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops), 3. العناية الشاملة (Comprehensive Care)]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -125,42 +142,73 @@ router.get('/:id', bookingController.getBookingById);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [customerId, vehicleId, scheduledDate]
+ *             required: [vehicleId, scheduledDate, serviceIds]
  *             properties:
  *               customerId:
  *                 type: string
+ *                 format: uuid
+ *                 description: مطلوب من الأدمن فقط؛ المستخدم العادي يُستخدم معرفه تلقائياً. Admin only — otherwise current user.
  *               vehicleId:
  *                 type: string
+ *                 format: uuid
+ *                 description: معرف المركبة — Vehicle ID
  *               scheduledDate:
  *                 type: string
  *                 format: date-time
+ *                 example: "2026-03-15T00:00:00.000Z"
+ *                 description: تاريخ الموعد
  *               scheduledTime:
  *                 type: string
  *                 example: "10:00"
+ *                 description: وقت الموعد (اختياري)
  *               workshopId:
  *                 type: string
- *                 description: ID of certified workshop (optional)
+ *                 format: uuid
+ *                 description: للورش المعتمدة فقط. معرف الورشة المعتمدة. Certified workshop ID — required for certified workshop bookings.
  *               deliveryMethod:
  *                 type: string
  *                 enum: [FLATBED, SELF_DELIVERY]
- *                 description: Required if workshopId is provided
- *               services:
+ *                 description: مطلوب عند إرسال workshopId. FLATBED = ونش، SELF_DELIVERY = إيصال ذاتي. Required when workshopId is provided.
+ *               serviceIds:
  *                 type: array
  *                 items:
  *                   type: string
- *               products:
- *                 type: array
- *                 items:
- *                   type: string
+ *                   format: uuid
+ *                 description: مصفوفة معرفات الخدمات (الورشة أو العناية الشاملة). Array of service IDs.
+ *               addressId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: معرف العنوان (اختياري). Address ID (optional).
  *               notes:
  *                 type: string
+ *                 description: ملاحظات (اختياري). Notes (optional).
+ *           examples:
+ *             certifiedWorkshop:
+ *               summary: حجز ورشة معتمدة — Certified Workshop
+ *               value:
+ *                 vehicleId: "uuid-المركبة"
+ *                 scheduledDate: "2026-03-15T00:00:00.000Z"
+ *                 scheduledTime: "10:00"
+ *                 workshopId: "uuid-الورشة-المعتمدة"
+ *                 deliveryMethod: "SELF_DELIVERY"
+ *                 serviceIds: ["uuid-خدمة-1", "uuid-خدمة-2"]
+ *                 notes: "ملاحظات اختيارية"
+ *             comprehensiveCare:
+ *               summary: حجز عناية شاملة — Comprehensive Care
+ *               value:
+ *                 vehicleId: "uuid-المركبة"
+ *                 scheduledDate: "2026-03-15T00:00:00.000Z"
+ *                 scheduledTime: "14:00"
+ *                 serviceIds: ["uuid-خدمة-عناية-1", "uuid-خدمة-عناية-2"]
+ *                 addressId: "uuid-العنوان"
+ *                 notes: "ملاحظات"
  *     responses:
  *       201:
- *         description: Booking created successfully
+ *         description: تم إنشاء الحجز بنجاح — Booking created successfully
  *       400:
- *         description: Invalid input or workshop not available
+ *         description: بيانات غير صالحة أو الورشة غير متاحة — Invalid input or workshop not available
  *       404:
- *         description: Workshop not found
+ *         description: المركبة أو الورشة أو الخدمة غير موجودة — Vehicle/Workshop/Service not found
  */
 router.post('/', bookingController.createBooking);
 
@@ -209,7 +257,7 @@ router.post('/', bookingController.createBooking);
  *       403:
  *         $ref: '#/components/responses/ForbiddenError'
  */
-router.patch('/:id/status', requireRole('ADMIN'), bookingController.updateBookingStatus);
+router.patch('/:id/status', requireAdminOrPermission('bookings'), bookingController.updateBookingStatus);
 
 // Real-time tracking endpoints (for customers)
 const trackingController = require('../controllers/tracking.controller');

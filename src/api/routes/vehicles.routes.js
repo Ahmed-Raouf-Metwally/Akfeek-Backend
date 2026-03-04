@@ -3,6 +3,7 @@ const router = express.Router();
 const vehicleController = require('../controllers/vehicle.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
+const { requireAdminOrPermission } = require('../middlewares/permission.middleware');
 
 // All routes require authentication
 router.use(authMiddleware);
@@ -107,7 +108,7 @@ router.get('/', vehicleController.getMyVehicles);
  *       200:
  *         description: Paginated list of vehicles
  */
-router.get('/admin/all', requireRole('ADMIN'), vehicleController.getAllVehicles);
+router.get('/admin/all', requireAdminOrPermission('vehicles'), vehicleController.getAllVehicles);
 
 /**
  * @swagger
