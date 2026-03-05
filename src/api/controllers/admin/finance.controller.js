@@ -629,6 +629,17 @@ async function getCommissionReport(req, res, next) {
               vendor: { select: { commissionPercent: true } },
             },
           },
+          jobBroadcast: {
+            select: {
+              offers: {
+                where: { isSelected: true },
+                take: 1,
+                select: {
+                  winch: { select: { vendor: { select: { commissionPercent: true } } } },
+                },
+              },
+            },
+          },
           invoice: {
             select: { id: true, invoiceNumber: true, status: true, totalAmount: true, paidAmount: true },
           },
@@ -681,10 +692,13 @@ async function getCommissionReport(req, res, next) {
         Number(b.deliveryFee ?? 0) +
         Number(b.partsTotal ?? 0) -
         Number(b.discount ?? 0);
-      // نسبة العمولة من الحجز (مخزنة عند الإنشاء) أو من الفيندور المرتبط بالورشة — لا نستخدم إعداداً عاماً
+      // نسبة العمولة: المُسجلة وقت الحجز أولاً، وإلا من الفيندور (ورشة أو ونش) — حتى لا تتأثر الحجوزات القديمة
       const commP = b.platformCommissionPercent != null
         ? Number(b.platformCommissionPercent)
-        : (b.workshop?.vendor?.commissionPercent != null ? Number(b.workshop.vendor.commissionPercent) : 0);
+        : (() => {
+            const vendorPct = b.workshop?.vendor?.commissionPercent ?? b.jobBroadcast?.offers?.[0]?.winch?.vendor?.commissionPercent;
+            return vendorPct != null ? Number(vendorPct) : 0;
+          })();
       const commission = price * commP / 100;
       const vat        = commission * defaultVatRate / 100;
       totalRevenue    += price;

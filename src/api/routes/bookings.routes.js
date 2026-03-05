@@ -128,11 +128,13 @@ router.get('/:id', bookingController.getBookingById);
  *     description: |
  *       إنشاء حجز جديد. يُستخدم لنوعين من الخدمات:
  *
- *       **1) الورش المعتمدة (Certified Workshop):** أرسل workshopId + deliveryMethod + serviceIds (خدمات الورشة).
+ *       **1) الورش المعتمدة (Certified Workshop):** أرسل workshopId + deliveryMethod، ثم إما:
+ *       - **workshopServiceIds** — مصفوفة معرفات خدمات الورشة (من GET /api/workshops/{id}/services)، أو
+ *       - **serviceIds** — مصفوفة معرفات الخدمات من الكتالوج العام.
  *
  *       **2) العناية الشاملة (Comprehensive Care):** أرسل serviceIds فقط (بدون workshopId وبدون deliveryMethod). serviceIds = خدمات تابعة لفيندور عناية شاملة.
  *
- *       Create a new booking. Used for (1) Certified Workshop — send workshopId, deliveryMethod, serviceIds; (2) Comprehensive Care — send only serviceIds (no workshopId).
+ *       Create a new booking. (1) Certified Workshop — workshopId, deliveryMethod, and either workshopServiceIds (from GET /api/workshops/:id/services) or serviceIds; (2) Comprehensive Care — serviceIds only.
  *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops), 3. العناية الشاملة (Comprehensive Care)]
  *     security:
  *       - bearerAuth: []
@@ -142,7 +144,7 @@ router.get('/:id', bookingController.getBookingById);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [vehicleId, scheduledDate, serviceIds]
+ *             required: [vehicleId, scheduledDate]
  *             properties:
  *               customerId:
  *                 type: string
@@ -174,7 +176,13 @@ router.get('/:id', bookingController.getBookingById);
  *                 items:
  *                   type: string
  *                   format: uuid
- *                 description: مصفوفة معرفات الخدمات (الورشة أو العناية الشاملة). Array of service IDs.
+ *                 description: مصفوفة معرفات الخدمات من الكتالوج (عناية شاملة أو ورشة). Array of catalog Service IDs.
+ *               workshopServiceIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: للورش المعتمدة فقط. مصفوفة معرفات خدمات الورشة (CertifiedWorkshopService من GET /api/workshops/{id}/services). عند الإرسال مع workshopId يُستخدم سعر واسم الخدمة من الورشة. For certified workshop — IDs from GET /api/workshops/:id/services.
  *               addressId:
  *                 type: string
  *                 format: uuid
@@ -183,8 +191,18 @@ router.get('/:id', bookingController.getBookingById);
  *                 type: string
  *                 description: ملاحظات (اختياري). Notes (optional).
  *           examples:
- *             certifiedWorkshop:
- *               summary: حجز ورشة معتمدة — Certified Workshop
+ *             certifiedWorkshopWithWorkshopServices:
+ *               summary: حجز ورشة معتمدة (خدمات الورشة) — Certified Workshop (workshop services)
+ *               value:
+ *                 vehicleId: "uuid-المركبة"
+ *                 scheduledDate: "2026-03-15T00:00:00.000Z"
+ *                 scheduledTime: "10:00"
+ *                 workshopId: "uuid-الورشة-المعتمدة"
+ *                 deliveryMethod: "SELF_DELIVERY"
+ *                 workshopServiceIds: ["uuid-خدمة-ورشة-1", "uuid-خدمة-ورشة-2"]
+ *                 notes: "ملاحظات اختيارية"
+ *             certifiedWorkshopWithCatalog:
+ *               summary: حجز ورشة معتمدة (خدمات كتالوج) — Certified Workshop (catalog services)
  *               value:
  *                 vehicleId: "uuid-المركبة"
  *                 scheduledDate: "2026-03-15T00:00:00.000Z"

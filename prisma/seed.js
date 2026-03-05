@@ -330,7 +330,6 @@ async function main() {
 
     for (let v = 0; v < numVehicles; v++) {
       const model = allModels[(i * 2 + v) % allModels.length];
-      const plateNum = `PLT-${String(vehicleCount + 10000).padStart(6, '0')}`;
       const vin = `VIN${String(2000000 + vehicleCount).padStart(7, '0')}`;
 
       const existing = await prisma.userVehicle.findFirst({

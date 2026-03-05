@@ -1,6 +1,7 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
 const { getPlatformCommissionPercent } = require('../../utils/pricing');
+const { emitBookingReady } = require('../../socket');
 
 /**
  * Get all invoices (Admin). Paginated list with customer/booking summary.
@@ -98,6 +99,7 @@ const invoiceInclude = {
       bookingNumber: true,
       status: true,
       scheduledDate: true,
+      subtotal: true,
       workshop: {
         select: {
           id: true,
@@ -115,6 +117,7 @@ const invoiceInclude = {
               address: true,
               city: true,
               country: true,
+              commissionPercent: true,
               user: { select: { id: true, email: true, phone: true } },
             },
           },
@@ -139,7 +142,44 @@ const invoiceInclude = {
                   address: true,
                   city: true,
                   country: true,
+                  commissionPercent: true,
                   user: { select: { id: true, email: true, phone: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+      // حجوزات السحب/الونش: الفيندور من العرض المختار
+      jobBroadcast: {
+        select: {
+          id: true,
+          offers: {
+            where: { isSelected: true },
+            take: 1,
+            select: {
+              winch: {
+                select: {
+                  id: true,
+                  name: true,
+                  vendorId: true,
+                  vendor: {
+                    select: {
+                      id: true,
+                      userId: true,
+                      businessName: true,
+                      businessNameAr: true,
+                      taxNumber: true,
+                      commercialLicense: true,
+                      contactPhone: true,
+                      contactEmail: true,
+                      address: true,
+                      city: true,
+                      country: true,
+                      commissionPercent: true,
+                      user: { select: { id: true, email: true, phone: true } },
+                    },
+                  },
                 },
               },
             },
@@ -169,10 +209,27 @@ const invoiceInclude = {
 function serializeInvoice(inv) {
   if (!inv) return inv;
   const toNum = (v) => (v == null ? v : (typeof v === 'number' ? v : Number(v)));
-  const vendor = inv.booking?.workshop?.vendor ?? inv.booking?.services?.[0]?.service?.vendor ?? null;
+  // بيان الفيندور صاحب الفاتورة: ورشة، خدمة، أو ونش سحب
+  const vendor =
+    inv.booking?.workshop?.vendor ??
+    inv.booking?.services?.[0]?.service?.vendor ??
+    inv.booking?.jobBroadcast?.offers?.[0]?.winch?.vendor ??
+    null;
+  const vendorSummary = vendor
+    ? {
+        id: vendor.id,
+        userId: vendor.userId,
+        businessName: vendor.businessName,
+        businessNameAr: vendor.businessNameAr,
+        contactPhone: vendor.contactPhone,
+        contactEmail: vendor.contactEmail,
+        ...(vendor.user && { user: vendor.user }),
+      }
+    : null;
   return {
     ...inv,
     vendor,
+    vendorSummary, // بيان الفيندور صاحب الفاتورة
     subtotal: toNum(inv.subtotal),
     tax: toNum(inv.tax),
     discount: toNum(inv.discount),
@@ -350,7 +407,7 @@ async function markInvoicePaid(req, res, next) {
         });
       }
 
-      // 5) إيداع حصة الفيندور في محفظته (من الحجز المرتبط بالفاتورة)
+      // 5) إيداع حصة الفيندور في محفظته وخصم نسبة المنصة (نسبة مسجلة وقت الحجز أو الحالية من الفيندور)
       const booking = await tx.booking.findUnique({
         where: { id: invoice.bookingId },
         include: {
@@ -364,20 +421,31 @@ async function markInvoicePaid(req, res, next) {
             take: 1,
             include: { service: { select: { vendorId: true } } },
           },
+          jobBroadcast: {
+            select: {
+              offers: {
+                where: { isSelected: true },
+                take: 1,
+                select: {
+                  winch: {
+                    select: {
+                      vendor: { select: { userId: true, commissionPercent: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
 
       let vendorUserId = null;
-      // نسبة العمولة: من الحجز إن وُجدت (حتى لا تتأثر الحجوزات القديمة بتغيير النسبة لاحقاً)، وإلا من الفيندور أو الافتراضية
-      let commissionPercent =
-        booking?.platformCommissionPercent != null
-          ? Number(booking.platformCommissionPercent)
-          : defaultCommissionPercent;
+      let vendorCommissionPercent = null; // النسبة المسجلة عند الفيندور
       if (booking?.workshop?.vendorId && booking.workshop.vendor) {
         vendorUserId = booking.workshop.vendor.userId;
-        if (booking?.platformCommissionPercent == null && booking.workshop.vendor.commissionPercent != null) {
-          commissionPercent = Number(booking.workshop.vendor.commissionPercent);
-        }
+        vendorCommissionPercent = booking.workshop.vendor.commissionPercent != null
+          ? Number(booking.workshop.vendor.commissionPercent)
+          : null;
       } else if (booking?.services?.[0]?.service?.vendorId) {
         const vendorProfile = await tx.vendorProfile.findUnique({
           where: { id: booking.services[0].service.vendorId },
@@ -385,11 +453,23 @@ async function markInvoicePaid(req, res, next) {
         });
         if (vendorProfile) {
           vendorUserId = vendorProfile.userId;
-          if (booking?.platformCommissionPercent == null && vendorProfile.commissionPercent != null) {
-            commissionPercent = Number(vendorProfile.commissionPercent);
-          }
+          vendorCommissionPercent = vendorProfile.commissionPercent != null
+            ? Number(vendorProfile.commissionPercent)
+            : null;
         }
+      } else if (booking?.jobBroadcast?.offers?.[0]?.winch?.vendor) {
+        const winchVendor = booking.jobBroadcast.offers[0].winch.vendor;
+        vendorUserId = winchVendor.userId;
+        vendorCommissionPercent = winchVendor.commissionPercent != null
+          ? Number(winchVendor.commissionPercent)
+          : null;
       }
+      // نسبة عمولة المنصة: المُسجلة وقت الحجز أولاً، ثم المسجلة عند الفيندور، ثم الإعداد العام (لتجنب تغيير الحجوزات القديمة)
+      const commissionPercent = (booking?.platformCommissionPercent != null)
+        ? Number(booking.platformCommissionPercent)
+        : (vendorUserId && vendorCommissionPercent != null)
+          ? vendorCommissionPercent
+          : defaultCommissionPercent;
 
       if (vendorUserId) {
         const subtotal = Number(booking?.subtotal) ?? Number(invoice.subtotal) ?? amount;
@@ -421,6 +501,7 @@ async function markInvoicePaid(req, res, next) {
                 paymentId: payment.id,
                 invoiceId: invoice.id,
                 bookingId: invoice.bookingId,
+                commissionPercentUsed: commissionPercent,
                 platformCommission,
                 vendorEarnings,
               },
@@ -436,6 +517,20 @@ async function markInvoicePaid(req, res, next) {
 
       return { payment, invoice: updatedInvoice };
     });
+
+    // بعد الدفع: فتح السوكت بين العميل وفيندور الوينش (تتبع + محادثة) إن كان الحجز له سائق معيّن
+    try {
+      const booking = await prisma.booking.findUnique({
+        where: { id: invoice.bookingId },
+        select: { customerId: true, technicianId: true },
+      });
+      if (booking?.technicianId) {
+        emitBookingReady(invoice.bookingId, {
+          customerId: booking.customerId,
+          driverId: booking.technicianId,
+        });
+      }
+    } catch (_) { /* socket not ready */ }
 
     res.json({
       success: true,

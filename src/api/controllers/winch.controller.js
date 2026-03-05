@@ -1,5 +1,6 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const winchTowingService = require('../../services/winchTowing.service');
 
 const WINCH_SELECT = {
   id: true, name: true, nameAr: true, plateNumber: true,
@@ -166,4 +167,57 @@ async function deleteWinch(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getAllWinches, getWinchById, createWinch, updateWinch, deleteWinch };
+// GET /api/winches/my/broadcasts — فيندور الوينش: طلبات السحب القريبة من ونشي
+async function getMyBroadcasts(req, res, next) {
+  try {
+    const result = await winchTowingService.getActiveBroadcastsForWinch(req.user.id);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+}
+
+// POST /api/winches/my/broadcasts/:broadcastId/offer — الوينش يوافق: السعر يُحسب من pricePerKm
+async function submitMyOffer(req, res, next) {
+  try {
+    const { broadcastId } = req.params;
+    const result = await winchTowingService.submitWinchOffer(req.user.id, broadcastId, req.body || {});
+    res.status(201).json({
+      success: true,
+      message: 'Offer submitted successfully',
+      messageAr: 'تم إرسال العرض بنجاح — السعر حسب سعر الكم',
+      data: result
+    });
+  } catch (err) { next(err); }
+}
+
+// GET /api/winches/my/jobs — فيندور الوينش فقط: المهام المحددة له (عبر عرض الوينش المُختار)
+async function getMyJobs(req, res, next) {
+  try {
+    const vendorUserId = req.user.id;
+    const result = await winchTowingService.getAssignedJobsForWinch(vendorUserId);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+}
+
+// PATCH /api/winches/my/jobs/:jobId/status — فيندور الوينش: تحديث حالة المهمة (TECHNICIAN_EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED)
+async function updateMyJobStatus(req, res, next) {
+  try {
+    const vendorUserId = req.user.id;
+    const { jobId } = req.params;
+    const { status } = req.body || {};
+    if (!status) throw new AppError('status is required', 400, 'VALIDATION_ERROR');
+    const result = await winchTowingService.updateWinchJobStatus(vendorUserId, jobId, status);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+}
+
+module.exports = {
+  getAllWinches,
+  getWinchById,
+  createWinch,
+  updateWinch,
+  deleteWinch,
+  getMyBroadcasts,
+  submitMyOffer,
+  getMyJobs,
+  updateMyJobStatus
+};

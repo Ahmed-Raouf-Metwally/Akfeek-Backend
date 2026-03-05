@@ -3,7 +3,7 @@
   "info": {
     "title": "AutoService (أكفيك) API",
     "version": "1.0.0",
-    "description": "\n# AutoService API Documentation\n\nComprehensive car services platform supporting 4 service models:\n1. **Direct Booking** (Fixed Services) - Car Wash, Polishing\n2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement\n3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance\n4. **Ekfik Lifecycle** (Inspection Services) - Valet & Comprehensive Repair\n\n---\n\nمنصة شاملة لخدمات السيارات تدعم 4 نماذج خدمة:\n1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع\n2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر\n3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق\n4. **دورة الفحص** (خدمات الفحص) - الفحص الشامل والإصلاح\n\n---\n\n## Features / المميزات\n\n- ✅ Bilingual support (Arabic/English) - دعم اللغتين\n- ✅ Real-time updates via Socket.io - تحديثات فورية\n- ✅ Multiple payment gateways - بوابات دفع متعددة\n- ✅ Supply chain integration - تكامل سلسلة التوريد\n- ✅ Geolocation-based services - خدمات الموقع الجغرافي\n\n## حجز الخدمات — تظهر تحت بعض في الـ API Docs\n\n- **Bookings:** الورش المعتمدة + العناية الشاملة مع أمثلة. (`POST /api/bookings`)\n- **Car Wash Service:** ورش الغسيل ومسار الطلب → العروض → القبول. (`POST /api/bookings/carwash/request` ثم GET عروض ثم POST قبول)\n- **Towing Service:** الوينشات ومسار الطلب → العروض → القبول. (`POST /api/bookings/towing/request` ثم GET عروض ثم POST قبول)\n- **Mobile Workshop:** الورش المتنقلة مع body كامل ومثال. (`POST /api/mobile-car-service/bookings`)\n\n## Postman / اختبار الـ API\n\n- **استيراد المواصفات:** في Postman اختر File → Import ثم إما:\n  - الرابط (مع تشغيل السيرفر): `http://localhost:3000/api-docs.json`\n  - أو الملف: `openapi.json` (من جذر المشروع بعد تشغيل `npm run openapi`)\n- **المصادقة:** في تبويب Authorization اختر Type: Bearer Token وأدخل الـ JWT بعد تسجيل الدخول من `POST /api/auth/login`.\n\n## Authentication / المصادقة\n\nAll protected endpoints require Bearer token in Authorization header:\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n      ",
+    "description": "\n# AutoService API Documentation\n\nComprehensive car services platform supporting 4 service models:\n1. **Direct Booking** (Fixed Services) - Car Wash, Polishing\n2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement\n3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance\n4. **Ekfik Lifecycle** (Inspection Services) - Valet & Comprehensive Repair\n\n---\n\nمنصة شاملة لخدمات السيارات تدعم 4 نماذج خدمة:\n1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع\n2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر\n3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق\n4. **دورة الفحص** (خدمات الفحص) - الفحص الشامل والإصلاح\n\n---\n\n## Features / المميزات\n\n- ✅ Bilingual support (Arabic/English) - دعم اللغتين\n- ✅ Real-time updates via Socket.io - تحديثات فورية\n- ✅ Multiple payment gateways - بوابات دفع متعددة\n- ✅ Supply chain integration - تكامل سلسلة التوريد\n- ✅ Geolocation-based services - خدمات الموقع الجغرافي\n\n## Postman / اختبار الـ API\n\n- **استيراد المواصفات:** في Postman اختر File → Import ثم إما:\n  - الرابط (مع تشغيل السيرفر): `http://localhost:3000/api-docs.json`\n  - أو الملف: `openapi.json` (من جذر المشروع بعد تشغيل `npm run openapi`)\n- **المصادقة:** في تبويب Authorization اختر Type: Bearer Token وأدخل الـ JWT بعد تسجيل الدخول من `POST /api/auth/login`.\n\n## Authentication / المصادقة\n\nAll protected endpoints require Bearer token in Authorization header:\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n      ",
     "contact": {
       "name": "AutoService API Support",
       "email": "support@autoservice.com",
@@ -588,6 +588,30 @@
   ],
   "tags": [
     {
+      "name": "1. الورش المعتمدة (Certified Workshops)",
+      "description": "CRUD الورش المعتمدة + حجز الورشة (POST /api/bookings مع workshopId). Certified workshops & their bookings."
+    },
+    {
+      "name": "2. ورش الغسيل (Car Wash)",
+      "description": "حجز غسيل السيارة: طلب → عروض → قبول. Car wash booking (request, offers, accept)."
+    },
+    {
+      "name": "3. العناية الشاملة (Comprehensive Care)",
+      "description": "حجز العناية الشاملة (POST /api/bookings بدون workshopId) + حجوزات الفيندور (GET /api/vendors/profile/me/comprehensive-care-bookings). Comprehensive care booking."
+    },
+    {
+      "name": "4. الوينشات (Winches/Towing)",
+      "description": "فلو الوينش من الطلب حتى إتمام النقل:\n1) العميل: POST /api/bookings/towing/request (من أين إلى أين)\n2) الوينش: GET /api/winches/my/broadcasts (طلبات قريبة + push عبر Socket winch:new_request)\n3) الوينش: POST /api/winches/my/broadcasts/{broadcastId}/offer (السعر من pricePerKm)\n4) العميل: GET /api/bookings/towing/{broadcastId}/offers ثم POST .../offers/{offerId}/accept\n5) العميل يدفع: PATCH /api/invoices/{id}/mark-paid ثم يتفتح السوكت (تتبع + محادثة)\n6) السائق: GET /api/technician/towing/jobs و PATCH .../jobs/{jobId}/status (EN_ROUTE, ARRIVED, IN_PROGRESS, COMPLETED)\n+ Socket: customer:join_booking / driver:join_booking (بعد الدفع)، driver:location، booking:message"
+    },
+    {
+      "name": "Winch Driver (مهام الوينش)",
+      "description": "السائق (فيندور الوينش): قائمة المهام المحددة له وتحديث الحالة حتى إتمام النقل. GET /api/technician/towing/jobs و PATCH /api/technician/towing/jobs/{jobId}/status"
+    },
+    {
+      "name": "5. الورش المتنقلة (Mobile Workshop)",
+      "description": "CRUD الورش المتنقلة + حجز الصيانة المتنقلة (POST /api/mobile-car-service/bookings). Mobile workshop & bookings."
+    },
+    {
       "name": "Authentication",
       "description": "User authentication endpoints - نقاط المصادقة",
       "externalDocs": {
@@ -608,6 +632,10 @@
       "description": "User profile management - إدارة الملف الشخصي"
     },
     {
+      "name": "Vendors (الفيندور)",
+      "description": "CRUD للفيندور: قائمة (GET)، إضافة (POST)، عرض (GET :id)، تحديث (PUT :id)، حذف (DELETE :id)، تحديث الحالة (PUT :id/status). Vendor management."
+    },
+    {
       "name": "Vehicles",
       "description": "Vehicle management - إدارة المركبات"
     },
@@ -617,7 +645,7 @@
     },
     {
       "name": "Bookings",
-      "description": "Booking management (All 4 models) - إدارة الحجوزات"
+      "description": "قائمة الحجوزات وتحديث الحالة (GET/PATCH). تفاصيل الحجز حسب النوع في الأقسام 1–5 أعلاه. Booking list & status."
     },
     {
       "name": "Broadcasts",
@@ -672,10 +700,6 @@
       "description": "System settings management for administrators - إدارة إعدادات النظام للمسؤولين"
     },
     {
-      "name": "Marketplace Vendors",
-      "description": "Vendor management for auto parts - إدارة البائعين لقطع الغيار"
-    },
-    {
       "name": "Auto Part Categories",
       "description": "Auto part category management - إدارة فئات قطع الغيار"
     },
@@ -694,6 +718,10 @@
     {
       "name": "Feedback",
       "description": "Customer Complaints and Suggestions management (نظام الشكاوى والمقترحات)"
+    },
+    {
+      "name": "4. الوينشات (Towing/Winch)",
+      "description": "فلو الوينش - العميل يطلب من أين إلى أين، الوينشات القريبة ترسل عروض، العميل يوافق ويدفع ثم يتفتح السوكت للتتبع والمحادثة."
     },
     {
       "name": "Tracking",
@@ -1108,7 +1136,16 @@
                     "type": "string"
                   },
                   "parentId": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "معرف الفئة الأب (مثلاً id لفئة \"قطع غيار سيارات\" أو \"قطع غيار دراجات نارية\")"
+                  },
+                  "rootType": {
+                    "type": "string",
+                    "enum": [
+                      "CAR",
+                      "MOTORCYCLE"
+                    ],
+                    "description": "للفئة الجذرية فقط — CAR أو MOTORCYCLE"
                   },
                   "icon": {
                     "type": "string"
@@ -1128,12 +1165,27 @@
     "/api/auto-part-categories/tree": {
       "get": {
         "summary": "Get category tree hierarchy",
+        "description": "يعيد الشجرة الهرمية. الفئات الجذرية لها id و rootType (CAR | MOTORCYCLE).\nاستخدم vehicleType لتصفية: قطع غيار سيارات (CAR) أو دراجات نارية (MOTORCYCLE).\n",
         "tags": [
           "Auto Part Categories"
         ],
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "in": "query",
+            "description": "CAR = قطع غيار سيارات، MOTORCYCLE = قطع غيار دراجات نارية",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CAR",
+                "MOTORCYCLE"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Category hierarchical tree",
+            "description": "Category hierarchical tree (roots have id for parentId)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1145,22 +1197,33 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "allOf": [
-                          {
-                            "$ref": "#/components/schemas/AutoPartCategory"
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
                           },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "children": {
-                                "type": "array",
-                                "items": {
-                                  "$ref": "#/components/schemas/AutoPartCategory"
-                                }
-                              }
-                            }
+                          "name": {
+                            "type": "string"
+                          },
+                          "nameAr": {
+                            "type": "string"
+                          },
+                          "rootType": {
+                            "type": "string",
+                            "enum": [
+                              "CAR",
+                              "MOTORCYCLE"
+                            ]
+                          },
+                          "parentId": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "children": {
+                            "type": "array"
                           }
-                        ]
+                        }
                       }
                     }
                   }
@@ -1225,6 +1288,11 @@
                   },
                   "nameAr": {
                     "type": "string"
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "id الفئة الأب (null للجذر)"
                   },
                   "icon": {
                     "type": "string"
@@ -1750,10 +1818,12 @@
         }
       },
       "post": {
-        "summary": "Create new booking",
-        "description": "Create a new booking with optional workshop and delivery method",
+        "summary": "Create booking (الورش المعتمدة / العناية الشاملة)",
+        "description": "إنشاء حجز جديد. يُستخدم لنوعين من الخدمات:\n\n**1) الورش المعتمدة (Certified Workshop):** أرسل workshopId + deliveryMethod، ثم إما:\n- **workshopServiceIds** — مصفوفة معرفات خدمات الورشة (من GET /api/workshops/{id}/services)، أو\n- **serviceIds** — مصفوفة معرفات الخدمات من الكتالوج العام.\n\n**2) العناية الشاملة (Comprehensive Care):** أرسل serviceIds فقط (بدون workshopId وبدون deliveryMethod). serviceIds = خدمات تابعة لفيندور عناية شاملة.\n\nCreate a new booking. (1) Certified Workshop — workshopId, deliveryMethod, and either workshopServiceIds (from GET /api/workshops/:id/services) or serviceIds; (2) Comprehensive Care — serviceIds only.\n",
         "tags": [
-          "Bookings"
+          "Bookings",
+          "1. الورش المعتمدة (Certified Workshops)",
+          "3. العناية الشاملة (Comprehensive Care)"
         ],
         "security": [
           {
@@ -1767,28 +1837,35 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "customerId",
                   "vehicleId",
                   "scheduledDate"
                 ],
                 "properties": {
                   "customerId": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "مطلوب من الأدمن فقط؛ المستخدم العادي يُستخدم معرفه تلقائياً. Admin only — otherwise current user."
                   },
                   "vehicleId": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "معرف المركبة — Vehicle ID"
                   },
                   "scheduledDate": {
                     "type": "string",
-                    "format": "date-time"
+                    "format": "date-time",
+                    "example": "2026-03-15T00:00:00.000Z",
+                    "description": "تاريخ الموعد"
                   },
                   "scheduledTime": {
                     "type": "string",
-                    "example": "10:00"
+                    "example": "10:00",
+                    "description": "وقت الموعد (اختياري)"
                   },
                   "workshopId": {
                     "type": "string",
-                    "description": "ID of certified workshop (optional)"
+                    "format": "uuid",
+                    "description": "للورش المعتمدة فقط. معرف الورشة المعتمدة. Certified workshop ID — required for certified workshop bookings."
                   },
                   "deliveryMethod": {
                     "type": "string",
@@ -1796,22 +1873,78 @@
                       "FLATBED",
                       "SELF_DELIVERY"
                     ],
-                    "description": "Required if workshopId is provided"
+                    "description": "مطلوب عند إرسال workshopId. FLATBED = ونش، SELF_DELIVERY = إيصال ذاتي. Required when workshopId is provided."
                   },
-                  "services": {
+                  "serviceIds": {
                     "type": "array",
                     "items": {
-                      "type": "string"
-                    }
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "مصفوفة معرفات الخدمات من الكتالوج (عناية شاملة أو ورشة). Array of catalog Service IDs."
                   },
-                  "products": {
+                  "workshopServiceIds": {
                     "type": "array",
                     "items": {
-                      "type": "string"
-                    }
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "للورش المعتمدة فقط. مصفوفة معرفات خدمات الورشة (CertifiedWorkshopService من GET /api/workshops/{id}/services). عند الإرسال مع workshopId يُستخدم سعر واسم الخدمة من الورشة. For certified workshop — IDs from GET /api/workshops/:id/services."
+                  },
+                  "addressId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "معرف العنوان (اختياري). Address ID (optional)."
                   },
                   "notes": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "ملاحظات (اختياري). Notes (optional)."
+                  }
+                }
+              },
+              "examples": {
+                "certifiedWorkshopWithWorkshopServices": {
+                  "summary": "حجز ورشة معتمدة (خدمات الورشة) — Certified Workshop (workshop services)",
+                  "value": {
+                    "vehicleId": "uuid-المركبة",
+                    "scheduledDate": "2026-03-15T00:00:00.000Z",
+                    "scheduledTime": "10:00",
+                    "workshopId": "uuid-الورشة-المعتمدة",
+                    "deliveryMethod": "SELF_DELIVERY",
+                    "workshopServiceIds": [
+                      "uuid-خدمة-ورشة-1",
+                      "uuid-خدمة-ورشة-2"
+                    ],
+                    "notes": "ملاحظات اختيارية"
+                  }
+                },
+                "certifiedWorkshopWithCatalog": {
+                  "summary": "حجز ورشة معتمدة (خدمات كتالوج) — Certified Workshop (catalog services)",
+                  "value": {
+                    "vehicleId": "uuid-المركبة",
+                    "scheduledDate": "2026-03-15T00:00:00.000Z",
+                    "scheduledTime": "10:00",
+                    "workshopId": "uuid-الورشة-المعتمدة",
+                    "deliveryMethod": "SELF_DELIVERY",
+                    "serviceIds": [
+                      "uuid-خدمة-1",
+                      "uuid-خدمة-2"
+                    ],
+                    "notes": "ملاحظات اختيارية"
+                  }
+                },
+                "comprehensiveCare": {
+                  "summary": "حجز عناية شاملة — Comprehensive Care",
+                  "value": {
+                    "vehicleId": "uuid-المركبة",
+                    "scheduledDate": "2026-03-15T00:00:00.000Z",
+                    "scheduledTime": "14:00",
+                    "serviceIds": [
+                      "uuid-خدمة-عناية-1",
+                      "uuid-خدمة-عناية-2"
+                    ],
+                    "addressId": "uuid-العنوان",
+                    "notes": "ملاحظات"
                   }
                 }
               }
@@ -1820,13 +1953,13 @@
         },
         "responses": {
           "201": {
-            "description": "Booking created successfully"
+            "description": "تم إنشاء الحجز بنجاح — Booking created successfully"
           },
           "400": {
-            "description": "Invalid input or workshop not available"
+            "description": "بيانات غير صالحة أو الورشة غير متاحة — Invalid input or workshop not available"
           },
           "404": {
-            "description": "Workshop not found"
+            "description": "المركبة أو الورشة أو الخدمة غير موجودة — Vehicle/Workshop/Service not found"
           }
         }
       }
@@ -2536,10 +2669,10 @@
     },
     "/api/bookings/carwash/request": {
       "post": {
-        "summary": "Create a car wash request",
-        "description": "Create a new car wash request and broadcast it to nearby technicians.\nThe request will be broadcasted to available car wash service providers in the area.\n\nإنشاء طلب غسيل سيارة جديد وإرساله إلى الفنيين القريبين\n",
+        "summary": "إنشاء طلب غسيل — Create car wash request",
+        "description": "إنشاء طلب غسيل وبثه للفنيين. ثم GET عروض ثم POST قبول عرض.",
         "tags": [
-          "Car Wash Service"
+          "2. ورش الغسيل (Car Wash)"
         ],
         "security": [
           {
@@ -2677,7 +2810,7 @@
         "summary": "Get offers for a car wash broadcast",
         "description": "Retrieve all offers submitted by technicians for a specific car wash broadcast.\nEach offer includes technician details, bid amount, and estimated arrival time.\n\nالحصول على جميع العروض المقدمة من الفنيين لطلب غسيل السيارة\n",
         "tags": [
-          "Car Wash Service"
+          "2. ورش الغسيل (Car Wash)"
         ],
         "security": [
           {
@@ -2843,7 +2976,7 @@
         "summary": "Accept a car wash offer",
         "description": "Accept a specific offer from a technician for the car wash service.\nThis will assign the technician to the booking and close the broadcast.\n\nقبول عرض محدد من فني لخدمة غسيل السيارة\n",
         "tags": [
-          "Car Wash Service"
+          "2. ورش الغسيل (Car Wash)"
         ],
         "security": [
           {
@@ -3238,10 +3371,11 @@
     },
     "/api/invoices/{id}/mark-paid": {
       "patch": {
-        "summary": "Mark invoice as paid (Admin)",
-        "description": "Mark an invoice as paid. Creates payment record, credits vendor wallet, awards customer points.\nتحديد الفاتورة كمدفوعة - يسجل الدفع ويودع رصيد الفيندور ويمنح النقاط للعميل.\n",
+        "summary": "Mark invoice as paid (Admin) — لحجز الوينش يفتح السوكت بعد الدفع",
+        "description": "تحديد الفاتورة كمدفوعة. يسجل الدفع ويودع رصيد الفيندور ويمنح النقاط للعميل.\nلحجز السحب/الوينش: بعد الدفع يُرسل حدث booking:ready للعميل والسائق فيفتح السوكت للتتبع والمحادثة.\n",
         "tags": [
-          "Invoices"
+          "Invoices",
+          "4. الوينشات (Winches/Towing)"
         ],
         "security": [
           {
@@ -3519,6 +3653,403 @@
         "responses": {
           "200": {
             "description": "Item status updated"
+          }
+        }
+      }
+    },
+    "/api/mobile-car-service/bookings": {
+      "post": {
+        "summary": "إنشاء حجز ورشة متنقلة — Create mobile workshop booking (حجز يظهر تحت قسم الورش المتنقلة)",
+        "description": "إنشاء حجز لخدمة الورشة المتنقلة. يحتاج subServiceId من GET /api/mobile-car-service/sub-services و vehicleId و location.\nCreate a mobile car service booking. Requires subServiceId (from sub-services), vehicleId, and location.\n",
+        "tags": [
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "subServiceId",
+                  "vehicleId",
+                  "location"
+                ],
+                "properties": {
+                  "subServiceId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "معرف الخدمة الفرعية (من sub-services). Sub-service ID."
+                  },
+                  "vehicleId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "معرف المركبة. Vehicle ID."
+                  },
+                  "location": {
+                    "type": "object",
+                    "required": [
+                      "latitude",
+                      "longitude"
+                    ],
+                    "properties": {
+                      "latitude": {
+                        "type": "number",
+                        "example": 24.7136
+                      },
+                      "longitude": {
+                        "type": "number",
+                        "example": 46.6753
+                      },
+                      "address": {
+                        "type": "string",
+                        "description": "العنوان (اختياري). Address (optional)."
+                      }
+                    }
+                  },
+                  "scheduledDate": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-03-15"
+                  },
+                  "scheduledTime": {
+                    "type": "string",
+                    "example": "10:00"
+                  },
+                  "spareParts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "قطع غيار اختيارية. Optional spare parts."
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "subServiceId": "uuid-الخدمة-الفرعية",
+                "vehicleId": "uuid-المركبة",
+                "location": {
+                  "latitude": 24.7136,
+                  "longitude": 46.6753,
+                  "address": "عنوان الموقع"
+                },
+                "scheduledDate": "2026-03-15",
+                "scheduledTime": "10:00",
+                "notes": "ملاحظات"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء حجز الصيانة المتنقلة — Mobile car service booking created"
+          },
+          "400": {
+            "description": "بيانات غير صالحة — Invalid input"
+          },
+          "401": {
+            "description": "غير مصرح — Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/mobile-workshops": {
+      "get": {
+        "summary": "قائمة الورش المتنقلة — List all mobile workshops [CRUD - Read List]",
+        "tags": [
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of mobile workshops"
+          }
+        }
+      },
+      "post": {
+        "summary": "إضافة ورشة متنقلة (أدمن) — Create mobile workshop [CRUD - Create]",
+        "tags": [
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "vendorId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mobile workshop created"
+          }
+        }
+      }
+    },
+    "/api/mobile-workshops/{id}": {
+      "get": {
+        "summary": "عرض ورشة متنقلة بالمعرف — Get mobile workshop by ID [CRUD - Read One]",
+        "tags": [
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mobile workshop details"
+          }
+        }
+      },
+      "put": {
+        "summary": "تحديث ورشة متنقلة (أدمن) — Update mobile workshop [CRUD - Update]",
+        "tags": [
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "vendorId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mobile workshop updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "حذف ورشة متنقلة (أدمن) — Delete mobile workshop [CRUD - Delete]",
+        "tags": [
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mobile workshop deleted"
+          }
+        }
+      }
+    },
+    "/api/mobile-workshops/{id}/services": {
+      "post": {
+        "summary": "إضافة خدمة لورشة متنقلة (أدمن)",
+        "tags": [
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Service added"
+          }
+        }
+      }
+    },
+    "/api/mobile-workshops/{id}/services/{svcId}": {
+      "put": {
+        "summary": "تحديث خدمة ورشة متنقلة (أدمن)",
+        "tags": [
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "svcId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "حذف خدمة ورشة متنقلة (أدمن)",
+        "tags": [
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "svcId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service removed"
           }
         }
       }
@@ -3884,6 +4415,397 @@
           },
           "404": {
             "description": "Model not found - الموديل غير موجود"
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "summary": "Get my notifications (paginated)",
+        "description": "Get current user's notifications. Push notifications - الإشعارات.\n",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "unreadOnly",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "false"
+            },
+            "description": "If true, return only unread notifications"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of notifications with pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "userId": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "titleAr": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "messageAr": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "isRead": {
+                            "type": "boolean"
+                          },
+                          "readAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "bookingId": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "metadata": {
+                            "type": "object",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/notifications/admin/all": {
+      "get": {
+        "summary": "Get all notifications in the system (Admin only)",
+        "description": "قائمة بكل الإشعارات في النظام (للمشرف فقط). Push notifications - الإشعارات.\n",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by user ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all notifications with user info and pagination"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/notifications/read-all": {
+      "patch": {
+        "summary": "Mark all my notifications as read",
+        "description": "تعليم كل الإشعارات كمقروءة للمستخدم الحالي.",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All notifications marked as read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageAr": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/notifications/{id}": {
+      "get": {
+        "summary": "Get notification by ID",
+        "description": "Get single notification (must belong to current user, or Admin can get any).",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification details"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/notifications/{id}/read": {
+      "patch": {
+        "summary": "Mark notification as read",
+        "description": "تعليم إشعار واحد كمقروء.",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification marked as read"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/ratings": {
+      "get": {
+        "summary": "List all ratings and reviews (Admin only)",
+        "description": "Get paginated list of all ratings/reviews in the system.\nالتقييمات والمراجعات — قائمة بكل التقييمات والمراجعات (للمشرف فقط).\n",
+        "tags": [
+          "Ratings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of ratings with booking, rater and ratee info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "bookingId": {
+                            "type": "string"
+                          },
+                          "raterId": {
+                            "type": "string"
+                          },
+                          "rateeId": {
+                            "type": "string"
+                          },
+                          "score": {
+                            "type": "integer",
+                            "description": "1-5 stars"
+                          },
+                          "review": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "punctuality": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "professionalism": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "quality": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "communication": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "booking": {
+                            "type": "object"
+                          },
+                          "rater": {
+                            "type": "object"
+                          },
+                          "ratee": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
           }
         }
       }
@@ -4275,10 +5197,11 @@
     },
     "/api/technician/towing/broadcasts": {
       "get": {
-        "summary": "Get active towing broadcasts",
-        "description": "Get all active towing requests that the technician can bid on",
+        "summary": "Get active towing broadcasts (for technicians)",
+        "description": "قائمة طلبات السحب النشطة التي يمكن للفني المزايدة عليها. ملاحظة - فيندور الوينش يستخدم GET /api/winches/my/broadcasts.",
         "tags": [
-          "Technician Towing"
+          "Technician Towing",
+          "Winch Driver (مهام الوينش)"
         ],
         "security": [
           {
@@ -4477,9 +5400,12 @@
     },
     "/api/technician/towing/jobs": {
       "get": {
-        "summary": "Get assigned towing jobs",
+        "summary": "6. قائمة مهام السائق — Get assigned towing jobs",
+        "description": "المهام المحددة للسائق (فني أو فيندور ونش) بعد قبول العميل للعرض. يعرض الحجوزات بحالة TECHNICIAN_ASSIGNED أو EN_ROUTE أو ARRIVED أو IN_PROGRESS.\nبعد الدفع يتفتح السوكت بين العميل والسائق للتتبع والمحادثة.\n",
         "tags": [
-          "Technician Towing"
+          "Technician Towing",
+          "Winch Driver (مهام الوينش)",
+          "4. الوينشات (Winches/Towing)"
         ],
         "security": [
           {
@@ -4488,15 +5414,14 @@
         ],
         "responses": {
           "200": {
-            "description": "List of assigned jobs",
+            "description": "قائمة المهام مع العميل والموقع والسعر",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "success": {
-                      "type": "boolean",
-                      "example": true
+                      "type": "boolean"
                     },
                     "data": {
                       "type": "object",
@@ -4510,12 +5435,10 @@
                                 "type": "string"
                               },
                               "bookingNumber": {
-                                "type": "string",
-                                "example": "TWG-20260127-001"
+                                "type": "string"
                               },
                               "status": {
-                                "type": "string",
-                                "example": "TECHNICIAN_ASSIGNED"
+                                "type": "string"
                               },
                               "customer": {
                                 "type": "object"
@@ -4531,6 +5454,9 @@
                               },
                               "agreedPrice": {
                                 "type": "number"
+                              },
+                              "scheduledDate": {
+                                "type": "string"
                               }
                             }
                           }
@@ -4547,10 +5473,12 @@
     },
     "/api/technician/towing/jobs/{jobId}/status": {
       "patch": {
-        "summary": "Update job status",
-        "description": "Update the status of an assigned towing job",
+        "summary": "6. تحديث حالة المهمة حتى إتمام النقل — Update job status",
+        "description": "السائق يحدّث الحالة أثناء تنفيذ المهمة. التسلسل: TECHNICIAN_ASSIGNED -> TECHNICIAN_EN_ROUTE -> TECHNICIAN_ARRIVED -> IN_PROGRESS -> COMPLETED.\nعند COMPLETED تُسجّل completedAt. العميل يستقبل التحديثات عبر Socket (booking:status_changed) إن كان متصلاً.\n",
         "tags": [
-          "Technician Towing"
+          "Technician Towing",
+          "Winch Driver (مهام الوينش)",
+          "4. الوينشات (Winches/Towing)"
         ],
         "security": [
           {
@@ -4565,7 +5493,8 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "Booking ID (معرف الحجز)"
           }
         ],
         "requestBody": {
@@ -4596,15 +5525,19 @@
         "responses": {
           "200": {
             "description": "Status updated successfully"
+          },
+          "400": {
+            "description": "Invalid status transition"
           }
         }
       }
     },
     "/api/bookings/towing/request": {
       "post": {
-        "summary": "Create towing request",
+        "summary": "1. إنشاء طلب سحب (ونش) — Create towing request",
+        "description": "العميل يحدد من أين (pickup) إلى أين (destination). يُنشأ الحجز والبث ويُرسل push للوينشات القريبة عبر Socket (winch:new_request).\nالخطوة التالية: الوينشات ترسل عروض، العميل يستدعي GET offers ثم POST accept.\n",
         "tags": [
-          "Towing Service"
+          "4. الوينشات (Winches/Towing)"
         ],
         "security": [
           {
@@ -4689,16 +5622,13 @@
                       "NORMAL",
                       "HIGH"
                     ],
-                    "default": "NORMAL",
-                    "example": "HIGH"
+                    "default": "NORMAL"
                   },
                   "notes": {
-                    "type": "string",
-                    "example": "Car won't start after accident"
+                    "type": "string"
                   },
                   "estimatedBudget": {
-                    "type": "number",
-                    "example": 200
+                    "type": "number"
                   }
                 }
               }
@@ -4707,7 +5637,7 @@
         },
         "responses": {
           "201": {
-            "description": "Towing request created successfully",
+            "description": "تم إنشاء الطلب والبث للوينشات القريبة (مع push عبر Socket)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4718,12 +5648,10 @@
                       "example": true
                     },
                     "message": {
-                      "type": "string",
-                      "example": "Towing request created successfully"
+                      "type": "string"
                     },
                     "messageAr": {
-                      "type": "string",
-                      "example": "تم إنشاء طلب السحب بنجاح"
+                      "type": "string"
                     },
                     "data": {
                       "type": "object",
@@ -4740,21 +5668,22 @@
                           "type": "string",
                           "example": "BROADCASTING"
                         },
-                        "estimatedDistance": {
-                          "type": "number",
-                          "example": 4.2
+                        "estimatedDistanceKm": {
+                          "type": "number"
+                        },
+                        "estimatedDurationMinutes": {
+                          "type": "number"
                         },
                         "estimatedPrice": {
-                          "type": "number",
-                          "example": 71
+                          "type": "number"
                         },
                         "broadcastUntil": {
                           "type": "string",
                           "format": "date-time"
                         },
-                        "nearbyTechniciansCount": {
+                        "nearbyWinchesCount": {
                           "type": "number",
-                          "example": 5
+                          "description": "عدد الوينشات القريبة التي استلمت الطلب"
                         }
                       }
                     }
@@ -4764,16 +5693,17 @@
             }
           },
           "404": {
-            "description": "Vehicle not found or no technicians available"
+            "description": "Vehicle not found or no winches available in area"
           }
         }
       }
     },
     "/api/bookings/towing/{broadcastId}/offers": {
       "get": {
-        "summary": "Get offers for towing request",
+        "summary": "4. عرض عروض الوينشات (أسعارها) — Get offers for towing request",
+        "description": "قائمة العروض من الوينشات/الفنيين مع السعر (bidAmount) لكل عرض. العميل يختار الأنسب ثم يستدعي POST accept.\nكل عرض قد يكون من ونش (winch + vendorName) أو من فني (technician).\n",
         "tags": [
-          "Towing Service"
+          "4. الوينشات (Winches/Towing)"
         ],
         "security": [
           {
@@ -4789,20 +5719,19 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Broadcast ID from create request response"
+            "description": "Broadcast ID من استجابة create request"
           }
         ],
         "responses": {
           "200": {
-            "description": "List of offers from technicians",
+            "description": "العروض مع السعر وبيانات الوينش/الفني",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "success": {
-                      "type": "boolean",
-                      "example": true
+                      "type": "boolean"
                     },
                     "data": {
                       "type": "object",
@@ -4811,12 +5740,10 @@
                           "type": "object",
                           "properties": {
                             "id": {
-                              "type": "string",
-                              "format": "uuid"
+                              "type": "string"
                             },
                             "status": {
-                              "type": "string",
-                              "example": "BROADCASTING"
+                              "type": "string"
                             },
                             "pickupLocation": {
                               "type": "object"
@@ -4839,44 +5766,42 @@
                                 "type": "string",
                                 "format": "uuid"
                               },
+                              "winch": {
+                                "type": "object",
+                                "description": "إن كان العرض من ونش",
+                                "properties": {
+                                  "id": null,
+                                  "name": null,
+                                  "nameAr": null,
+                                  "vendorName": null,
+                                  "vendorNameAr": null,
+                                  "distance": null,
+                                  "estimatedArrival": null,
+                                  "averageRating": null,
+                                  "totalTrips": null
+                                }
+                              },
                               "technician": {
                                 "type": "object",
+                                "description": "إن كان العرض من فني",
                                 "properties": {
-                                  "id": {
-                                    "type": "string"
-                                  },
-                                  "name": {
-                                    "type": "string",
-                                    "example": "Ahmed المهندس"
-                                  },
-                                  "avatar": {
-                                    "type": "string"
-                                  },
-                                  "rating": {
-                                    "type": "number",
-                                    "example": 4.8
-                                  },
-                                  "completedJobs": {
-                                    "type": "number",
-                                    "example": 150
-                                  },
-                                  "distance": {
-                                    "type": "number",
-                                    "example": 2.3
-                                  },
-                                  "estimatedArrival": {
-                                    "type": "number",
-                                    "example": 8
-                                  }
+                                  "id": null,
+                                  "name": null,
+                                  "avatar": null,
+                                  "rating": null,
+                                  "distance": null,
+                                  "estimatedArrival": null
                                 }
                               },
                               "bidAmount": {
                                 "type": "number",
-                                "example": 180
+                                "description": "السعر المعروض"
                               },
                               "message": {
-                                "type": "string",
-                                "example": "I'm nearby, can arrive in 8 minutes"
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string"
                               },
                               "createdAt": {
                                 "type": "string",
@@ -4897,9 +5822,10 @@
     },
     "/api/bookings/towing/{broadcastId}/offers/{offerId}/accept": {
       "post": {
-        "summary": "Accept technician offer",
+        "summary": "4. قبول عرض ونش/فني — Accept winch or technician offer",
+        "description": "العميل يوافق على عرض واحد. يُربط الحجز بالسائق ويُنشأ فاتورة (PENDING). العميل يدفع الفاتورة ثم يتفتح السوكت للتتبع والمحادثة.\nاستخدم data.invoice.id للدفع عبر PATCH /api/invoices/{id}/mark-paid.\n",
         "tags": [
-          "Towing Service"
+          "4. الوينشات (Winches/Towing)"
         ],
         "security": [
           {
@@ -4928,23 +5854,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Offer accepted successfully",
+            "description": "تم قبول العرض وإنشاء الفاتورة — ادفع الفاتورة لفتح السوكت",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "Offer accepted successfully"
-                    },
-                    "messageAr": {
-                      "type": "string",
-                      "example": "تم قبول العرض بنجاح"
+                      "type": "boolean"
                     },
                     "data": {
                       "type": "object",
@@ -4953,12 +5870,10 @@
                           "type": "object",
                           "properties": {
                             "id": {
-                              "type": "string",
-                              "format": "uuid"
+                              "type": "string"
                             },
                             "bookingNumber": {
-                              "type": "string",
-                              "example": "TWG-20260127-001"
+                              "type": "string"
                             },
                             "status": {
                               "type": "string",
@@ -4967,23 +5882,49 @@
                             "technician": {
                               "type": "object",
                               "properties": {
-                                "id": {
-                                  "type": "string"
-                                },
-                                "name": {
-                                  "type": "string"
-                                },
-                                "phone": {
-                                  "type": "string"
-                                },
-                                "avatar": {
-                                  "type": "string"
-                                }
+                                "id": null,
+                                "name": null,
+                                "phone": null,
+                                "avatar": null
+                              }
+                            },
+                            "winch": {
+                              "type": "object",
+                              "properties": {
+                                "id": null,
+                                "name": null,
+                                "vendorName": null,
+                                "vendorNameAr": null
                               }
                             },
                             "agreedPrice": {
-                              "type": "number",
-                              "example": 180
+                              "type": "number"
+                            }
+                          }
+                        },
+                        "invoice": {
+                          "type": "object",
+                          "description": "ادفع هذه الفاتورة لفتح التتبع والمحادثة",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "invoiceNumber": {
+                              "type": "string"
+                            },
+                            "totalAmount": {
+                              "type": "number"
+                            },
+                            "status": {
+                              "type": "string",
+                              "example": "PENDING"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "messageAr": {
+                              "type": "string"
                             }
                           }
                         }
@@ -6000,9 +6941,9 @@
     },
     "/api/vendors": {
       "get": {
-        "summary": "Get all vendors (Admin only)",
+        "summary": "قائمة الفيندورات (أدمن) — List all vendors (Admin only) [CRUD - Read List]",
         "tags": [
-          "Marketplace Vendors"
+          "Vendors (الفيندور)"
         ],
         "security": [
           {
@@ -6014,7 +6955,13 @@
             "in": "query",
             "name": "status",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "PENDING_APPROVAL",
+                "ACTIVE",
+                "SUSPENDED",
+                "REJECTED"
+              ]
             },
             "description": "Filter by vendor status"
           },
@@ -6025,6 +6972,22 @@
               "type": "string"
             },
             "description": "Search by business name"
+          },
+          {
+            "in": "query",
+            "name": "isVerified",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by verification"
+          },
+          {
+            "in": "query",
+            "name": "vendorType",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by vendor type"
           },
           {
             "$ref": "#/components/parameters/PageParam"
@@ -6061,9 +7024,9 @@
         }
       },
       "post": {
-        "summary": "Create new vendor profile",
+        "summary": "إضافة فيندور — Create vendor [CRUD - Create]",
         "tags": [
-          "Marketplace Vendors"
+          "Vendors (الفيندور)"
         ],
         "security": [
           {
@@ -6120,7 +7083,7 @@
       "get": {
         "summary": "Get current user's vendor profile",
         "tags": [
-          "Marketplace Vendors"
+          "Vendors (الفيندور)"
         ],
         "security": [
           {
@@ -6149,11 +7112,46 @@
         }
       }
     },
+    "/api/vendors/profile/me/comprehensive-care-bookings": {
+      "get": {
+        "summary": "حجوزات العناية الشاملة للفيندور — Comprehensive care bookings (الفيندور) [قسم 3]",
+        "description": "قائمة حجوزات الخدمات الخاصة بالعناية الشاملة لهذا الفيندور. List bookings for this vendor's comprehensive care services.",
+        "tags": [
+          "3. العناية الشاملة (Comprehensive Care)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by booking status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of comprehensive care bookings"
+          }
+        }
+      }
+    },
     "/api/vendors/{id}": {
       "get": {
-        "summary": "Get vendor details by ID",
+        "summary": "عرض الفيندور بالمعرف — Get vendor by ID [CRUD - Read One]",
         "tags": [
-          "Marketplace Vendors"
+          "Vendors (الفيندور)"
         ],
         "security": [
           {
@@ -6192,9 +7190,9 @@
         }
       },
       "put": {
-        "summary": "Update vendor profile",
+        "summary": "تحديث الفيندور — Update vendor [CRUD - Update]",
         "tags": [
-          "Marketplace Vendors"
+          "Vendors (الفيندور)"
         ],
         "security": [
           {
@@ -6207,7 +7205,8 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -6221,8 +7220,39 @@
                   "businessName": {
                     "type": "string"
                   },
+                  "businessNameAr": {
+                    "type": "string"
+                  },
                   "description": {
                     "type": "string"
+                  },
+                  "descriptionAr": {
+                    "type": "string"
+                  },
+                  "contactEmail": {
+                    "type": "string"
+                  },
+                  "contactPhone": {
+                    "type": "string"
+                  },
+                  "taxNumber": {
+                    "type": "string"
+                  },
+                  "commercialLicense": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "country": {
+                    "type": "string"
+                  },
+                  "commissionPercent": {
+                    "type": "number",
+                    "description": "نسبة عمولة المنصة لهذا الفيندور (اختياري)"
                   }
                 }
               }
@@ -6238,7 +7268,7 @@
       "delete": {
         "summary": "Delete vendor (Admin only)",
         "tags": [
-          "Marketplace Vendors"
+          "Vendors (الفيندور)"
         ],
         "security": [
           {
@@ -6266,7 +7296,7 @@
       "get": {
         "summary": "Get vendor statistics",
         "tags": [
-          "Marketplace Vendors"
+          "Vendors (الفيندور)"
         ],
         "security": [
           {
@@ -6294,7 +7324,7 @@
       "put": {
         "summary": "Update vendor status (Admin only)",
         "tags": [
-          "Marketplace Vendors"
+          "Vendors (الفيندور)"
         ],
         "security": [
           {
@@ -6342,12 +7372,359 @@
         }
       }
     },
+    "/api/winches/my/broadcasts": {
+      "get": {
+        "summary": "2. طلبات السحب القريبة من ونشي — Get nearby towing requests (Winch vendor)",
+        "description": "فيندور الوينش يستدعي هذا لرؤية الطلبات القريبة من موقع ونشه. يُرسل أيضاً push عبر Socket (حدث winch:new_request) عند إنشاء أي طلب جديد قريب.\nيتطلب تسجيل دخول كـ VENDOR ووجود ونش مرتبط بحسابك. يرجع قائمة مع المسافة وسعرك المقترح (yourPrice من pricePerKm).\n",
+        "tags": [
+          "4. الوينشات (Winches/Towing)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة البثوط القريبة مع تفاصيل الرحلة وسعرك",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "broadcasts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "broadcastId"
+                              },
+                              "customer": {
+                                "type": "object"
+                              },
+                              "vehicle": {
+                                "type": "object"
+                              },
+                              "pickupLocation": {
+                                "type": "object"
+                              },
+                              "destinationLocation": {
+                                "type": "object"
+                              },
+                              "distance": {
+                                "type": "number"
+                              },
+                              "tripDistanceKm": {
+                                "type": "number"
+                              },
+                              "estimatedArrival": {
+                                "type": "number"
+                              },
+                              "yourPrice": {
+                                "type": "number",
+                                "description": "السعر المحسوب من pricePerKm"
+                              },
+                              "urgency": {
+                                "type": "string"
+                              },
+                              "vehicleCondition": {
+                                "type": "string"
+                              },
+                              "expiresAt": {
+                                "type": "string"
+                              },
+                              "myOffer": {
+                                "type": "object",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "إن لم يكن هناك طلبات أو الوينش غير متاح"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No winch linked to your vendor account"
+          }
+        }
+      }
+    },
+    "/api/winches/my/broadcasts/{broadcastId}/offer": {
+      "post": {
+        "summary": "3. إرسال عرض (الونش يوافق) — Submit winch offer",
+        "description": "الوينش يرسل عرضاً للطلب. السعر يُحسب تلقائياً من basePrice + (مسافة الرحلة × pricePerKm) مع احترام minPrice.\nBody اختياري (مثلاً message فقط). لا حاجة لإرسال السعر — يُحسب من إعدادات الوينش.\n",
+        "tags": [
+          "4. الوينشات (Winches/Towing)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcastId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "رسالة اختيارية للعميل"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إرسال العرض بنجاح — السعر حسب سعر الكم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageAr": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "offer": {
+                          "type": "object",
+                          "properties": {
+                            "id": null,
+                            "broadcastId": null,
+                            "bidAmount": null,
+                            "message": null,
+                            "estimatedArrival": null,
+                            "status": null,
+                            "createdAt": null
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Broadcast expired or already submitted offer"
+          },
+          "404": {
+            "description": "Broadcast not found or no winch linked"
+          }
+        }
+      }
+    },
+    "/api/winches": {
+      "get": {
+        "summary": "قائمة الوينشات — List all winches [CRUD - Read List]",
+        "tags": [
+          "4. الوينشات (Winches/Towing)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of winches"
+          }
+        }
+      },
+      "post": {
+        "summary": "إضافة ونش (أدمن) — Create winch [CRUD - Create]",
+        "tags": [
+          "4. الوينشات (Winches/Towing)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "vendorId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "plateNumber": {
+                    "type": "string"
+                  },
+                  "capacity": {
+                    "type": "number"
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Winch created"
+          }
+        }
+      }
+    },
+    "/api/winches/{id}": {
+      "get": {
+        "summary": "عرض ونش بالمعرف — Get winch by ID [CRUD - Read One]",
+        "tags": [
+          "4. الوينشات (Winches/Towing)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Winch details"
+          },
+          "404": {
+            "description": "Winch not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "تحديث ونش (أدمن) — Update winch [CRUD - Update]",
+        "tags": [
+          "4. الوينشات (Winches/Towing)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "vendorId": {
+                    "type": "string"
+                  },
+                  "plateNumber": {
+                    "type": "string"
+                  },
+                  "capacity": {
+                    "type": "number"
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Winch updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "حذف ونش (أدمن) — Delete winch [CRUD - Delete]",
+        "tags": [
+          "4. الوينشات (Winches/Towing)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Winch deleted"
+          }
+        }
+      }
+    },
     "/api/workshops": {
       "get": {
         "summary": "Get all certified workshops",
         "description": "Retrieve a list of active and verified workshops with optional filtering",
         "tags": [
-          "Certified Workshops"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -6441,7 +7818,7 @@
         "summary": "Get workshop details by ID",
         "description": "Retrieve detailed information about a specific certified workshop",
         "tags": [
-          "Certified Workshops"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -6524,7 +7901,7 @@
         "summary": "Get all workshops (Admin)",
         "description": "Retrieve all workshops without filtering (Admin only)",
         "tags": [
-          "Certified Workshops - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -6584,7 +7961,7 @@
         "summary": "Create new certified workshop (Admin)",
         "description": "Add a new certified workshop to the system",
         "tags": [
-          "Certified Workshops - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -6706,7 +8083,7 @@
         "summary": "Update workshop (Admin)",
         "description": "Update workshop information",
         "tags": [
-          "Certified Workshops - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -6775,7 +8152,7 @@
         "summary": "Delete workshop (Admin)",
         "description": "Delete a certified workshop (only if no active bookings)",
         "tags": [
-          "Certified Workshops - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -6813,7 +8190,7 @@
         "summary": "Verify/Unverify workshop (Admin)",
         "description": "Toggle workshop verification status",
         "tags": [
-          "Certified Workshops - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -6867,7 +8244,7 @@
         "summary": "Create a review for a workshop",
         "description": "Submit a review and rating for a workshop (requires completed booking for verified reviews)",
         "tags": [
-          "Workshop Reviews"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -6934,7 +8311,7 @@
         "summary": "Get workshop reviews",
         "description": "Retrieve all approved reviews for a workshop",
         "tags": [
-          "Workshop Reviews"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -6995,7 +8372,7 @@
         "summary": "Get review statistics",
         "description": "Get rating distribution and statistics for a workshop",
         "tags": [
-          "Workshop Reviews"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -7024,7 +8401,7 @@
         "summary": "Get workshop reviews (Admin)",
         "description": "Retrieve all reviews including unapproved ones",
         "tags": [
-          "Workshop Reviews - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -7076,7 +8453,7 @@
         "summary": "Update review approval status",
         "description": "Approve or hide a review",
         "tags": [
-          "Workshop Reviews - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -7123,7 +8500,7 @@
         "summary": "Add workshop response to review",
         "description": "Add an official response from the workshop to a review",
         "tags": [
-          "Workshop Reviews - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -7170,7 +8547,7 @@
         "summary": "Delete a review",
         "description": "Permanently delete a review",
         "tags": [
-          "Workshop Reviews - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -7199,7 +8576,7 @@
         "summary": "Upload workshop logo",
         "description": "Upload a logo image for a workshop (Admin only)",
         "tags": [
-          "Workshop Images - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -7245,7 +8622,7 @@
         "summary": "Delete workshop logo",
         "description": "Delete the workshop logo (Admin only)",
         "tags": [
-          "Workshop Images - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -7277,7 +8654,7 @@
         "summary": "Upload workshop images",
         "description": "Upload multiple images for a workshop (max 10 total, Admin only)",
         "tags": [
-          "Workshop Images - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -7328,7 +8705,7 @@
         "summary": "Delete workshop image",
         "description": "Delete a specific image by index (Admin only)",
         "tags": [
-          "Workshop Images - Admin"
+          "1. الورش المعتمدة (Certified Workshops)"
         ],
         "security": [
           {
@@ -7359,6 +8736,108 @@
           },
           "400": {
             "description": "Invalid image index"
+          }
+        }
+      }
+    },
+    "/api/workshops/{id}/services": {
+      "get": {
+        "summary": "Get workshop services (list for booking)",
+        "description": "Retrieve all active services offered by a certified workshop (id, name, price, duration).\nUse these IDs in POST /api/bookings with workshopId + workshopServiceIds to book workshop-specific services.\nقائمة خدمات الورشة المعتمدة (للعميل) — استخدم معرفات الخدمات في حجز ورشة مع workshopServiceIds.\n",
+        "tags": [
+          "1. الورش المعتمدة (Certified Workshops)",
+          "Bookings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Workshop ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of workshop services",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "CertifiedWorkshopService ID (use in workshopServiceIds when booking)"
+                          },
+                          "workshopId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "serviceType": {
+                            "type": "string",
+                            "enum": [
+                              "GENERAL",
+                              "MAINTENANCE",
+                              "REPAIR",
+                              "INSPECTION",
+                              "OTHER"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "nameAr": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "price": {
+                            "type": "number",
+                            "format": "double"
+                          },
+                          "currency": {
+                            "type": "string",
+                            "example": "SAR"
+                          },
+                          "estimatedDuration": {
+                            "type": "integer",
+                            "nullable": true,
+                            "description": "Duration in minutes"
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workshop not found"
           }
         }
       }

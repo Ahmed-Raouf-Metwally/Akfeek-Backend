@@ -173,9 +173,68 @@ async function findNearbyTechnicians(latitude, longitude) {
     return nearbyTechs;
 }
 
+/**
+ * Find nearby winches (Vendor + Winch) — للبث على الوينشات القريبة فقط
+ * @param {number} latitude - Pickup latitude
+ * @param {number} longitude - Pickup longitude
+ * @returns {Promise<Array>} Array of { winchId, winch, distance, etaMinutes, estimatedArrival }
+ */
+async function findNearbyWinches(latitude, longitude) {
+    const prisma = require('./database/prisma');
+
+    const radiusKm = await getSystemSetting('TOWING_SEARCH_RADIUS', 10);
+
+    const winches = await prisma.winch.findMany({
+        where: {
+            isActive: true,
+            isAvailable: true,
+            latitude: { not: null },
+            longitude: { not: null },
+            vendorId: { not: null },
+            vendor: {
+                status: 'ACTIVE',
+                vendorType: 'TOWING_SERVICE'
+            }
+        },
+        include: {
+            vendor: {
+                select: {
+                    id: true,
+                    userId: true,
+                    businessName: true,
+                    businessNameAr: true
+                }
+            }
+        }
+    });
+
+    const nearby = [];
+    for (const w of winches) {
+        const distance = calculateDistance(latitude, longitude, w.latitude, w.longitude);
+        if (distance > radiusKm) continue;
+        let etaMinutes = 0;
+        try {
+            const eta = await calculateETA(w.latitude, w.longitude, latitude, longitude);
+            etaMinutes = eta.etaMinutes;
+        } catch (_) {
+            etaMinutes = Math.round((distance / 50) * 60); // fallback ~50 km/h
+        }
+        nearby.push({
+            winchId: w.id,
+            winch: w,
+            distance,
+            etaMinutes,
+            estimatedArrival: new Date(Date.now() + etaMinutes * 60000)
+        });
+    }
+    nearby.sort((a, b) => a.distance - b.distance);
+    return nearby;
+}
+
 module.exports = {
     calculateDistance,
     calculateETA,
     calculateTowingPrice,
-    findNearbyTechnicians
+    findNearbyTechnicians,
+    findNearbyWinches
 };
