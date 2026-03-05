@@ -88,7 +88,7 @@ model User {
   vendorApplication Vendor?            @relation("VendorApplication")
   autoParts         AutoPart[]         @relation("VendorParts")
   marketplaceOrders MarketplaceOrder[]
-  cart               Cart?
+  cart              Cart?
 
   // Workshop Reviews
   workshopReviews WorkshopReview[]
@@ -98,6 +98,11 @@ model User {
   handledFeedbacks  Feedback[]         @relation("HandledFeedbacks")
   feedbackReplies   FeedbackReply[]
   feedbackAuditLogs FeedbackAuditLog[]
+
+  // Technical Support
+  supportRequestsAsCustomer TechnicalSupportRequest[] @relation("CustomerSupportRequests")
+  supportRequestsAsTech     TechnicalSupportRequest[] @relation("TechnicianSupportRequests")
+  supportRequestsAssigned   TechnicalSupportRequest[] @relation("AssignedSupportRequests")
 
   // Admin Transactions
   performedTransactions      Transaction[]      @relation("TransactionPerformer")
@@ -329,8 +334,8 @@ model Service {
   vendor   VendorProfile? @relation("VendorComprehensiveCareServices", fields: [vendorId], references: [id], onDelete: SetNull)
 
   // مواعيد العمل للحجز (العناية الشاملة): يوم الأسبوع + من - إلى. يمنع حجز عميلين في نفس الوقت
-  workingHours       Json?   // [{ "dayOfWeek": 0, "start": "09:00", "end": "17:00" }, ...] 0=Sun, 6=Sat
-  slotDurationMinutes Int?   // مدة كل موعد بالدقائق (افتراضي 60)
+  workingHours        Json? // [{ "dayOfWeek": 0, "start": "09:00", "end": "17:00" }, ...] 0=Sun, 6=Sat
+  slotDurationMinutes Int? // مدة كل موعد بالدقائق (افتراضي 60)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -353,8 +358,8 @@ model ServicePricing {
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  vehicleType     String  // اسم حر من الفيندور (مثلاً سيدان، دفع رباعي، عربية صغيرة)
-  basePrice       Decimal @db.Decimal(10, 2)
+  vehicleType     String // اسم حر من الفيندور (مثلاً سيدان، دفع رباعي، عربية صغيرة)
+  basePrice       Decimal  @db.Decimal(10, 2)
   discountedPrice Decimal? @db.Decimal(10, 2)
 
   isActive  Boolean  @default(true)
@@ -1024,7 +1029,7 @@ enum BookingStatus {
 }
 
 enum WorkType {
-  WORK   // عمل - أول مرة
+  WORK // عمل - أول مرة
   REWORK // إعادة عمل
 }
 
@@ -2108,4 +2113,55 @@ model VendorCity {
   createdAt DateTime @default(now())
 
   @@index([vendorId])
+}
+
+// ================================================================================================
+// TECHNICAL SUPPORT MODULE
+// ================================================================================================
+
+enum TechnicalSupportStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model TechnicalSupportRequest {
+  id     String @id @default(uuid())
+  number String @unique
+
+  customerId String
+  customer   User   @relation("CustomerSupportRequests", fields: [customerId], references: [id])
+
+  technicianId String?
+  technician   User?   @relation("TechnicianSupportRequests", fields: [technicianId], references: [id])
+
+  assignedById String?
+  assignedBy   User?   @relation("AssignedSupportRequests", fields: [assignedById], references: [id])
+
+  assignedAt DateTime?
+
+  vehicleSerialNumber String
+  plateNumber         String
+  hasInsurance        Boolean @default(false)
+  insuranceCompany    String?
+  deliveryAddress     String
+
+  repairAuthUrl    String?
+  najmDocUrl       String?
+  trafficReportUrl String?
+
+  accidentDamages String @db.Text
+  carImageUrls    Json?
+
+  status TechnicalSupportStatus @default(PENDING)
+  notes  String?                @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([technicianId])
+  @@index([status])
 }
