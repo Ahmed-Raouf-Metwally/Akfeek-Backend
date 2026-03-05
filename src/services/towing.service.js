@@ -3,7 +3,7 @@ const {
     calculateDistance,
     calculateETA,
     calculateTowingPrice,
-    findNearbyTechnicians
+    findNearbyWinches
 } = require('../utils/towing');
 const {
     getSystemSetting
@@ -12,6 +12,8 @@ const {
     AppError
 } = require('../api/middlewares/error.middleware');
 const osrmService = require('./osrm.service');
+const { emitNewTowingRequestToWinches } = require('../socket');
+const { getPlatformCommissionPercent } = require('../utils/pricing');
 
 class TowingService {
     /**
@@ -27,6 +29,28 @@ class TowingService {
             notes,
             estimatedBudget
         } = data;
+
+        // التحقق من موقع الالتقاط والجهة (الوجهة) مع الإحداثيات — لازم للرد بالسعر لما الفيندور يوافق
+        if (!pickupLocation || typeof pickupLocation.latitude !== 'number' || typeof pickupLocation.longitude !== 'number') {
+            throw new AppError('Pickup location with latitude and longitude is required', 400, 'VALIDATION_ERROR');
+        }
+        if (!destinationLocation || typeof destinationLocation.latitude !== 'number' || typeof destinationLocation.longitude !== 'number') {
+            throw new AppError('Destination location with latitude and longitude is required', 400, 'VALIDATION_ERROR');
+        }
+        const validLat = (v) => typeof v === 'number' && v >= -90 && v <= 90;
+        const validLng = (v) => typeof v === 'number' && v >= -180 && v <= 180;
+        if (!validLat(pickupLocation.latitude) || !validLng(pickupLocation.longitude)) {
+            throw new AppError('Invalid pickup coordinates (lat -90..90, lng -180..180)', 400, 'VALIDATION_ERROR');
+        }
+        if (!validLat(destinationLocation.latitude) || !validLng(destinationLocation.longitude)) {
+            throw new AppError('Invalid destination coordinates (lat -90..90, lng -180..180)', 400, 'VALIDATION_ERROR');
+        }
+        if (!pickupLocation.address || typeof pickupLocation.address !== 'string') {
+            throw new AppError('Pickup address is required', 400, 'VALIDATION_ERROR');
+        }
+        if (!destinationLocation.address || typeof destinationLocation.address !== 'string') {
+            throw new AppError('Destination address is required', 400, 'VALIDATION_ERROR');
+        }
 
         // Validate vehicle ownership
         const vehicle = await prisma.userVehicle.findFirst({
@@ -91,26 +115,26 @@ class TowingService {
             }
         });
 
-        // Find nearby technicians
-        const nearbyTechs = await findNearbyTechnicians(
+        // Find nearby winches (Vendor + Winch) — البث للوينشات القريبة فقط
+        const nearbyWinches = await findNearbyWinches(
             pickupLocation.latitude,
             pickupLocation.longitude
         );
 
-        if (nearbyTechs.length === 0) {
+        if (nearbyWinches.length === 0) {
             await prisma.booking.update({
                 where: {
                     id: booking.id
                 },
                 data: {
-                    status: 'NO_TECHNICIANS_AVAILABLE'
+                    status: 'PENDING'
                 }
             });
 
             throw new AppError(
-                'No technicians available in your area',
+                'No winches available in your area',
                 404,
-                'NO_TECHNICIANS'
+                'NO_WINCHES'
             );
         }
 
@@ -148,37 +172,65 @@ class TowingService {
             }
         });
 
-        // TODO: Send notifications to nearby technicians via Socket.io
-        // this.notifyNearbyTechnicians(broadcast, nearbyTechs);
+        // إرسال فوري (push) للوينشات القريبة عبر السوكت — حتى يظهر الطلب بدون polling
+        try {
+            const vendorUserIds = nearbyWinches
+                .map((n) => n.winch?.vendor?.userId)
+                .filter(Boolean);
+            if (vendorUserIds.length > 0) {
+                emitNewTowingRequestToWinches(vendorUserIds, {
+                    broadcastId: broadcast.id,
+                    bookingId: booking.id,
+                    pickupLocation: {
+                        latitude: pickupLocation.latitude,
+                        longitude: pickupLocation.longitude,
+                        address: pickupLocation.address
+                    },
+                    destinationLocation: {
+                        latitude: destinationLocation.latitude,
+                        longitude: destinationLocation.longitude,
+                        address: destinationLocation.address
+                    },
+                    distanceKm: tripDistance.distance,
+                    urgency: urgency || 'NORMAL',
+                    vehicleCondition: vehicleCondition || null,
+                    expiresAt: expiresAt.toISOString()
+                });
+            }
+        } catch (_) { /* socket not ready */ }
 
         return {
             bookingId: booking.id,
             broadcastId: broadcast.id,
             status: 'BROADCASTING',
-            estimatedDistanceKm: tripDistance.distance, // Road distance in kilometers
-            estimatedDurationMinutes: tripDistance.duration, // Duration in minutes
+            estimatedDistanceKm: tripDistance.distance,
+            estimatedDurationMinutes: tripDistance.duration,
             estimatedPrice: pricing.finalPrice,
             pricing: pricing,
             routingMethod: tripDistance.method,
             broadcastUntil: expiresAt,
-            nearbyTechniciansCount: nearbyTechs.length
+            nearbyWinchesCount: nearbyWinches.length
         };
     }
 
     /**
-     * Get offers for a broadcast
+     * Get offers for a broadcast — عروض الوينشات/الفنيين مع السعر للعميل
      */
     async getOffers(broadcastId, customerId) {
         const broadcast = await prisma.jobBroadcast.findUnique({
-            where: {
-                id: broadcastId
-            },
+            where: { id: broadcastId },
             include: {
                 booking: {
                     select: {
                         id: true,
                         customerId: true,
-                        status: true
+                        status: true,
+                        pickupLat: true,
+                        pickupLng: true,
+                        pickupAddress: true,
+                        destinationLat: true,
+                        destinationLng: true,
+                        destinationAddress: true
                     }
                 },
                 offers: {
@@ -195,11 +247,20 @@ class TowingService {
                                     }
                                 }
                             }
+                        },
+                        winch: {
+                            include: {
+                                vendor: {
+                                    select: {
+                                        businessName: true,
+                                        businessNameAr: true,
+                                        userId: true
+                                    }
+                                }
+                            }
                         }
                     },
-                    orderBy: {
-                        bidAmount: 'asc' // Cheapest first
-                    }
+                    orderBy: { bidAmount: 'asc' }
                 }
             }
         });
@@ -207,34 +268,64 @@ class TowingService {
         if (!broadcast) {
             throw new AppError('Broadcast not found', 404, 'BROADCAST_NOT_FOUND');
         }
-
-        // Verify ownership
         if (broadcast.booking.customerId !== customerId) {
             throw new AppError('Unauthorized access', 403, 'FORBIDDEN');
         }
 
-        // Calculate ETA for each offer
-        const offersWithETA = await Promise.all(
-            broadcast.offers.map(async (offer) => {
-                const eta = await calculateETA(
-                    offer.technician.profile.currentLat,
-                    offer.technician.profile.currentLng,
-                    broadcast.pickupLat,
-                    broadcast.pickupLng
-                );
+        const pickupLat = broadcast.latitude;
+        const pickupLng = broadcast.longitude;
+        const booking = broadcast.booking;
 
+        const offersWithMeta = await Promise.all(
+            broadcast.offers.map(async (offer) => {
+                if (offer.winchId && offer.winch) {
+                    return {
+                        id: offer.id,
+                        winch: {
+                            id: offer.winch.id,
+                            name: offer.winch.name,
+                            nameAr: offer.winch.nameAr,
+                            vendorName: offer.winch.vendor?.businessName,
+                            vendorNameAr: offer.winch.vendor?.businessNameAr,
+                            distance: offer.distanceKm ?? 0,
+                            estimatedArrival: offer.estimatedArrival,
+                            averageRating: offer.winch.averageRating,
+                            totalTrips: offer.winch.totalTrips
+                        },
+                        bidAmount: Number(offer.bidAmount),
+                        message: offer.message,
+                        status: offer.status,
+                        createdAt: offer.createdAt
+                    };
+                }
+                if (offer.technicianId && offer.technician?.profile) {
+                    const prof = offer.technician.profile;
+                    let eta = { distance: offer.distanceKm ?? 0, etaMinutes: offer.estimatedArrival ?? 0 };
+                    if (prof.currentLat != null && prof.currentLng != null) {
+                        try {
+                            eta = await calculateETA(prof.currentLat, prof.currentLng, pickupLat, pickupLng);
+                        } catch (_) {}
+                    }
+                    return {
+                        id: offer.id,
+                        technician: {
+                            id: offer.technicianId,
+                            name: `${prof.firstName ?? ''} ${prof.lastName ?? ''}`.trim(),
+                            avatar: prof.avatar,
+                            rating: 4.5,
+                            completedJobs: 0,
+                            distance: eta.distance,
+                            estimatedArrival: eta.etaMinutes
+                        },
+                        bidAmount: Number(offer.bidAmount),
+                        message: offer.message,
+                        status: offer.status,
+                        createdAt: offer.createdAt
+                    };
+                }
                 return {
                     id: offer.id,
-                    technician: {
-                        id: offer.technicianId,
-                        name: `${offer.technician.profile.firstName} ${offer.technician.profile.lastName}`,
-                        avatar: offer.technician.profile.avatar,
-                        rating: 4.5, // TODO: Calculate from ratings
-                        completedJobs: 0, // TODO: Count from bookings
-                        distance: eta.distance,
-                        estimatedArrival: eta.etaMinutes
-                    },
-                    bidAmount: offer.bidAmount,
+                    bidAmount: Number(offer.bidAmount),
                     message: offer.message,
                     status: offer.status,
                     createdAt: offer.createdAt
@@ -247,18 +338,18 @@ class TowingService {
                 id: broadcast.id,
                 status: broadcast.status,
                 pickupLocation: {
-                    latitude: broadcast.pickupLat,
-                    longitude: broadcast.pickupLng,
-                    address: broadcast.pickupAddress
+                    latitude: pickupLat,
+                    longitude: pickupLng,
+                    address: broadcast.locationAddress
                 },
                 destinationLocation: {
-                    latitude: broadcast.destinationLat,
-                    longitude: broadcast.destinationLng,
-                    address: broadcast.destinationAddress
+                    latitude: booking.destinationLat ?? null,
+                    longitude: booking.destinationLng ?? null,
+                    address: booking.destinationAddress ?? null
                 },
-                expiresAt: broadcast.expiresAt
+                expiresAt: broadcast.broadcastUntil
             },
-            offers: offersWithETA
+            offers: offersWithMeta
         };
     }
 
@@ -288,16 +379,14 @@ class TowingService {
             throw new AppError('Broadcast is not active', 400, 'INVALID_STATUS');
         }
 
-        // Get offer
+        // Get offer (من ونش أو فني)
         const offer = await prisma.jobOffer.findFirst({
-            where: {
-                id: offerId,
-                broadcastId
-            },
+            where: { id: offerId, broadcastId },
             include: {
-                technician: {
+                technician: { include: { profile: true } },
+                winch: {
                     include: {
-                        profile: true
+                        vendor: { select: { userId: true, businessName: true, businessNameAr: true, commissionPercent: true } }
                     }
                 }
             }
@@ -306,86 +395,122 @@ class TowingService {
         if (!offer) {
             throw new AppError('Offer not found', 404, 'OFFER_NOT_FOUND');
         }
-
         if (offer.status !== 'PENDING') {
             throw new AppError('Offer is no longer available', 400, 'INVALID_STATUS');
         }
 
-        // Start transaction
+        const driverUserId = offer.winchId && offer.winch?.vendor
+            ? offer.winch.vendor.userId
+            : offer.technicianId;
+        if (!driverUserId) {
+            throw new AppError('Offer has no assigned driver', 400, 'INVALID_OFFER');
+        }
+
+        // تسجيل نسبة عمولة المنصة وقت الحجز حتى لا تتأثر الحجوزات القديمة بتغيير النسبة
+        const defaultCommission = await getPlatformCommissionPercent();
+        const commissionPercentAtBooking = (offer.winch?.vendor?.commissionPercent != null)
+            ? Number(offer.winch.vendor.commissionPercent)
+            : defaultCommission;
+
+        const agreedAmount = Number(offer.bidAmount);
         const result = await prisma.$transaction(async (tx) => {
-            // Accept the offer
             await tx.jobOffer.update({
-                where: {
-                    id: offerId
-                },
-                data: {
-                    status: 'ACCEPTED'
-                }
+                where: { id: offerId },
+                data: { status: 'ACCEPTED', isSelected: true }
             });
-
-            // Reject all other offers
             await tx.jobOffer.updateMany({
-                where: {
-                    broadcastId,
-                    id: {
-                        not: offerId
-                    }
-                },
-                data: {
-                    status: 'REJECTED'
-                }
+                where: { broadcastId, id: { not: offerId } },
+                data: { status: 'REJECTED' }
             });
-
-            // Update broadcast status
             await tx.jobBroadcast.update({
-                where: {
-                    id: broadcastId
-                },
-                data: {
-                    status: 'TECHNICIAN_SELECTED'
+                where: { id: broadcastId },
+                data: { status: 'TECHNICIAN_SELECTED' }
+            });
+
+            // ربط الحجز بفيندور الوينش (يُخزَّن في technicianId للتوافق مع السوكت/التتبع — الفيندور هو من ينفذ المهمة)
+            const updateData = {
+                status: 'TECHNICIAN_ASSIGNED',
+                totalPrice: offer.bidAmount,
+                subtotal: offer.bidAmount,
+                platformCommissionPercent: commissionPercentAtBooking
+            };
+            if (driverUserId) {
+                updateData.technician = { connect: { id: driverUserId } };
+            }
+            const updatedBooking = await tx.booking.update({
+                where: { id: broadcast.booking.id },
+                data: updateData,
+                include: {
+                    technician: { include: { profile: true } }
                 }
             });
 
-            // Update booking with technician and price
-            const updatedBooking = await tx.booking.update({
-                where: {
-                    id: broadcast.booking.id
-                },
-                data: {
-                    technicianId: offer.technicianId,
-                    status: 'TECHNICIAN_ASSIGNED',
-                    totalPrice: offer.bidAmount,
-                    subtotal: offer.bidAmount
-                    // agreedPrice/acceptedAt removed as per schema
-                },
-                include: {
-                    technician: {
-                        include: {
-                            profile: true
-                        }
+            // إنشاء فاتورة للحجز حتى يدفع العميل — بعد الدفع يتفتح السوكت
+            const existingInv = await tx.invoice.findUnique({ where: { bookingId: updatedBooking.id } });
+            if (!existingInv) {
+                const invNum = `INV-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+                const invoice = await tx.invoice.create({
+                    data: {
+                        invoiceNumber: invNum,
+                        bookingId: updatedBooking.id,
+                        customerId: updatedBooking.customerId,
+                        subtotal: agreedAmount,
+                        tax: 0,
+                        discount: 0,
+                        totalAmount: agreedAmount,
+                        paidAmount: 0,
+                        status: 'PENDING'
                     }
-                }
-            });
+                });
+                await tx.invoiceLineItem.create({
+                    data: {
+                        invoiceId: invoice.id,
+                        description: 'Towing / Winch service',
+                        descriptionAr: 'خدمة السحب / الوينش',
+                        itemType: 'SERVICE',
+                        quantity: 1,
+                        unitPrice: agreedAmount,
+                        totalPrice: agreedAmount
+                    }
+                });
+            }
 
             return updatedBooking;
         });
 
-        // TODO: Notify technician via Socket.io
-        // TODO: Notify rejected technicians
+        // العميل يدفع الفاتورة ثم يتفتح السوكت — انظر markInvoicePaid
+        const invoice = await prisma.invoice.findUnique({
+            where: { bookingId: result.id },
+            select: { id: true, invoiceNumber: true, totalAmount: true, status: true }
+        });
 
         return {
             booking: {
                 id: result.id,
                 bookingNumber: result.bookingNumber,
                 status: result.status,
-                technician: {
+                technician: result.technician ? {
                     id: result.technician.id,
-                    name: `${result.technician.profile.firstName} ${result.technician.profile.lastName}`,
+                    name: `${result.technician.profile?.firstName ?? ''} ${result.technician.profile?.lastName ?? ''}`.trim(),
                     phone: result.technician.phone,
-                    avatar: result.technician.profile.avatar
-                },
-                agreedPrice: result.agreedPrice
-            }
+                    avatar: result.technician.profile?.avatar
+                } : null,
+                winch: offer.winch ? {
+                    id: offer.winch.id,
+                    name: offer.winch.name,
+                    vendorName: offer.winch.vendor?.businessName,
+                    vendorNameAr: offer.winch.vendor?.businessNameAr
+                } : null,
+                agreedPrice: agreedAmount
+            },
+            invoice: invoice ? {
+                id: invoice.id,
+                invoiceNumber: invoice.invoiceNumber,
+                totalAmount: Number(invoice.totalAmount),
+                status: invoice.status,
+                message: 'Pay this invoice to open tracking and chat with the winch driver.',
+                messageAr: 'ادفع الفاتورة لفتح التتبع والمحادثة مع السائق.'
+            } : null
         };
     }
 

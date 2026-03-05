@@ -32,6 +32,8 @@
         "prisma:seed:root-categories": "node prisma/seed-auto-part-root-categories.js",
         "openapi": "node generate-openapi.js",
         "test:order-flow": "node scripts/test-order-flow.js",
+        "test:winch-flow": "node scripts/test-winch-flow.js",
+        "test:marketplace-parts-flow": "node scripts/test-marketplace-parts-flow.js",
         "test": "jest --coverage",
         "test:watch": "jest --watch",
         "lint": "eslint src/",

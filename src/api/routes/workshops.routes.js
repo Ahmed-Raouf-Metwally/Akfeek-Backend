@@ -727,6 +727,76 @@ router.delete('/:id/logo', requireRole('ADMIN'), workshopImageController.deleteL
 // ================================================================================================
 // WORKSHOP SERVICES (Pricing)
 // ================================================================================================
+
+/**
+ * @swagger
+ * /api/workshops/{id}/services:
+ *   get:
+ *     summary: Get workshop services (list for booking)
+ *     description: |
+ *       Retrieve all active services offered by a certified workshop (id, name, price, duration).
+ *       Use these IDs in POST /api/bookings with workshopId + workshopServiceIds to book workshop-specific services.
+ *       قائمة خدمات الورشة المعتمدة (للعميل) — استخدم معرفات الخدمات في حجز ورشة مع workshopServiceIds.
+ *     tags: [1. الورش المعتمدة (Certified Workshops), Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Workshop ID
+ *     responses:
+ *       200:
+ *         description: List of workshop services
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                         description: CertifiedWorkshopService ID (use in workshopServiceIds when booking)
+ *                       workshopId:
+ *                         type: string
+ *                         format: uuid
+ *                       serviceType:
+ *                         type: string
+ *                         enum: [GENERAL, MAINTENANCE, REPAIR, INSPECTION, OTHER]
+ *                       name:
+ *                         type: string
+ *                       nameAr:
+ *                         type: string
+ *                         nullable: true
+ *                       description:
+ *                         type: string
+ *                         nullable: true
+ *                       price:
+ *                         type: number
+ *                         format: double
+ *                       currency:
+ *                         type: string
+ *                         example: SAR
+ *                       estimatedDuration:
+ *                         type: integer
+ *                         nullable: true
+ *                         description: Duration in minutes
+ *                       isActive:
+ *                         type: boolean
+ *       404:
+ *         description: Workshop not found
+ */
 router.get('/:id/services',                     workshopServiceController.getServices);
 router.post('/:id/services',                    requireRole('ADMIN'), workshopServiceController.addService);
 router.put('/:id/services/:svcId',              requireRole('ADMIN'), workshopServiceController.updateService);

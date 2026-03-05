@@ -7,15 +7,15 @@ const authMiddleware = require('../middlewares/auth.middleware');
  * @swagger
  * tags:
  *   name: Technician Towing
- *   description: Technician towing service endpoints - خدمة السحب للفنيين
+ *   description: "للفنيين فقط (TECHNICIAN). سائق الوينش = فيندور الوينش يستخدم /api/winches/my/jobs و /api/winches/my/jobs/:jobId/status."
  */
 
 /**
  * @swagger
  * /api/technician/towing/broadcasts:
  *   get:
- *     summary: Get active towing broadcasts
- *     description: Get all active towing requests that the technician can bid on
+ *     summary: Get active towing broadcasts (for technicians)
+ *     description: قائمة طلبات السحب النشطة التي يمكن للفني المزايدة عليها. ملاحظة - فيندور الوينش يستخدم GET /api/winches/my/broadcasts.
  *     tags: [Technician Towing]
  *     security:
  *       - bearerAuth: []
@@ -154,21 +154,22 @@ router.post('/broadcasts/:broadcastId/offer', authMiddleware, technicianTowingCo
  * @swagger
  * /api/technician/towing/jobs:
  *   get:
- *     summary: Get assigned towing jobs
+ *     summary: "6. قائمة مهام السائق — Get assigned towing jobs"
+ *     description: |
+ *       المهام المحددة للسائق (فني أو فيندور ونش) بعد قبول العميل للعرض. يعرض الحجوزات بحالة TECHNICIAN_ASSIGNED أو EN_ROUTE أو ARRIVED أو IN_PROGRESS.
+ *       بعد الدفع يتفتح السوكت بين العميل والسائق للتتبع والمحادثة.
  *     tags: [Technician Towing]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of assigned jobs
+ *         description: قائمة المهام مع العميل والموقع والسعر
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
+ *                 success: { type: boolean }
  *                 data:
  *                   type: object
  *                   properties:
@@ -177,24 +178,15 @@ router.post('/broadcasts/:broadcastId/offer', authMiddleware, technicianTowingCo
  *                       items:
  *                         type: object
  *                         properties:
- *                           id:
- *                             type: string
- *                           bookingNumber:
- *                             type: string
- *                             example: "TWG-20260127-001"
- *                           status:
- *                             type: string
- *                             example: "TECHNICIAN_ASSIGNED"
- *                           customer:
- *                             type: object
- *                           vehicle:
- *                             type: object
- *                           pickupLocation:
- *                             type: object
- *                           destinationLocation:
- *                             type: object
- *                           agreedPrice:
- *                             type: number
+ *                           id: { type: string }
+ *                           bookingNumber: { type: string }
+ *                           status: { type: string }
+ *                           customer: { type: object }
+ *                           vehicle: { type: object }
+ *                           pickupLocation: { type: object }
+ *                           destinationLocation: { type: object }
+ *                           agreedPrice: { type: number }
+ *                           scheduledDate: { type: string }
  */
 router.get('/jobs', authMiddleware, technicianTowingController.getJobs);
 
@@ -202,8 +194,10 @@ router.get('/jobs', authMiddleware, technicianTowingController.getJobs);
  * @swagger
  * /api/technician/towing/jobs/{jobId}/status:
  *   patch:
- *     summary: Update job status
- *     description: Update the status of an assigned towing job
+ *     summary: "6. تحديث حالة المهمة حتى إتمام النقل — Update job status"
+ *     description: |
+ *       السائق يحدّث الحالة أثناء تنفيذ المهمة. التسلسل: TECHNICIAN_ASSIGNED -> TECHNICIAN_EN_ROUTE -> TECHNICIAN_ARRIVED -> IN_PROGRESS -> COMPLETED.
+ *       عند COMPLETED تُسجّل completedAt. العميل يستقبل التحديثات عبر Socket (booking:status_changed) إن كان متصلاً.
  *     tags: [Technician Towing]
  *     security:
  *       - bearerAuth: []
@@ -211,17 +205,15 @@ router.get('/jobs', authMiddleware, technicianTowingController.getJobs);
  *       - in: path
  *         name: jobId
  *         required: true
- *         schema:
- *           type: string
- *           format: uuid
+ *         schema: { type: string, format: uuid }
+ *         description: Booking ID (معرف الحجز)
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - status
+ *             required: [status]
  *             properties:
  *               status:
  *                 type: string
@@ -234,6 +226,8 @@ router.get('/jobs', authMiddleware, technicianTowingController.getJobs);
  *     responses:
  *       200:
  *         description: Status updated successfully
+ *       400:
+ *         description: Invalid status transition
  */
 router.patch('/jobs/:jobId/status', authMiddleware, technicianTowingController.updateJobStatus);
 

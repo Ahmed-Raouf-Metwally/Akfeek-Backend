@@ -116,10 +116,15 @@ router.get('/:id', orderController.getOrderById);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [status]
  *             properties:
  *               status:
  *                 type: string
+ *                 enum: [PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED]
+ *                 description: حالة الطلب
+ *               paymentStatus:
+ *                 type: string
+ *                 enum: [PENDING, PAID, FAILED]
+ *                 description: حالة الدفع (أدمن فقط)
  *     responses:
  *       200:
  *         description: Status updated

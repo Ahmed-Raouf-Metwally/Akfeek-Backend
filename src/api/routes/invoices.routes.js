@@ -52,7 +52,7 @@ router.get('/', requireAdminOrPermission('invoices'), invoiceController.getAllIn
  *     summary: Get invoice by ID
  *     description: |
  *       Get single invoice details by ID or by bookingId. Admin only.
- *       تفاصيل فاتورة بالمعرف أو معرف الحجز - للمسؤول فقط.
+ *       تفاصيل فاتورة بالمعرف أو معرف الحجز - للمسؤول فقط. تتضمن بيانات الفاتورة وبيان الفيندور صاحبها (vendor, vendorSummary) — ورشة أو خدمة أو ونش سحب.
  *     tags: [Invoices]
  *     security:
  *       - bearerAuth: []
@@ -64,14 +64,14 @@ router.get('/', requireAdminOrPermission('invoices'), invoiceController.getAllIn
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200:
- *         description: Invoice details - تفاصيل الفاتورة
+ *         description: Invoice details - تفاصيل الفاتورة (مع vendor و vendorSummary)
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
  *                 success: { type: boolean }
- *                 data: { type: object, description: Invoice with booking, lineItems, payments }
+ *                 data: { type: object, description: Invoice with booking, lineItems, payments, vendor, vendorSummary (بيان الفيندور صاحب الفاتورة) }
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:
@@ -83,11 +83,11 @@ router.get('/:id', requireAdminOrPermission('invoices'), invoiceController.getIn
  * @swagger
  * /api/invoices/{id}/mark-paid:
  *   patch:
- *     summary: Mark invoice as paid (Admin)
+ *     summary: Mark invoice as paid (Admin) — إيداع حصة الفيندور وخصم عمولة المنصة
  *     description: |
- *       Mark an invoice as paid. Creates payment record, credits vendor wallet, awards customer points.
- *       تحديد الفاتورة كمدفوعة - يسجل الدفع ويودع رصيد الفيندور ويمنح النقاط للعميل.
- *     tags: [Invoices]
+ *       تحديد الفاتورة كمدفوعة. يسجل الدفع، يودع حصة الفيندور في محفظته ويخصم عمولة المنصة (نسبة مسجلة وقت الحجز — لا تتأثر الحجوزات القديمة بتغيير النسبة)، ويمنح النقاط للعميل.
+ *       لحجز السحب/الوينش: بعد الدفع يُرسل حدث booking:ready للعميل وفيندور الوينش فيفتح السوكت للتتبع والمحادثة.
+ *     tags: [Invoices, 4. الوينشات (Winches/Towing)]
  *     security:
  *       - bearerAuth: []
  *     parameters:

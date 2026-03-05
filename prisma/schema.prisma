@@ -800,6 +800,8 @@ model CertifiedWorkshopService {
   estimatedDuration Int?                // بالدقائق
   isActive          Boolean  @default(true)
 
+  bookingServices BookingService[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -883,6 +885,8 @@ model Winch {
   // ربط بفيندور نوعه TOWING_SERVICE — فيندور واحد = وينش واحد
   vendorId String?        @unique
   vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  jobOffers JobOffer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1073,6 +1077,8 @@ model Booking {
   discount    Decimal @default(0) @db.Decimal(10, 2)
   tax         Decimal @default(0) @db.Decimal(10, 2)
   totalPrice  Decimal @default(0) @db.Decimal(10, 2)
+  // نسبة عمولة المنصة المسجلة وقت الحجز — تغيير النسبة لاحقاً يؤثر على الحجوزات القادمة فقط
+  platformCommissionPercent Float?
 
   // Distance calculation (for delivery fee)
   distanceKm        Float?
@@ -1222,30 +1228,43 @@ model JobBroadcast {
   @@index([latitude, longitude])
 }
 
+enum JobOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 model JobOffer {
   id          String       @id @default(uuid())
   broadcastId String
   broadcast   JobBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
 
-  technicianId String
-  technician   User   @relation(fields: [technicianId], references: [id])
+  // من فني (User) أو من ونش (Vendor+Winch) — واحد منهما مطلوب
+  technicianId String?
+  technician   User?  @relation(fields: [technicianId], references: [id], onDelete: SetNull)
+  winchId      String?
+  winch        Winch? @relation(fields: [winchId], references: [id], onDelete: SetNull)
 
-  // Offer Details
+  // Offer Details — السعر يظهر للعميل (من pricePerKm للونش أو bidAmount للفني)
   bidAmount        Decimal @db.Decimal(10, 2)
-  estimatedArrival Int // minutes
+  estimatedArrival Int     // minutes
   message          String? @db.Text
 
-  // Technician Location (snapshot at time of offer)
-  technicianLat Float
-  technicianLng Float
-  distanceKm    Float
+  status JobOfferStatus @default(PENDING)
+
+  // Location snapshot at time of offer (فني أو موقع الوينش)
+  technicianLat Float?
+  technicianLng Float?
+  distanceKm    Float?
 
   isSelected Boolean  @default(false)
   createdAt  DateTime @default(now())
 
   @@index([broadcastId])
   @@index([technicianId])
+  @@index([winchId])
   @@index([isSelected])
+  @@index([status])
 }
 
 // ================================================================================================

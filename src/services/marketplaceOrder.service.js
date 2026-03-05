@@ -240,16 +240,27 @@ exports.getOrderById = async (id, currentUser) => {
   return order;
 };
 
-exports.updateOrderStatus = async (id, status, currentUser) => {
-  // Admin can update global status
-  if (currentUser.role === 'ADMIN') {
-    return await prisma.marketplaceOrder.update({
-      where: { id },
-      data: { status }
-    });
-  } 
-  
-  throw new AppError('Unauthorized', 403);
+exports.updateOrderStatus = async (id, payload, currentUser) => {
+  // Admin can update global status and/or paymentStatus
+  if (currentUser.role !== 'ADMIN') {
+    throw new AppError('Unauthorized', 403);
+  }
+  const data = {};
+  if (payload.status != null) data.status = payload.status;
+  if (payload.paymentStatus != null) {
+    const allowed = ['PENDING', 'PAID', 'FAILED'];
+    if (!allowed.includes(payload.paymentStatus)) {
+      throw new AppError('Invalid paymentStatus', 400);
+    }
+    data.paymentStatus = payload.paymentStatus;
+  }
+  if (Object.keys(data).length === 0) {
+    throw new AppError('Provide status and/or paymentStatus', 400);
+  }
+  return await prisma.marketplaceOrder.update({
+    where: { id },
+    data,
+  });
 };
 
 exports.updateOrderItemStatus = async (orderId, itemId, status, currentUser) => {

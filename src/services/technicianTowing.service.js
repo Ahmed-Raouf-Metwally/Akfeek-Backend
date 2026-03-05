@@ -1,4 +1,5 @@
 const prisma = require('../utils/database/prisma');
+const { BookingStatus } = require('@prisma/client');
 const { calculateETA } = require('../utils/towing');
 const { AppError } = require('../api/middlewares/error.middleware');
 
@@ -42,9 +43,7 @@ class TechnicianTowingService {
         const broadcasts = await prisma.jobBroadcast.findMany({
             where: {
                 status: 'BROADCASTING',
-                expiresAt: {
-                    gt: new Date()
-                }
+                broadcastUntil: { gt: new Date() }
             },
             include: {
                 booking: {
@@ -89,41 +88,47 @@ class TechnicianTowingService {
             }
         });
 
-        // Calculate ETA for each broadcast
         const broadcastsWithETA = await Promise.all(
             broadcasts.map(async (broadcast) => {
-                const eta = await calculateETA(
-                    technician.profile.currentLat,
-                    technician.profile.currentLng,
-                    broadcast.pickupLat,
-                    broadcast.pickupLng
-                );
-
+                const pickupLat = broadcast.latitude;
+                const pickupLng = broadcast.longitude;
+                const booking = broadcast.booking;
+                let eta = { distance: 0, etaMinutes: 0 };
+                if (technician.profile?.currentLat != null && technician.profile?.currentLng != null) {
+                    try {
+                        eta = await calculateETA(
+                            technician.profile.currentLat,
+                            technician.profile.currentLng,
+                            pickupLat,
+                            pickupLng
+                        );
+                    } catch (_) {}
+                }
                 const myOffer = broadcast.offers[0] || null;
 
                 return {
                     id: broadcast.id,
                     customer: {
-                        name: `${broadcast.booking.customer.profile.firstName} ${broadcast.booking.customer.profile.lastName}`,
-                        avatar: broadcast.booking.customer.profile.avatar
+                        name: `${booking.customer?.profile?.firstName ?? ''} ${booking.customer?.profile?.lastName ?? ''}`.trim(),
+                        avatar: booking.customer?.profile?.avatar
                     },
-                    vehicle: broadcast.booking.vehicle,
+                    vehicle: booking.vehicle,
                     pickupLocation: {
-                        latitude: broadcast.pickupLat,
-                        longitude: broadcast.pickupLng,
-                        address: broadcast.pickupAddress
+                        latitude: pickupLat,
+                        longitude: pickupLng,
+                        address: broadcast.locationAddress
                     },
                     destinationLocation: {
-                        latitude: broadcast.destinationLat,
-                        longitude: broadcast.destinationLng,
-                        address: broadcast.destinationAddress
+                        latitude: booking.destinationLat ?? null,
+                        longitude: booking.destinationLng ?? null,
+                        address: booking.destinationAddress ?? null
                     },
                     distance: eta.distance,
                     estimatedArrival: eta.etaMinutes,
-                    estimatedPrice: broadcast.metadata?.estimatedPrice || 0,
-                    urgency: broadcast.metadata?.urgency || 'NORMAL',
-                    vehicleCondition: broadcast.metadata?.vehicleCondition,
-                    expiresAt: broadcast.expiresAt,
+                    estimatedPrice: booking.metadata?.estimatedPrice ?? 0,
+                    urgency: booking.metadata?.urgency ?? 'NORMAL',
+                    vehicleCondition: booking.metadata?.vehicleCondition,
+                    expiresAt: broadcast.broadcastUntil,
                     myOffer,
                     createdAt: broadcast.createdAt
                 };
@@ -191,31 +196,35 @@ class TechnicianTowingService {
             throw new AppError('Broadcast is no longer active', 400, 'INVALID_STATUS');
         }
 
-        if (new Date() > new Date(broadcast.expiresAt)) {
+        if (new Date() > new Date(broadcast.broadcastUntil)) {
             throw new AppError('Broadcast has expired', 400, 'EXPIRED');
         }
 
-        // Check if already submitted offer
         const existingOffer = await prisma.jobOffer.findFirst({
-            where: {
-                broadcastId,
-                technicianId
-            }
+            where: { broadcastId, technicianId }
         });
-
         if (existingOffer) {
             throw new AppError('You have already submitted an offer', 400, 'DUPLICATE_OFFER');
         }
 
-        // Create offer
+        const dist = await require('../utils/towing').calculateDistance(
+            technician.profile.currentLat,
+            technician.profile.currentLng,
+            broadcast.latitude,
+            broadcast.longitude
+        );
+
         const offer = await prisma.jobOffer.create({
             data: {
                 broadcastId,
                 technicianId,
                 bidAmount,
-                message,
-                estimatedArrival,
-                status: 'PENDING'
+                message: message ?? null,
+                estimatedArrival: estimatedArrival ?? 0,
+                status: 'PENDING',
+                technicianLat: technician.profile.currentLat,
+                technicianLng: technician.profile.currentLng,
+                distanceKm: dist
             },
             include: {
                 technician: {
@@ -256,10 +265,10 @@ class TechnicianTowingService {
                 technicianId,
                 status: {
                     in: [
-                        'TECHNICIAN_ASSIGNED',
-                        'TECHNICIAN_EN_ROUTE',
-                        'TECHNICIAN_ARRIVED',
-                        'IN_PROGRESS'
+                        BookingStatus.TECHNICIAN_ASSIGNED,
+                        BookingStatus.TECHNICIAN_EN_ROUTE,
+                        BookingStatus.ARRIVED,
+                        BookingStatus.IN_PROGRESS
                     ]
                 }
             },
@@ -278,9 +287,7 @@ class TechnicianTowingService {
                 },
                 vehicle: true
             },
-            orderBy: {
-                acceptedAt: 'desc'
-            }
+            orderBy: { updatedAt: 'desc' }
         });
 
         return {
@@ -289,9 +296,9 @@ class TechnicianTowingService {
                 bookingNumber: job.bookingNumber,
                 status: job.status,
                 customer: {
-                    name: `${job.customer.profile.firstName} ${job.customer.profile.lastName}`,
-                    phone: job.customer.phone,
-                    avatar: job.customer.profile.avatar
+                    name: `${job.customer?.profile?.firstName ?? ''} ${job.customer?.profile?.lastName ?? ''}`.trim(),
+                    phone: job.customer?.phone,
+                    avatar: job.customer?.profile?.avatar
                 },
                 vehicle: job.vehicle,
                 pickupLocation: {
@@ -304,8 +311,7 @@ class TechnicianTowingService {
                     longitude: job.destinationLng,
                     address: job.destinationAddress
                 },
-                agreedPrice: job.agreedPrice,
-                acceptedAt: job.acceptedAt,
+                agreedPrice: job.totalPrice,
                 scheduledDate: job.scheduledDate
             }))
         };
@@ -327,12 +333,12 @@ class TechnicianTowingService {
             throw new AppError('Unauthorized access', 403, 'FORBIDDEN');
         }
 
-        // Validate status transition
+        // Validate status transition (values must match BookingStatus enum)
         const validTransitions = {
-            'TECHNICIAN_ASSIGNED': ['TECHNICIAN_EN_ROUTE'],
-            'TECHNICIAN_EN_ROUTE': ['TECHNICIAN_ARRIVED'],
-            'TECHNICIAN_ARRIVED': ['IN_PROGRESS'],
-            'IN_PROGRESS': ['COMPLETED']
+            [BookingStatus.TECHNICIAN_ASSIGNED]: [BookingStatus.TECHNICIAN_EN_ROUTE],
+            [BookingStatus.TECHNICIAN_EN_ROUTE]: [BookingStatus.ARRIVED],
+            [BookingStatus.ARRIVED]: [BookingStatus.IN_PROGRESS],
+            [BookingStatus.IN_PROGRESS]: [BookingStatus.COMPLETED]
         };
 
         if (!validTransitions[booking.status]?.includes(newStatus)) {
@@ -347,7 +353,7 @@ class TechnicianTowingService {
             where: { id: bookingId },
             data: {
                 status: newStatus,
-                ...(newStatus === 'COMPLETED' && { completedAt: new Date() })
+                ...(newStatus === BookingStatus.COMPLETED && { completedAt: new Date() })
             }
         });
 

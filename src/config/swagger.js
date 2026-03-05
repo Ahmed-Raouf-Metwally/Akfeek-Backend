@@ -438,7 +438,18 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: '4. الوينشات (Winches/Towing)',
-            description: 'CRUD الوينشات + حجز السحب: طلب → عروض → قبول. Winches CRUD & towing booking.'
+            description: `فلو الوينش — فيندور الوينش هو المتحكم بالكامل (لا دور للفني):
+1) العميل: POST /api/bookings/towing/request (من أين إلى أين)
+2) فيندور الوينش: GET /api/winches/my/broadcasts (طلبات قريبة + push عبر Socket winch:new_request)
+3) فيندور الوينش: POST /api/winches/my/broadcasts/{broadcastId}/offer (السعر من pricePerKm)
+4) العميل: GET /api/bookings/towing/{broadcastId}/offers ثم POST .../offers/{offerId}/accept
+5) أدمن/العميل يدفع: PATCH /api/invoices/{id}/mark-paid — إيداع حصة الفيندور في محفظته وخصم عمولة المنصة (نسبة مسجلة وقت الحجز)، ثم يتفتح السوكت
+6) فيندور الوينش: GET /api/winches/my/jobs و PATCH /api/winches/my/jobs/{jobId}/status (TECHNICIAN_EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED)
++ Socket: customer:join_booking / driver:join_booking (بعد الدفع)، driver:location، booking:message`
+        },
+        {
+            name: 'فيندور الوينش (مهام الوينش)',
+            description: 'فيندور الوينش (VENDOR) هو المتحكم: قائمة مهامه وتحديث الحالة عبر GET /api/winches/my/jobs و PATCH /api/winches/my/jobs/{jobId}/status'
         },
         {
             name: '5. الورش المتنقلة (Mobile Workshop)',
@@ -494,7 +505,7 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: 'Invoices',
-            description: 'Invoice management - إدارة الفواتير'
+            description: 'إدارة الفواتير — كل فاتورة تتضمن بيان الفيندور صاحبها (ورشة/خدمة/ونش). mark-paid: إيداع حصة الفيندور في محفظته وخصم عمولة المنصة (نسبة مسجلة وقت الحجز).'
         },
         {
             name: 'Payments',
