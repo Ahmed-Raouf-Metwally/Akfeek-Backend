@@ -231,7 +231,6 @@ async function main() {
         discount: 0,
         tax,
         totalPrice,
-        platformCommissionPercent: workshop.vendor?.commissionPercent ?? null,
         services: {
           create: {
             serviceId: service.id,
