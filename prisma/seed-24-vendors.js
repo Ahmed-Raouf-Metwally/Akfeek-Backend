@@ -76,7 +76,7 @@ async function main() {
       globalIndex++;
       const suffix = `${group.vendorType.toLowerCase().replace(/_/g, '-')}-${i}`;
       const email = `vendor-${suffix}@akfeek.com`;
-      const phone = `+966${500000000 + globalIndex}`;
+      const phone = `+966${550000000 + globalIndex}`;
       const businessName = `${group.businessPrefixEn} ${i}`;
       const businessNameAr = `${group.businessPrefixAr} ${i}`;
 

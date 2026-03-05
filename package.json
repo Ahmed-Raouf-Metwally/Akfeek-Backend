@@ -12,6 +12,7 @@
         "prisma:db:sync": "prisma db push --accept-data-loss && npm run prisma:seed:all",
         "prisma:studio": "prisma studio",
         "prisma:seed": "node prisma/seed.js",
+        "prisma:seed:all": "node prisma/seed-all.js",
         "prisma:seed:care": "node prisma/seed-comprehensive-care-vendor.js",
         "prisma:seed:care-workshops": "node prisma/seed-workshops-for-comprehensive-care-vendors.js",
         "prisma:seed:care-services": "node prisma/seed-5-services-per-comprehensive-care.js",

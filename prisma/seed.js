@@ -333,7 +333,7 @@ async function main() {
       const vin = `VIN${String(2000000 + vehicleCount).padStart(7, '0')}`;
 
       const existing = await prisma.userVehicle.findFirst({
-        where: { vin },
+        where: { OR: [{ vin: vin }] },
       });
       if (existing) {
         vehicleCount++;

@@ -104,7 +104,6 @@ async function main() {
         data: {
           userId: user.id,
           vehicleModelId: vehicleModel.id,
-          plateNumber: plateNum,
           plateDigits: String(1000 + u),
           plateLettersEn: 'ABC',
           plateLettersAr: 'أ ب ج',
