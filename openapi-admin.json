@@ -1,0 +1,3253 @@
+{
+  "openapi": "3.0.0",
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development — بيئة التطوير"
+    },
+    {
+      "url": "https://akfeek-backend.developteam.site",
+      "description": "Production — بيئة الإنتاج"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token — أدخل التوكن بعد كلمة Bearer مثال: `Bearer eyJhbGci...`"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "string",
+            "example": "Error message"
+          },
+          "errorAr": {
+            "type": "string",
+            "example": "رسالة الخطأ"
+          },
+          "code": {
+            "type": "string",
+            "example": "VALIDATION_ERROR"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "Success": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Operation successful"
+          },
+          "messageAr": {
+            "type": "string",
+            "example": "تمت العملية بنجاح"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "example": 100
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 10
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string",
+            "example": "Home"
+          },
+          "labelAr": {
+            "type": "string",
+            "nullable": true,
+            "example": "المنزل"
+          },
+          "street": {
+            "type": "string",
+            "example": "King Fahd Road"
+          },
+          "streetAr": {
+            "type": "string",
+            "nullable": true,
+            "example": "طريق الملك فهد"
+          },
+          "city": {
+            "type": "string",
+            "example": "Riyadh"
+          },
+          "cityAr": {
+            "type": "string",
+            "nullable": true,
+            "example": "الرياض"
+          },
+          "state": {
+            "type": "string",
+            "nullable": true
+          },
+          "stateAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "postalCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "12345"
+          },
+          "country": {
+            "type": "string",
+            "example": "SA",
+            "default": "SA"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "example": 24.7136
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "example": 46.6753
+          },
+          "isDefault": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AddressInput": {
+        "type": "object",
+        "required": [
+          "label",
+          "street",
+          "city",
+          "latitude",
+          "longitude"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Home"
+          },
+          "labelAr": {
+            "type": "string",
+            "example": "المنزل"
+          },
+          "street": {
+            "type": "string",
+            "example": "King Fahd Road"
+          },
+          "streetAr": {
+            "type": "string",
+            "example": "طريق الملك فهد"
+          },
+          "city": {
+            "type": "string",
+            "example": "Riyadh"
+          },
+          "cityAr": {
+            "type": "string",
+            "example": "الرياض"
+          },
+          "state": {
+            "type": "string"
+          },
+          "stateAr": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string",
+            "example": "12345"
+          },
+          "country": {
+            "type": "string",
+            "example": "SA",
+            "default": "SA"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "example": 24.7136
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "example": 46.6753
+          },
+          "isDefault": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "Feedback": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "COMPLAINT",
+              "SUGGESTION"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "DELIVERY",
+              "PAYMENT",
+              "PRODUCT",
+              "UI_UX",
+              "OTHER"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isAnonymous": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VendorProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "businessName": {
+            "type": "string"
+          },
+          "businessNameAr": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "descriptionAr": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_APPROVAL",
+              "ACTIVE",
+              "SUSPENDED",
+              "REJECTED"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "logo": {
+            "type": "string"
+          },
+          "contactEmail": {
+            "type": "string"
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AutoPartCategory": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "SEDAN",
+              "HATCHBACK",
+              "COUPE",
+              "SMALL_SUV",
+              "LARGE_SEDAN",
+              "SUV",
+              "CROSSOVER",
+              "TRUCK",
+              "MOTORCYCLE",
+              "HEAVY_EQUIPMENT"
+            ]
+          },
+          "icon": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AutoPart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vendorId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "price": {
+            "type": "number"
+          },
+          "stockQuantity": {
+            "type": "integer"
+          },
+          "isApproved": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutoPartImage"
+            }
+          }
+        }
+      },
+      "AutoPartImage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AutoPartCompatibility": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "autoPartId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vehicleModelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "yearRange": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "LanguageHeader": {
+        "name": "Accept-Language",
+        "in": "header",
+        "description": "اللغة المفضلة | Preferred language",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "ar",
+            "en"
+          ],
+          "default": "ar"
+        }
+      },
+      "PageParam": {
+        "name": "page",
+        "in": "query",
+        "description": "رقم الصفحة | Page number",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "LimitParam": {
+        "name": "limit",
+        "in": "query",
+        "description": "عدد العناصر في الصفحة | Items per page",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "مطلوب مصادقة | Authentication required",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Authentication required",
+              "errorAr": "مطلوب مصادقة",
+              "code": "UNAUTHORIZED"
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "تم رفض الوصول | Access denied",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Access denied",
+              "errorAr": "تم رفض الوصول",
+              "code": "FORBIDDEN"
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "المورد غير موجود | Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Resource not found",
+              "errorAr": "المورد غير موجود",
+              "code": "NOT_FOUND"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "خطأ في التحقق من البيانات | Validation error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "success": false,
+              "error": "Validation failed",
+              "errorAr": "فشل التحقق",
+              "code": "VALIDATION_ERROR",
+              "details": {
+                "field": "Invalid value"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "info": {
+    "title": "⚙️ Akfeek — Admin Dashboard",
+    "version": "1.0.0",
+    "description": "\n# لوحة تحكم أكفيك — الأدمن\n\n**لمطور الداشبورد فقط** — هذه الوثيقة تحتوي على كل الـ endpoints الخاصة بلوحة التحكم.\n\n> كل الـ endpoints تتطلب توكن بـ role = **ADMIN**\n\n## الـ endpoints الرئيسية\n\n| القسم | Endpoint |\n|---|---|\n| إحصائيات | `GET /api/dashboard/stats` |\n| المستخدمون | `GET /api/users` |\n| الطلبات المالية | `GET /api/admin/finance/wallets` |\n| إعدادات النظام | `GET /api/admin/settings` |\n| الورش | `GET /api/workshops` |\n| الشكاوى | `GET /api/admin/feedback` |\n  ",
+    "contact": {
+      "name": "Akfeek API Support",
+      "email": "support@akfeek.com"
+    }
+  },
+  "tags": [
+    {
+      "name": "🔓 Auth",
+      "description": "تسجيل الدخول والتسجيل والـ OTP — مشترك لجميع أنواع المستخدمين | Login, register, OTP — shared for all user types"
+    },
+    {
+      "name": "🔓 Brands & Models",
+      "description": "ماركات وموديلات السيارات (بيانات عامة لا تحتاج توكن) | Vehicle brands & models — public data, no auth required"
+    },
+    {
+      "name": "⚙️ Admin | Dashboard",
+      "description": "إحصائيات وملخص لوحة التحكم | Dashboard statistics & summary"
+    },
+    {
+      "name": "⚙️ Admin | Users",
+      "description": "إدارة كل المستخدمين (عملاء + فنيين + فيندورز) | Manage all users — customers, technicians & vendors"
+    },
+    {
+      "name": "⚙️ Admin | Bookings",
+      "description": "إدارة الحجوزات وتحديث الحالة — فاتورة تُنشأ تلقائياً عند الإكمال | Manage bookings & update status — invoice auto-created on COMPLETED"
+    },
+    {
+      "name": "⚙️ Admin | Services",
+      "description": "إدارة قائمة الخدمات | Manage service catalog"
+    },
+    {
+      "name": "⚙️ Admin | Workshops",
+      "description": "مراجعة وإدارة الورش المعتمدة | Review & manage certified workshops"
+    },
+    {
+      "name": "⚙️ Admin | Finance",
+      "description": "التقارير المالية والفواتير والمحافظ والعمولات — إنشاء فاتورة يدوياً وتسجيل الدفع | Financial reports, invoices, wallets & commissions"
+    },
+    {
+      "name": "⚙️ Admin | Settings",
+      "description": "إعدادات النظام العامة (ضريبة القيمة المضافة، عمولة التطبيق، النقاط) | System-wide settings (VAT, commission, points)"
+    },
+    {
+      "name": "⚙️ Admin | Feedback",
+      "description": "مراجعة شكاوى ومقترحات العملاء | Review customer complaints & suggestions"
+    },
+    {
+      "name": "⚙️ Admin | Activity Logs",
+      "description": "سجل نشاط الأدمن | Admin activity logs"
+    },
+    {
+      "name": "⚙️ Admin | Brands & Models",
+      "description": "إضافة وتعديل وحذف ماركات وموديلات السيارات | Add, edit & delete vehicle brands & models"
+    },
+    {
+      "name": "⚙️ Admin | Spare Parts",
+      "description": "الإشراف على قطع الغيار في المتجر | Oversee marketplace spare parts"
+    }
+  ],
+  "paths": {
+    "/api/activity": {
+      "get": {
+        "summary": "Get all activity logs (Admin)",
+        "tags": [
+          "⚙️ Admin | Activity Logs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of activity logs"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create manual activity log (Admin)",
+        "tags": [
+          "⚙️ Admin | Activity Logs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "action",
+                  "description"
+                ],
+                "properties": {
+                  "action": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "metadata": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Log created"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register new user",
+        "description": "Create a new user account (Customer, Technician, or Supplier)\n\nإنشاء حساب مستخدم جديد (عميل، فني، أو مورد)\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password",
+                  "role",
+                  "firstName",
+                  "lastName"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "ahmed@example.com",
+                    "description": "User email - البريد الإلكتروني"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "example": "+966501234567",
+                    "description": "Phone number with country code - رقم الهاتف مع رمز الدولة"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "example": "StrongPass123!",
+                    "description": "Password (min 8 chars) - كلمة المرور (8 أحرف على الأقل)"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "CUSTOMER",
+                      "TECHNICIAN",
+                      "SUPPLIER"
+                    ],
+                    "example": "CUSTOMER",
+                    "description": "User role - دور المستخدم"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "example": "Ahmed",
+                    "description": "First name - الاسم الأول"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "example": "Al-Mutairi",
+                    "description": "Last name - اسم العائلة"
+                  },
+                  "preferredLanguage": {
+                    "type": "string",
+                    "enum": [
+                      "AR",
+                      "EN"
+                    ],
+                    "default": "AR",
+                    "example": "AR",
+                    "description": "Preferred language - اللغة المفضلة"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully - تم التسجيل بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Registration successful"
+                    },
+                    "messageAr": {
+                      "type": "string",
+                      "example": "تم التسجيل بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string"
+                            },
+                            "profile": {
+                              "type": "object"
+                            }
+                          }
+                        },
+                        "token": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "409": {
+            "description": "Email or phone already exists - البريد الإلكتروني أو الهاتف موجود بالفعل",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "User login",
+        "description": "Authenticate user with email/phone and password, return JWT token\n\nمصادقة المستخدم بالبريد الإلكتروني/الهاتف وكلمة المرور، وإرجاع رمز JWT\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "identifier",
+                  "password"
+                ],
+                "properties": {
+                  "identifier": {
+                    "type": "string",
+                    "example": "ahmed@example.com",
+                    "description": "Email or phone number - البريد الإلكتروني أو رقم الهاتف"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "StrongPass123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful - تم تسجيل الدخول بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object"
+                        },
+                        "token": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials - بيانات اعتماد غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/send-otp": {
+      "post": {
+        "summary": "Send OTP to phone",
+        "description": "Send OTP code to user's phone number for verification\n\nإرسال رمز OTP إلى رقم هاتف المستخدم للتحقق\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "+966501234567"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent successfully - تم إرسال OTP بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify-otp": {
+      "post": {
+        "summary": "Verify OTP",
+        "description": "Verify phone number with OTP code\n\nالتحقق من رقم الهاتف برمز OTP\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "code"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "+966501234567"
+                  },
+                  "code": {
+                    "type": "string",
+                    "example": "123456"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified - تم التحقق من OTP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid OTP - رمز OTP غير صحيح"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Get current user",
+        "description": "Get authenticated user's profile information\n\nالحصول على معلومات ملف المستخدم المصادق عليه\n",
+        "tags": [
+          "🔓 Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved - تم استرجاع ملف المستخدم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}/status": {
+      "patch": {
+        "summary": "Update booking status",
+        "description": "Update booking status. Auto-creates invoice when status is COMPLETED or DELIVERED.",
+        "tags": [
+          "⚙️ Admin | Bookings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "CONFIRMED",
+                      "IN_PROGRESS",
+                      "COMPLETED",
+                      "DELIVERED",
+                      "CANCELLED",
+                      "TECHNICIAN_EN_ROUTE",
+                      "ARRIVED",
+                      "IN_SERVICE"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "technicianId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated. Invoice auto-created if COMPLETED/DELIVERED."
+          }
+        }
+      }
+    },
+    "/api/brands": {
+      "post": {
+        "summary": "Create new brand (Admin only)",
+        "description": "Create a new vehicle brand - ????? ????? ????? ?????",
+        "tags": [
+          "⚙️ Admin | Brands & Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Tesla",
+                    "description": "Brand name - ??? ???????"
+                  },
+                  "nameAr": {
+                    "type": "string",
+                    "example": "????",
+                    "description": "Arabic brand name - ??? ??????? ????????"
+                  },
+                  "logo": {
+                    "type": "string",
+                    "nullable": true,
+                    "example": "https://example.com/tesla-logo.png",
+                    "description": "Brand logo URL - ???? ???? ???????"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Brand created successfully - ?? ????? ??????? ?????",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Brand created successfully"
+                    },
+                    "messageAr": {
+                      "type": "string",
+                      "example": "?? ????? ??????? ?????"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error - ??? ?? ??????"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "409": {
+            "description": "Brand already exists - ??????? ?????? ??????"
+          }
+        }
+      }
+    },
+    "/api/brands/{id}": {
+      "patch": {
+        "summary": "Update brand (Admin only)",
+        "description": "Update an existing brand - ????? ????? ??????",
+        "tags": [
+          "⚙️ Admin | Brands & Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID - ???? ???????"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "logo": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Brand updated successfully - ?? ????? ??????? ?????"
+          },
+          "404": {
+            "description": "Brand not found - ??????? ??? ??????"
+          },
+          "409": {
+            "description": "Brand name already exists - ??? ??????? ????? ??????"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete brand (Admin only)",
+        "description": "Delete a brand (soft delete by default) - ??? ????? (??? ???????)",
+        "tags": [
+          "⚙️ Admin | Brands & Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID - ???? ???????"
+          },
+          {
+            "in": "query",
+            "name": "hardDelete",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Permanently delete brand and all models - ??? ????? ??????? ????? ?????????"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brand deleted/deactivated - ?? ???/????? ???????"
+          },
+          "404": {
+            "description": "Brand not found - ??????? ??? ??????"
+          }
+        }
+      }
+    },
+    "/api/dashboard/stats": {
+      "get": {
+        "summary": "Get dashboard statistics overview",
+        "description": "Retrieve key metrics like total users, bookings, revenue, etc.",
+        "tags": [
+          "⚙️ Admin | Dashboard"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard statistics"
+          }
+        }
+      }
+    },
+    "/api/invoices": {
+      "post": {
+        "summary": "Manually create invoice for a booking (Admin)",
+        "tags": [
+          "⚙️ Admin | Finance"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "bookingId"
+                ],
+                "properties": {
+                  "bookingId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invoice created with subtotal, tax (VAT), discount, and total"
+          }
+        }
+      }
+    },
+    "/api/invoices/{id}/pay": {
+      "patch": {
+        "summary": "Mark invoice as paid (Admin)",
+        "tags": [
+          "⚙️ Admin | Finance"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "CASH",
+                      "CARD",
+                      "WALLET",
+                      "APPLE_PAY",
+                      "MADA",
+                      "BANK_TRANSFER"
+                    ],
+                    "default": "CASH"
+                  },
+                  "amount": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice marked as paid and Payment record created"
+          }
+        }
+      }
+    },
+    "/api/models": {
+      "post": {
+        "summary": "Create new model (Admin only)",
+        "description": "Create a new vehicle model - ????? ????? ????? ????",
+        "tags": [
+          "⚙️ Admin | Brands & Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "brandId",
+                  "name",
+                  "year",
+                  "size"
+                ],
+                "properties": {
+                  "brandId": {
+                    "type": "string",
+                    "description": "Brand ID - ???? ???????"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Camry",
+                    "description": "Model name - ??? ???????"
+                  },
+                  "nameAr": {
+                    "type": "string",
+                    "example": "?????",
+                    "description": "Arabic model name - ??? ??????? ????????"
+                  },
+                  "year": {
+                    "type": "integer",
+                    "example": 2023,
+                    "description": "Model year - ??? ???????"
+                  },
+                  "size": {
+                    "type": "string",
+                    "enum": [
+                      "SMALL",
+                      "MEDIUM",
+                      "LARGE",
+                      "EXTRA_LARGE"
+                    ],
+                    "example": "MEDIUM",
+                    "description": "Vehicle size - ??? ???????"
+                  },
+                  "imageUrl": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Model image URL - ???? ???? ???????"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Model created successfully - ?? ????? ??????? ?????"
+          },
+          "400": {
+            "description": "Validation error - ??? ?? ??????"
+          },
+          "404": {
+            "description": "Brand not found - ??????? ??? ??????"
+          },
+          "409": {
+            "description": "Model already exists - ??????? ????? ??????"
+          }
+        }
+      }
+    },
+    "/api/models/{id}": {
+      "patch": {
+        "summary": "Update model (Admin only)",
+        "description": "Update an existing model - ????? ????? ?????",
+        "tags": [
+          "⚙️ Admin | Brands & Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Model ID - ???? ???????"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "year": {
+                    "type": "integer"
+                  },
+                  "size": {
+                    "type": "string",
+                    "enum": [
+                      "SMALL",
+                      "MEDIUM",
+                      "LARGE",
+                      "EXTRA_LARGE"
+                    ]
+                  },
+                  "imageUrl": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Model updated successfully - ?? ????? ??????? ?????"
+          },
+          "404": {
+            "description": "Model not found - ??????? ??? ?????"
+          },
+          "409": {
+            "description": "Model with these details already exists - ??????? ???? ???????? ????? ??????"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete model (Admin only)",
+        "description": "Delete a model (soft delete by default) - ??? ????? (??? ???????)",
+        "tags": [
+          "⚙️ Admin | Brands & Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Model ID - ???? ???????"
+          },
+          {
+            "in": "query",
+            "name": "hardDelete",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Permanently delete model - ??? ????? ???????"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Model deleted/deactivated - ?? ???/????? ???????"
+          },
+          "404": {
+            "description": "Model not found - ??????? ??? ?????"
+          }
+        }
+      }
+    },
+    "/api/notifications/admin/all": {
+      "get": {
+        "summary": "Get all system notifications (Admin)",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all notifications"
+          }
+        }
+      }
+    },
+    "/api/services/upload-image": {
+      "post": {
+        "summary": "Upload service image",
+        "tags": [
+          "⚙️ Admin | Services"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image uploaded successfully"
+          }
+        }
+      }
+    },
+    "/api/services": {
+      "post": {
+        "summary": "Create new service (Admin)",
+        "tags": [
+          "⚙️ Admin | Services"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "type",
+                  "category"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "estimatedDuration": {
+                    "type": "integer"
+                  },
+                  "pricing": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "vehicleSize": {
+                          "type": "string"
+                        },
+                        "basePrice": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Service created"
+          }
+        }
+      }
+    },
+    "/api/services/{id}": {
+      "put": {
+        "summary": "Update service (Admin)",
+        "tags": [
+          "⚙️ Admin | Services"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete/Deactivate service (Admin)",
+        "tags": [
+          "⚙️ Admin | Services"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service deleted"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/admin/list": {
+      "get": {
+        "summary": "[Admin] List all technical support requests",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "ASSIGNED",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of requests"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/admin/{id}/assign": {
+      "post": {
+        "summary": "[Admin] Assign technician to request",
+        "description": "الأدمن يحدد الفني الذي سيراجع العميل",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "technicianId"
+                ],
+                "properties": {
+                  "technicianId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID الفني"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Technician assigned"
+          },
+          "400": {
+            "description": "Invalid technician or request state"
+          },
+          "404": {
+            "description": "Request not found"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/admin/{id}/status": {
+      "patch": {
+        "summary": "[Admin] Update request status",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "ASSIGNED",
+                      "IN_PROGRESS",
+                      "COMPLETED",
+                      "CANCELLED"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/technicians": {
+      "get": {
+        "summary": "[Admin] List technicians for assign dropdown",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of technicians (id, email, profile.firstName, profile.lastName)"
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "summary": "Get all users (Admin only)",
+        "description": "Get paginated list of all users with filters\n\nالحصول على قائمة المستخدمين (للمشرف فقط)\n",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CUSTOMER",
+                "TECHNICIAN",
+                "SUPPLIER",
+                "ADMIN"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users list retrieved"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create user (Admin only) - e.g. vendor account",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password",
+                  "firstName",
+                  "lastName",
+                  "role"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "CUSTOMER",
+                      "TECHNICIAN",
+                      "SUPPLIER",
+                      "VENDOR",
+                      "ADMIN"
+                    ]
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "preferredLanguage": {
+                    "type": "string",
+                    "enum": [
+                      "AR",
+                      "EN"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "409": {
+            "description": "Email or phone already registered"
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "summary": "Get user by ID (Admin only)",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User retrieved"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update user (Admin only)",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "bio": {
+                    "type": "string"
+                  },
+                  "bioAr": {
+                    "type": "string"
+                  },
+                  "avatar": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete user (Admin only)",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted"
+          }
+        }
+      }
+    },
+    "/api/users/{id}/status": {
+      "patch": {
+        "summary": "Update user status (Admin only)",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "PENDING_VERIFICATION",
+                      "SUSPENDED",
+                      "BANNED"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          }
+        }
+      }
+    },
+    "/api/workshops/{id}": {
+      "get": {
+        "summary": "Get workshop details by ID",
+        "description": "Retrieve detailed information about a specific certified workshop",
+        "tags": [
+          "⚙️ Admin | Workshops"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workshop ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workshop details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "nameAr": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "address": {
+                          "type": "string"
+                        },
+                        "city": {
+                          "type": "string"
+                        },
+                        "phone": {
+                          "type": "string"
+                        },
+                        "workingHours": {
+                          "type": "object"
+                        },
+                        "services": {
+                          "type": "string"
+                        },
+                        "averageRating": {
+                          "type": "number"
+                        },
+                        "totalReviews": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workshop not found"
+          }
+        }
+      }
+    },
+    "/api/workshops/admin/workshops/{id}": {
+      "delete": {
+        "summary": "Delete workshop (Admin)",
+        "description": "Delete a certified workshop (only if no active bookings)",
+        "tags": [
+          "⚙️ Admin | Workshops"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workshop deleted successfully"
+          },
+          "400": {
+            "description": "Cannot delete workshop with active bookings"
+          },
+          "403": {
+            "description": "Unauthorized - Admin access required"
+          },
+          "404": {
+            "description": "Workshop not found"
+          }
+        }
+      }
+    },
+    "/api/workshops/admin/workshops/{id}/verify": {
+      "patch": {
+        "summary": "Verify/Unverify workshop (Admin)",
+        "description": "Toggle workshop verification status",
+        "tags": [
+          "⚙️ Admin | Workshops"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "isVerified"
+                ],
+                "properties": {
+                  "isVerified": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification status updated successfully"
+          },
+          "403": {
+            "description": "Unauthorized - Admin access required"
+          },
+          "404": {
+            "description": "Workshop not found"
+          }
+        }
+      }
+    },
+    "/api/workshops/admin/reviews/{id}": {
+      "delete": {
+        "summary": "Delete a review",
+        "description": "Permanently delete a review",
+        "tags": [
+          "⚙️ Admin | Workshops"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Review deleted successfully"
+          }
+        }
+      }
+    },
+    "/api/workshops/{id}/logo": {
+      "delete": {
+        "summary": "Delete workshop logo",
+        "description": "Delete the workshop logo (Admin only)",
+        "tags": [
+          "⚙️ Admin | Workshops"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logo deleted successfully"
+          },
+          "400": {
+            "description": "Workshop has no logo"
+          }
+        }
+      }
+    },
+    "/api/workshops/{id}/images/{imageIndex}": {
+      "delete": {
+        "summary": "Delete workshop image",
+        "description": "Delete a specific image by index (Admin only)",
+        "tags": [
+          "⚙️ Admin | Workshops"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "imageIndex",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image deleted successfully"
+          },
+          "400": {
+            "description": "Invalid image index"
+          }
+        }
+      }
+    },
+    "/api/admin/feedback": {
+      "get": {
+        "summary": "List all feedbacks (Admin)",
+        "description": "Advanced filtering, search, and pagination for admin dashboard.",
+        "tags": [
+          "⚙️ Admin | Feedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status"
+          },
+          {
+            "in": "query",
+            "name": "type"
+          },
+          {
+            "in": "query",
+            "name": "priority"
+          },
+          {
+            "in": "query",
+            "name": "search"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated feedbacks"
+          }
+        }
+      }
+    },
+    "/api/admin/feedback/{id}/status": {
+      "patch": {
+        "summary": "Update feedback status",
+        "description": "Change status (e.g. to RESOLVED). Includes automatic HandledBy assignment.",
+        "tags": [
+          "⚙️ Admin | Feedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated"
+          }
+        }
+      }
+    },
+    "/api/admin/feedback/{id}/reply": {
+      "post": {
+        "summary": "Reply to a feedback",
+        "description": "Post a reply to the customer's complaint or suggestion.",
+        "tags": [
+          "⚙️ Admin | Feedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Reply created"
+          }
+        }
+      }
+    },
+    "/api/admin/feedback/{id}": {
+      "delete": {
+        "summary": "Soft delete feedback",
+        "description": "Mark feedback as deleted without removing from database.",
+        "tags": [
+          "⚙️ Admin | Feedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/wallets": {
+      "get": {
+        "summary": "Get all wallets with pagination and search",
+        "tags": [
+          "⚙️ Admin | Finance"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Items per page"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by email, phone, or name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of wallets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "wallets": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "pages": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/finance/wallet/credit": {
+      "post": {
+        "summary": "Credit a user's wallet",
+        "tags": [
+          "⚙️ Admin | Finance"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "amount"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wallet credited successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/wallet/debit": {
+      "post": {
+        "summary": "Debit a user's wallet",
+        "tags": [
+          "⚙️ Admin | Finance"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "amount"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wallet debited successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/wallet/{walletId}/transactions": {
+      "get": {
+        "summary": "Get wallet transactions history",
+        "tags": [
+          "⚙️ Admin | Finance"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "walletId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Wallet ID"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of transactions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "transactions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "pages": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/finance/points/audit": {
+      "get": {
+        "summary": "Get points audit log",
+        "tags": [
+          "⚙️ Admin | Finance"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by User ID"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Points audit log"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/points/adjust": {
+      "post": {
+        "summary": "Adjust user points (Credit/Debit)",
+        "tags": [
+          "⚙️ Admin | Finance"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "amount"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "integer",
+                    "description": "Positive to add, negative to subtract"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Points adjusted successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/points/settings": {
+      "get": {
+        "summary": "Get points conversion rate settings",
+        "tags": [
+          "⚙️ Admin | Finance"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Points settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "points": {
+                          "type": "number"
+                        },
+                        "currency": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Update points conversion rate settings",
+        "tags": [
+          "⚙️ Admin | Finance"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "points",
+                  "currency"
+                ],
+                "properties": {
+                  "points": {
+                    "type": "number",
+                    "description": "Number of points"
+                  },
+                  "currency": {
+                    "type": "number",
+                    "description": "Equivalent currency value"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settings updated successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/settings": {
+      "get": {
+        "summary": "Get all system settings",
+        "tags": [
+          "⚙️ Admin | Settings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/towing": {
+      "get": {
+        "summary": "Get towing service settings",
+        "tags": [
+          "⚙️ Admin | Settings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Towing settings retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "example": "TOWING_SEARCH_RADIUS"
+                          },
+                          "value": {
+                            "type": "string",
+                            "example": "10"
+                          },
+                          "type": {
+                            "type": "string",
+                            "example": "NUMBER"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "descriptionAr": {
+                            "type": "string"
+                          },
+                          "isEditable": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/pricing": {
+      "get": {
+        "summary": "Get pricing settings (VAT rate, platform commission %)",
+        "tags": [
+          "⚙️ Admin | Settings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pricing settings (VAT_RATE, PLATFORM_COMMISSION_PERCENT)"
+          }
+        }
+      }
+    },
+    "/api/admin/settings/pricing/init": {
+      "post": {
+        "summary": "Create or reset VAT_RATE and PLATFORM_COMMISSION_PERCENT in DB",
+        "tags": [
+          "⚙️ Admin | Settings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pricing settings initialized"
+          }
+        }
+      }
+    },
+    "/api/admin/settings/{key}": {
+      "put": {
+        "summary": "Update a system setting",
+        "tags": [
+          "⚙️ Admin | Settings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "TOWING_SEARCH_RADIUS"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "value"
+                ],
+                "properties": {
+                  "value": {
+                    "type": "string",
+                    "example": "15",
+                    "description": "New value for the setting"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Setting updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageAr": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
