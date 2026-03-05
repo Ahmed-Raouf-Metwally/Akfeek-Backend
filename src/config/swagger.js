@@ -33,6 +33,13 @@ Comprehensive car services platform supporting 4 service models:
 - ✅ Supply chain integration - تكامل سلسلة التوريد
 - ✅ Geolocation-based services - خدمات الموقع الجغرافي
 
+## Postman / اختبار الـ API
+
+- **استيراد المواصفات:** في Postman اختر File → Import ثم إما:
+  - الرابط (مع تشغيل السيرفر): \`http://localhost:3000/api-docs.json\`
+  - أو الملف: \`openapi.json\` (من جذر المشروع بعد تشغيل \`npm run openapi\`)
+- **المصادقة:** في تبويب Authorization اختر Type: Bearer Token وأدخل الـ JWT بعد تسجيل الدخول من \`POST /api/auth/login\`.
+
 ## Authentication / المصادقة
 
 All protected endpoints require Bearer token in Authorization header:
@@ -416,7 +423,28 @@ Authorization: Bearer <your_jwt_token>
         security: [{
             bearerAuth: []
         }],
-        tags: [{
+        tags: [
+        {
+            name: '1. الورش المعتمدة (Certified Workshops)',
+            description: 'CRUD الورش المعتمدة + حجز الورشة (POST /api/bookings مع workshopId). Certified workshops & their bookings.'
+        },
+        {
+            name: '2. ورش الغسيل (Car Wash)',
+            description: 'حجز غسيل السيارة: طلب → عروض → قبول. Car wash booking (request, offers, accept).'
+        },
+        {
+            name: '3. العناية الشاملة (Comprehensive Care)',
+            description: 'حجز العناية الشاملة (POST /api/bookings بدون workshopId) + حجوزات الفيندور (GET /api/vendors/profile/me/comprehensive-care-bookings). Comprehensive care booking.'
+        },
+        {
+            name: '4. الوينشات (Winches/Towing)',
+            description: 'CRUD الوينشات + حجز السحب: طلب → عروض → قبول. Winches CRUD & towing booking.'
+        },
+        {
+            name: '5. الورش المتنقلة (Mobile Workshop)',
+            description: 'CRUD الورش المتنقلة + حجز الصيانة المتنقلة (POST /api/mobile-car-service/bookings). Mobile workshop & bookings.'
+        },
+        {
             name: 'Authentication',
             description: 'User authentication endpoints - نقاط المصادقة',
             externalDocs: {
@@ -437,6 +465,10 @@ Authorization: Bearer <your_jwt_token>
             description: 'User profile management - إدارة الملف الشخصي'
         },
         {
+            name: 'Vendors (الفيندور)',
+            description: 'CRUD للفيندور: قائمة (GET)، إضافة (POST)، عرض (GET :id)، تحديث (PUT :id)، حذف (DELETE :id)، تحديث الحالة (PUT :id/status). Vendor management.'
+        },
+        {
             name: 'Vehicles',
             description: 'Vehicle management - إدارة المركبات'
         },
@@ -446,7 +478,7 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: 'Bookings',
-            description: 'Booking management (All 4 models) - إدارة الحجوزات'
+            description: 'قائمة الحجوزات وتحديث الحالة (GET/PATCH). تفاصيل الحجز حسب النوع في الأقسام 1–5 أعلاه. Booking list & status.'
         },
         {
             name: 'Broadcasts',
@@ -499,10 +531,6 @@ Authorization: Bearer <your_jwt_token>
         {
             name: 'Admin Settings',
             description: 'System settings management for administrators - إدارة إعدادات النظام للمسؤولين'
-        },
-        {
-            name: 'Marketplace Vendors',
-            description: 'Vendor management for auto parts - إدارة البائعين لقطع الغيار'
         },
         {
             name: 'Auto Part Categories',

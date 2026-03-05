@@ -419,6 +419,81 @@ class AdminFinanceController {
             next(error);
         }
     }
+
+    /**
+     * Get refunds list (transactions with type REFUND)
+     * GET /api/admin/finance/refunds?page=&limit=&status=
+     */
+    async getRefunds(req, res, next) {
+        try {
+            const page = Math.max(1, parseInt(req.query.page) || 1);
+            const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+            const status = req.query.status || null;
+            const skip = (page - 1) * limit;
+
+            const where = { type: 'REFUND' };
+            if (status) where.status = status;
+
+            const [transactions, total] = await Promise.all([
+                prisma.transaction.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                email: true,
+                                phone: true,
+                                profile: { select: { firstName: true, lastName: true } },
+                            },
+                        },
+                        wallet: { select: { id: true, userId: true } },
+                        performedBy: {
+                            select: {
+                                id: true,
+                                email: true,
+                                profile: { select: { firstName: true, lastName: true } },
+                            },
+                        },
+                    },
+                }),
+                prisma.transaction.count({ where }),
+            ]);
+
+            const data = transactions.map((t) => ({
+                id: t.id,
+                transactionNumber: t.transactionNumber,
+                userId: t.userId,
+                user: t.user,
+                amount: Number(t.amount),
+                balanceBefore: Number(t.balanceBefore),
+                balanceAfter: Number(t.balanceAfter),
+                description: t.description,
+                status: t.status,
+                metadata: t.metadata,
+                performedBy: t.performedBy,
+                createdAt: t.createdAt,
+            }));
+
+            res.json({
+                success: true,
+                data: {
+                    list: data,
+                    pagination: {
+                        page,
+                        limit,
+                        total,
+                        totalPages: Math.ceil(total / limit) || 1,
+                    },
+                },
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     /**
      * Get points configuration
      * GET /api/admin/finance/points/settings
@@ -488,3 +563,219 @@ class AdminFinanceController {
 }
 
 module.exports = new AdminFinanceController();
+
+/**
+ * GET /api/admin/finance/commission-report
+ * تقرير عمولة الموقع + ضريبة القيمة المضافة على العمولة
+ * Query: from (YYYY-MM-DD), to (YYYY-MM-DD), page, limit
+ *
+ * المنطق:
+ *   - الحجوزات المكتملة (COMPLETED | DELIVERED | READY_FOR_DELIVERY) في نطاق التاريخ
+ *   - طلبات المتجر المكتملة أو المُوصّلة (DELIVERED | SHIPPED) والمدفوعة (PAID) في نطاق التاريخ
+ *   - عمولة الموقع = قيمة × commissionPercent / 100
+ *   - ضريبة على العمولة = عمولة الموقع × vatRate / 100
+ */
+async function getCommissionReport(req, res, next) {
+  try {
+    const prisma = require('../../../utils/database/prisma');
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+    const skip  = (page - 1) * limit;
+
+    const fromRaw = req.query.from;
+    const toRaw   = req.query.to;
+    const fromDate = fromRaw ? new Date(fromRaw + 'T00:00:00.000Z') : null;
+    const toDate   = toRaw   ? new Date(toRaw   + 'T23:59:59.999Z') : null;
+
+    const vatSetting = await prisma.systemSettings.findUnique({ where: { key: 'VAT_RATE' } }).catch(() => null);
+    let defaultVatRate = vatSetting?.value != null ? parseFloat(vatSetting.value) : 15;
+    if (defaultVatRate > 0 && defaultVatRate <= 1) defaultVatRate = defaultVatRate * 100;
+    // نسبة العمولة تُحدَّد لكل فيندور (VendorProfile.commissionPercent) وليس من إعداد عام
+
+    const dateFilter = {};
+    if (fromDate) dateFilter.gte = fromDate;
+    if (toDate)   dateFilter.lte = toDate;
+
+    // 1) الحجوزات المكتملة
+    const bookingWhere = {
+      status: { in: ['COMPLETED', 'DELIVERED', 'READY_FOR_DELIVERY'] },
+      ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
+    };
+    const [bookings, totalBookings] = await Promise.all([
+      prisma.booking.findMany({
+        where: bookingWhere,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          bookingNumber: true,
+          status: true,
+          platformCommissionPercent: true,
+          subtotal: true,
+          laborFee: true,
+          deliveryFee: true,
+          partsTotal: true,
+          discount: true,
+          totalPrice: true,
+          createdAt: true,
+          metadata: true,
+          customer: {
+            select: {
+              email: true,
+              profile: { select: { firstName: true, lastName: true } },
+            },
+          },
+          workshop: {
+            select: {
+              vendor: { select: { commissionPercent: true } },
+            },
+          },
+          invoice: {
+            select: { id: true, invoiceNumber: true, status: true, totalAmount: true, paidAmount: true },
+          },
+        },
+      }),
+      prisma.booking.count({ where: bookingWhere }),
+    ]);
+
+    // 2) طلبات المتجر المكتملة أو المُوصّلة والمدفوعة (للدقة)
+    const orderWhere = {
+      status: { in: ['DELIVERED', 'SHIPPED'] },
+      paymentStatus: 'PAID',
+      ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
+    };
+    const [marketplaceOrders, totalMarketplaceOrders] = await Promise.all([
+      prisma.marketplaceOrder.findMany({
+        where: orderWhere,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          totalAmount: true,
+          createdAt: true,
+          customer: {
+            select: {
+              email: true,
+              profile: { select: { firstName: true, lastName: true } },
+            },
+          },
+          items: {
+            select: {
+              totalPrice: true,
+              vendor: { select: { commissionPercent: true } },
+            },
+          },
+        },
+      }),
+      prisma.marketplaceOrder.count({ where: orderWhere }),
+    ]);
+
+    let totalRevenue    = 0;
+    let totalCommission = 0;
+    let totalVat        = 0;
+
+    const bookingRows = bookings.map((b) => {
+      const price =
+        Number(b.subtotal ?? 0) +
+        Number(b.laborFee ?? 0) +
+        Number(b.deliveryFee ?? 0) +
+        Number(b.partsTotal ?? 0) -
+        Number(b.discount ?? 0);
+      // نسبة العمولة من الحجز (مخزنة عند الإنشاء) أو من الفيندور المرتبط بالورشة — لا نستخدم إعداداً عاماً
+      const commP = b.platformCommissionPercent != null
+        ? Number(b.platformCommissionPercent)
+        : (b.workshop?.vendor?.commissionPercent != null ? Number(b.workshop.vendor.commissionPercent) : 0);
+      const commission = price * commP / 100;
+      const vat        = commission * defaultVatRate / 100;
+      totalRevenue    += price;
+      totalCommission += commission;
+      totalVat        += vat;
+      return {
+        id:            b.id,
+        source:        'booking',
+        bookingNumber: b.bookingNumber,
+        status:        b.status,
+        totalPrice:    price,
+        commissionPercent: commP,
+        commission,
+        vatRate:       defaultVatRate,
+        vat,
+        netAfterVat:   commission - vat,
+        createdAt:     b.createdAt,
+        customer: b.customer?.profile
+          ? [b.customer.profile.firstName, b.customer.profile.lastName].filter(Boolean).join(' ')
+          : b.customer?.email ?? '—',
+        invoice: b.invoice ?? null,
+      };
+    });
+
+    const orderRows = marketplaceOrders.map((o) => {
+      const price = Number(o.totalAmount ?? 0);
+      // عمولة طلب المتجر = مجموع (عمولة كل صنف حسب فيندوره)
+      let commission = 0;
+      const items = o.items || [];
+      for (const it of items) {
+        const itemTotal = Number(it.totalPrice ?? 0);
+        const vendorPct = it.vendor?.commissionPercent != null ? Number(it.vendor.commissionPercent) : 0;
+        commission += itemTotal * vendorPct / 100;
+      }
+      const effectivePct = price > 0 ? (commission / price) * 100 : 0;
+      const vat = commission * defaultVatRate / 100;
+      totalRevenue    += price;
+      totalCommission += commission;
+      totalVat        += vat;
+      return {
+        id:            o.id,
+        source:        'marketplace',
+        orderNumber:   o.orderNumber,
+        status:        o.status,
+        totalPrice:    price,
+        commissionPercent: items.length ? effectivePct : null,
+        commission,
+        vatRate:       defaultVatRate,
+        vat,
+        netAfterVat:   commission - vat,
+        createdAt:     o.createdAt,
+        customer: o.customer?.profile
+          ? [o.customer.profile.firstName, o.customer.profile.lastName].filter(Boolean).join(' ')
+          : o.customer?.email ?? '—',
+      };
+    });
+
+    // دمج وترتيب حسب التاريخ ثم تطبيق الصفحة
+    const rows = [...bookingRows, ...orderRows]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(skip, skip + limit);
+    const total = totalBookings + totalMarketplaceOrders;
+
+    res.json({
+      success: true,
+      data: {
+        rows,
+        summary: {
+          totalBookings:           totalBookings,
+          totalMarketplaceOrders:  totalMarketplaceOrders,
+          totalRevenue:            Math.round(totalRevenue    * 100) / 100,
+          totalCommission:         Math.round(totalCommission * 100) / 100,
+          totalVat:                Math.round(totalVat        * 100) / 100,
+          totalNetCommission:      Math.round((totalCommission - totalVat) * 100) / 100,
+          vatRate: defaultVatRate,
+          periodFrom: fromRaw ?? null,
+          periodTo:   toRaw   ?? null,
+        },
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit) || 1,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// attach to class instance before export
+const controller = module.exports;
+controller.getCommissionReport = getCommissionReport;

@@ -99,6 +99,79 @@ class AuthService {
   }
 
   /**
+   * إنشاء مستخدم بواسطة الأدمن (أي دور عدا ADMIN).
+   * POST /api/users — للأدمن فقط.
+   * @param {Object} body - email, password, role, firstName, lastName, phone?, preferredLanguage?
+   * @returns {Object} المستخدم المُنشأ (بدون token)
+   */
+  async createUserByAdmin(userData) {
+    const { email, phone, password, role, firstName, lastName, preferredLanguage = 'AR' } = userData;
+
+    if (!email || !password || !role || !firstName || !lastName) {
+      throw new AppError('Missing required fields: email, password, role, firstName, lastName', 400, 'VALIDATION_ERROR');
+    }
+
+    const allowedRoles = ['CUSTOMER', 'TECHNICIAN', 'SUPPLIER', 'VENDOR', 'EMPLOYEE'];
+    if (!allowedRoles.includes(role)) {
+      throw new AppError('Invalid role. Allowed: ' + allowedRoles.join(', '), 400, 'VALIDATION_ERROR');
+    }
+
+    if (password.length < 8) {
+      throw new AppError('Password must be at least 8 characters', 400, 'VALIDATION_ERROR');
+    }
+
+    const emailNorm = email.trim().toLowerCase();
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: emailNorm }, ...(phone ? [{ phone: phone.trim() }] : [])],
+      },
+    });
+    if (existing) {
+      throw new AppError('Email or phone already registered', 409, 'ALREADY_EXISTS');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const phoneVal = phone && String(phone).trim() ? String(phone).trim() : null;
+
+    const user = await prisma.user.create({
+      data: {
+        email: emailNorm,
+        phone: phoneVal,
+        passwordHash,
+        role,
+        status: 'ACTIVE',
+        preferredLanguage: preferredLanguage === 'EN' ? 'EN' : 'AR',
+      },
+      select: { id: true, email: true, phone: true, role: true, status: true, preferredLanguage: true, createdAt: true },
+    });
+
+    await prisma.profile.create({
+      data: {
+        userId: user.id,
+        firstName: (firstName || '').trim(),
+        lastName: (lastName || '').trim(),
+      },
+    });
+
+    const userWithProfile = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        role: true,
+        status: true,
+        preferredLanguage: true,
+        createdAt: true,
+        profile: { select: { firstName: true, lastName: true, avatar: true } },
+      },
+    });
+
+    logger.info(`Admin created user: ${user.id} (${user.role})`);
+    return userWithProfile || user;
+  }
+
+  /**
    * Authenticate user and generate token
    * @param {string} identifier - Email or phone number
    * @param {string} password - User password
@@ -183,6 +256,14 @@ class AuthService {
       userWithoutPassword.vendorType = vendor?.vendorType != null ? String(vendor.vendorType) : 'AUTO_PARTS';
     }
 
+    if (userWithoutPassword.role === 'EMPLOYEE') {
+      const perms = await prisma.employeePermission.findMany({
+        where: { userId: user.id },
+        select: { permissionKey: true },
+      });
+      userWithoutPassword.permissions = (perms || []).map((p) => p.permissionKey);
+    }
+
     logger.info(`User logged in: ${user.id} (${user.role})`);
 
     return { user: userWithoutPassword, token };
@@ -261,6 +342,7 @@ class AuthService {
 
   /**
    * Get user by ID
+   * For EMPLOYEE role, includes permissions array (صلاحيات موظف أكفيك).
    * @param {string} userId - User ID
    * @returns {Object} User data
    */
@@ -294,7 +376,7 @@ class AuthService {
             businessNameAr: true,
             businessLicense: true
           }
-        }
+        },
       }
     });
 
@@ -304,6 +386,14 @@ class AuthService {
         404,
         'NOT_FOUND'
       );
+    }
+
+    if (user.role === 'EMPLOYEE') {
+      const perms = await prisma.employeePermission.findMany({
+        where: { userId: user.id },
+        select: { permissionKey: true },
+      });
+      user.permissions = (perms || []).map((p) => p.permissionKey);
     }
 
     return user;

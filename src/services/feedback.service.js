@@ -415,7 +415,7 @@ class FeedbackService {
                     feedbackId: f.id,
                     oldStatus: f.status,
                     newStatus: f.status,
-                    changedBy: '00000000-0000-0000-0000-000000000000', // System identifier (placeholder UUID)
+                    changedBy: null, // System auto-escalation (no user)
                     notes: 'SLA Escalation: Unresolved for 48+ hours. Priority automatically raised to URGENT.'
                 }
             })

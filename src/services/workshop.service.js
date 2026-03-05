@@ -51,7 +51,6 @@ class WorkshopService {
                 longitude: true,
                 phone: true,
                 workingHours: true,
-                services: true,
                 averageRating: true,
                 totalReviews: true,
                 totalBookings: true,
@@ -112,7 +111,9 @@ class WorkshopService {
             throw new AppError('Workshop not found', 404, 'NOT_FOUND');
         }
 
-        return workshop;
+        // لا نعيد الخدمات القديمة (نص بدون أسعار) — الاعتماد على CertifiedWorkshopService
+        const { services: _old, ...rest } = workshop;
+        return rest;
     }
 
     /**
@@ -140,7 +141,9 @@ class WorkshopService {
             const workshop = await prisma.certifiedWorkshop.findUnique({
                 where: { vendorId: profile.id }
             });
-            return workshop;
+            if (!workshop) return null;
+            const { services: _old, ...rest } = workshop;
+            return rest;
         } catch (e) {
             if (e.statusCode) throw e;
             if (e.code === 'P2025') return null;
@@ -260,13 +263,10 @@ class WorkshopService {
         }
 
         const servicesStr = services == null
-            ? ''
+            ? '[]'
             : Array.isArray(services)
                 ? JSON.stringify(services)
-                : String(services);
-        if (!servicesStr.trim()) {
-            throw new AppError('Services are required', 400, 'VALIDATION_ERROR');
-        }
+                : String(services).trim() || '[]';
 
         const lat = latitude != null ? Number(latitude) : NaN;
         const lng = longitude != null ? Number(longitude) : NaN;

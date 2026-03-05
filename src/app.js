@@ -42,7 +42,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // For Swagger UI
       scriptSrc: ["'self'", "'unsafe-inline'"], // For Swagger UI
-      imgSrc: ["'self'", "data:", "https:"]
+      imgSrc: ["'self'", "data:", "https:", "http:", "http://localhost:*", "http://127.0.0.1:*"]
     }
   }
 }));
@@ -54,7 +54,11 @@ app.use(morgan('combined', { stream: logger.stream }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static file serving for uploads
+// Static file serving for uploads — allow cross-origin so frontend (e.g. :5173) can load images from API (:3000)
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+});
 app.use('/uploads', express.static('uploads'));
 
 // ================================================================================================

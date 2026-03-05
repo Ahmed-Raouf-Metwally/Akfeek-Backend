@@ -5,7 +5,8 @@ const authenticate = require('../middlewares/auth.middleware');
 const authorize = require('../middlewares/role.middleware');
 
 router.use(authenticate);
-// Admin and Vendor can see dashboard stats (Vendor sees same aggregate for now)
 router.get('/stats', authorize(['ADMIN', 'VENDOR']), dashboardController.getStats);
+router.get('/analytics', authorize(['ADMIN']), dashboardController.getAnalytics);
+router.get('/all-sub-services', authorize(['ADMIN', 'VENDOR']), dashboardController.getAllSubServices);
 
 module.exports = router;

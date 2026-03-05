@@ -1,11 +1,45 @@
 const userService = require('../../services/user.service');
 const authService = require('../../services/auth.service');
+const { PERMISSION_KEYS } = require('../../constants/permissions');
+const prisma = require('../../utils/database/prisma');
 
 /**
  * User Controller
  * Handles HTTP requests for user management
  */
 class UserController {
+  /**
+   * صلاحيات المستخدم الحالي — للأدمن كل الصلاحيات، للموظف ما منحه الأدمن فقط.
+   * GET /api/users/me/permissions
+   */
+  async getMyPermissions(req, res, next) {
+    try {
+      if (req.user.role === 'ADMIN') {
+        return res.json({
+          success: true,
+          data: { role: 'ADMIN', permissions: PERMISSION_KEYS },
+        });
+      }
+      if (req.user.role === 'EMPLOYEE') {
+        const list = await prisma.employeePermission.findMany({
+          where: { userId: req.user.id },
+          select: { permissionKey: true },
+        });
+        const permissions = list.map((p) => p.permissionKey);
+        return res.json({
+          success: true,
+          data: { role: 'EMPLOYEE', permissions },
+        });
+      }
+      res.json({
+        success: true,
+        data: { role: req.user.role, permissions: [] },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * Get current user profile
    * GET /api/users/profile

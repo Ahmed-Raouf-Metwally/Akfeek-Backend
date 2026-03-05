@@ -6,6 +6,31 @@ const vehicleService = require('../../services/vehicle.service');
  */
 class VehicleController {
   /**
+   * Get all vehicles (admin only, paginated)
+   * GET /api/vehicles/admin/all?page=1&limit=20&userId=xxx&userSearch=...&search=...
+   */
+  async getAllVehicles(req, res, next) {
+    try {
+      const { page, limit, userId, userSearch, search } = req.query;
+      const result = await vehicleService.getAllVehicles({
+        page: page ? parseInt(String(page), 10) : undefined,
+        limit: limit ? parseInt(String(limit), 10) : undefined,
+        userId: userId || undefined,
+        userSearch: userSearch && String(userSearch).trim() ? String(userSearch).trim() : undefined,
+        search: search && String(search).trim() ? String(search).trim() : undefined,
+      });
+
+      res.json({
+        success: true,
+        data: result.data,
+        pagination: result.pagination,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get all vehicles for current user
    * GET /api/vehicles
    */
@@ -24,11 +49,12 @@ class VehicleController {
 
   /**
    * Get vehicle by ID
-   * GET /api/vehicles/:id
+   * GET /api/vehicles/:id (admin can get any vehicle)
    */
   async getVehicleById(req, res, next) {
     try {
-      const vehicle = await vehicleService.getVehicleById(req.params.id, req.user.id);
+      const isAdmin = req.user.role === 'ADMIN';
+      const vehicle = await vehicleService.getVehicleById(req.params.id, isAdmin ? null : req.user.id);
 
       res.json({
         success: true,
@@ -41,11 +67,13 @@ class VehicleController {
 
   /**
    * Add new vehicle
-   * POST /api/vehicles
+   * POST /api/vehicles (admin can pass body.userId to add for any user)
    */
   async addVehicle(req, res, next) {
     try {
-      const vehicle = await vehicleService.addVehicle(req.user.id, req.body);
+      const isAdmin = req.user.role === 'ADMIN';
+      const userId = isAdmin && req.body.userId ? req.body.userId : req.user.id;
+      const vehicle = await vehicleService.addVehicle(userId, req.body);
 
       res.status(201).json({
         success: true,
@@ -60,11 +88,12 @@ class VehicleController {
 
   /**
    * Update vehicle
-   * PUT /api/vehicles/:id
+   * PUT /api/vehicles/:id (admin can update any vehicle)
    */
   async updateVehicle(req, res, next) {
     try {
-      const vehicle = await vehicleService.updateVehicle(req.params.id, req.user.id, req.body);
+      const isAdmin = req.user.role === 'ADMIN';
+      const vehicle = await vehicleService.updateVehicle(req.params.id, isAdmin ? null : req.user.id, req.body);
 
       res.json({
         success: true,
@@ -79,11 +108,12 @@ class VehicleController {
 
   /**
    * Delete vehicle
-   * DELETE /api/vehicles/:id
+   * DELETE /api/vehicles/:id (admin can delete any vehicle)
    */
   async deleteVehicle(req, res, next) {
     try {
-      await vehicleService.deleteVehicle(req.params.id, req.user.id);
+      const isAdmin = req.user.role === 'ADMIN';
+      await vehicleService.deleteVehicle(req.params.id, isAdmin ? null : req.user.id);
 
       res.json({
         success: true,

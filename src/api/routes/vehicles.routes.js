@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const vehicleController = require('../controllers/vehicle.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
+const requireRole = require('../middlewares/role.middleware');
+const { requireAdminOrPermission } = require('../middlewares/permission.middleware');
 
 // All routes require authentication
 router.use(authMiddleware);
@@ -77,6 +79,36 @@ router.get('/brands/:brandId/models', vehicleController.getVehicleModels);
  *         description: Vehicles list retrieved
  */
 router.get('/', vehicleController.getMyVehicles);
+
+/**
+ * @swagger
+ * /api/vehicles/admin/all:
+ *   get:
+ *     summary: Get all vehicles (Admin)
+ *     description: List all user vehicles with pagination. Query: page, limit, userId, search
+ *     tags: [Vehicles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20 }
+ *       - in: query
+ *         name: userId
+ *         schema: { type: string }
+ *         description: Filter by user ID
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *         description: Search plate, color, email, name, brand/model
+ *     responses:
+ *       200:
+ *         description: Paginated list of vehicles
+ */
+router.get('/admin/all', requireAdminOrPermission('vehicles'), vehicleController.getAllVehicles);
 
 /**
  * @swagger

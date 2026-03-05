@@ -28,11 +28,12 @@ class AutoPartCategoryController {
 
   /**
    * Get category tree (hierarchical)
-   * GET /api/auto-part-categories/tree
+   * GET /api/auto-part-categories/tree?vehicleType=CAR|MOTORCYCLE
    */
   async getCategoryTree(req, res, next) {
     try {
-      const tree = await autoPartCategoryService.getCategoryTree();
+      const { vehicleType } = req.query;
+      const tree = await autoPartCategoryService.getCategoryTree({ vehicleType });
 
       res.json({
         success: true,

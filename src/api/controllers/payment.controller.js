@@ -1,13 +1,14 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const { hasPermission } = require('../middlewares/permission.middleware');
 
 /**
  * Payment Controller
- * List payments for current user (customer) or all for admin
+ * List payments for current user (customer) or all for admin/employee with permission
  */
 class PaymentController {
   /**
-   * Get payments - customer: own payments; admin: all (paginated)
+   * Get payments - customer: own payments; admin or employee with 'payments': all (paginated)
    * GET /api/payments?page=1&limit=10&status=COMPLETED
    */
   async list(req, res, next) {
@@ -18,8 +19,9 @@ class PaymentController {
       const status = req.query.status || null;
       const skip = (page - 1) * limit;
 
+      const canSeeAll = user.role === 'ADMIN' || (user.role === 'EMPLOYEE' && (await hasPermission(user.id, 'payments')));
       const where = {};
-      if (user.role !== 'ADMIN') {
+      if (!canSeeAll) {
         where.customerId = user.id;
       }
       if (status) where.status = status;
@@ -39,7 +41,23 @@ class PaymentController {
             status: true,
             processedAt: true,
             createdAt: true,
-            invoice: { select: { invoiceNumber: true, totalAmount: true } },
+            invoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                totalAmount: true,
+                bookingId: true,
+                lineItems: { select: { totalPrice: true } },
+              },
+            },
+            customer: {
+              select: {
+                id: true,
+                email: true,
+                phone: true,
+                profile: { select: { firstName: true, lastName: true } },
+              },
+            },
           },
         }),
         prisma.payment.count({ where }),
@@ -47,10 +65,24 @@ class PaymentController {
 
       const totalPages = Math.ceil(total / limit) || 1;
 
+      const data = items.map((p) => ({
+        ...p,
+        amount: p.amount != null ? Number(p.amount) : p.amount,
+        invoice: p.invoice
+          ? {
+              ...p.invoice,
+              totalAmount: p.invoice.totalAmount != null ? Number(p.invoice.totalAmount) : p.invoice.totalAmount,
+              lineItems: (p.invoice.lineItems || []).map((li) => ({
+                totalPrice: li.totalPrice != null ? Number(li.totalPrice) : li.totalPrice,
+              })),
+            }
+          : p.invoice,
+      }));
+
       res.json({
         success: true,
         message: '',
-        data: items,
+        data,
         pagination: { page, limit, total, totalPages },
       });
     } catch (error) {
@@ -75,6 +107,8 @@ class PaymentController {
         include: {
           invoice: { select: { id: true, invoiceNumber: true, totalAmount: true, bookingId: true } },
           customer: { select: { id: true, email: true, profile: { select: { firstName: true, lastName: true } } } },
+          walletTransaction: { select: { id: true, transactionNumber: true, amount: true, description: true, createdAt: true } },
+          pointsTransaction: { select: { id: true, amount: true, description: true, balanceAfter: true, createdAt: true } },
         },
       });
 

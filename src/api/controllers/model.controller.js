@@ -8,7 +8,7 @@ class ModelController {
      */
     async getAllModels(req, res, next) {
         try {
-            const { brandId, year, size, activeOnly = 'true' } = req.query;
+            const { brandId, year, type, activeOnly = 'true' } = req.query;
 
             const where = {};
 
@@ -24,8 +24,8 @@ class ModelController {
                 where.year = parseInt(year);
             }
 
-            if (size) {
-                where.size = size;
+            if (req.query.type) {
+                where.type = req.query.type;
             }
 
             const models = await prisma.vehicleModel.findMany({
@@ -56,7 +56,7 @@ class ModelController {
                 data: models,
                 meta: {
                     total: models.length,
-                    filters: { brandId, year, size }
+                    filters: { brandId, year, type: req.query.type }
                 }
             });
         } catch (error) {
@@ -111,14 +111,14 @@ class ModelController {
      */
     async createModel(req, res, next) {
         try {
-            const { brandId, name, nameAr, year, size, imageUrl } = req.body;
+            const { brandId, name, nameAr, year, type, imageUrl } = req.body;
 
             // Validation
-            if (!brandId || !name || !year || !size) {
+            if (!brandId || !name || !year || !type) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Missing required fields: brandId, name, year, size',
-                    errorAr: 'حقول مطلوبة مفقودة: الماركة، الاسم، السنة، الحجم',
+                    error: 'Missing required fields: brandId, name, year, type',
+                    errorAr: 'حقول مطلوبة مفقودة: الماركة، الاسم، السنة، نوع المركبة',
                     code: 'VALIDATION_ERROR'
                 });
             }
@@ -161,7 +161,7 @@ class ModelController {
                     name,
                     nameAr,
                     year: parseInt(year),
-                    size,
+                    type,
                     imageUrl
                 },
                 include: {
@@ -190,7 +190,7 @@ class ModelController {
     async updateModel(req, res, next) {
         try {
             const { id } = req.params;
-            const { brandId, name, nameAr, year, size, imageUrl, isActive } = req.body;
+            const { brandId, name, nameAr, year, type, imageUrl, isActive } = req.body;
 
             // Check if model exists
             const existing = await prisma.vehicleModel.findUnique({
@@ -250,7 +250,7 @@ class ModelController {
                     ...(name && { name }),
                     ...(nameAr !== undefined && { nameAr }),
                     ...(year && { year: parseInt(year) }),
-                    ...(size && { size }),
+                    ...(type && { type }),
                     ...(imageUrl !== undefined && { imageUrl }),
                     ...(isActive !== undefined && { isActive })
                 },

@@ -2,11 +2,109 @@ const prisma = require('../utils/database/prisma');
 const { AppError } = require('../api/middlewares/error.middleware');
 const logger = require('../utils/logger/logger');
 
+/** Compute full plate number from parts (not stored in DB) */
+function computePlateNumber(v) {
+  const letters = ((v.plateLettersAr || v.plateLettersEn || '').toString()).trim();
+  const digits = (v.plateDigits || '').toString().trim();
+  const region = (v.plateRegion || '').toString().trim();
+  const part = [letters, digits].filter(Boolean).join(' ');
+  return region ? `${part} ${region}`.trim() : part;
+}
+
 /**
  * Vehicle Service
  * Handles vehicle management business logic
  */
 class VehicleService {
+  /**
+   * Get all vehicles (admin) with pagination and optional filters
+   * @param {Object} options - { page, limit, userId, userSearch, search }
+   * @returns {Object} { data, pagination: { total, page, limit, totalPages } }
+   */
+  async getAllVehicles(options = {}) {
+    const { page = 1, limit = 20, userId, userSearch, search } = options;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+    const take = limitNum;
+
+    const conditions = [];
+
+    if (userId) {
+      conditions.push({ userId });
+    }
+
+    if (userSearch && String(userSearch).trim()) {
+      const term = String(userSearch).trim();
+      conditions.push({
+        user: {
+          OR: [
+            { email: { contains: term } },
+            { profile: { firstName: { contains: term } } },
+            { profile: { lastName: { contains: term } } },
+          ],
+        },
+      });
+    }
+
+    if (search && String(search).trim()) {
+      const term = String(search).trim();
+      conditions.push({
+        OR: [
+          { plateLettersAr: { contains: term } },
+          { plateLettersEn: { contains: term } },
+          { plateDigits: { contains: term } },
+          { plateRegion: { contains: term } },
+          { color: { contains: term } },
+          { user: { email: { contains: term } } },
+          { user: { profile: { firstName: { contains: term } } } },
+          { user: { profile: { lastName: { contains: term } } } },
+          { vehicleModel: { name: { contains: term } } },
+          { vehicleModel: { brand: { name: { contains: term } } } },
+        ],
+      });
+    }
+
+    const where = conditions.length > 0 ? { AND: conditions } : {};
+
+    const [rows, total] = await Promise.all([
+      prisma.userVehicle.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              profile: { select: { firstName: true, lastName: true } },
+            },
+          },
+          vehicleModel: {
+            select: {
+              id: true,
+              name: true,
+              nameAr: true,
+              year: true,
+              type: true,
+              brand: { select: { id: true, name: true, nameAr: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.userVehicle.count({ where }),
+    ]);
+
+    const data = rows.map((v) => ({ ...v, plateNumber: computePlateNumber(v) }));
+    const totalPages = Math.max(1, Math.ceil(total / take));
+    return {
+      data,
+      pagination: { total, page: pageNum, limit: take, totalPages },
+    };
+  }
+
   /**
    * Get all vehicles for a user
    * @param {string} userId - User ID
@@ -38,20 +136,20 @@ class VehicleService {
       orderBy: { isDefault: 'desc' }
     });
 
-    return vehicles;
+    return vehicles.map((v) => ({ ...v, plateNumber: computePlateNumber(v) }));
   }
 
   /**
    * Get vehicle by ID
    * @param {string} vehicleId - Vehicle ID
-   * @param {string} userId - User ID (for ownership verification)
+   * @param {string|null} userId - User ID (for ownership verification); null = admin, any vehicle
    * @returns {Object} Vehicle details
    */
   async getVehicleById(vehicleId, userId) {
     const vehicle = await prisma.userVehicle.findFirst({
       where: {
         id: vehicleId,
-        userId
+        ...(userId != null && { userId }),
       },
       include: {
         vehicleModel: {
@@ -60,7 +158,7 @@ class VehicleService {
             name: true,
             nameAr: true,
             year: true,
-            size: true,
+            type: true,
             brand: {
               select: {
                 id: true,
@@ -77,7 +175,7 @@ class VehicleService {
       throw new AppError('Vehicle not found', 404, 'NOT_FOUND');
     }
 
-    return vehicle;
+    return { ...vehicle, plateNumber: computePlateNumber(vehicle) };
   }
 
   /**
@@ -93,7 +191,7 @@ class VehicleService {
       plateLettersEn,
       plateDigits,
       plateRegion,
-      plateNumber,
+      plateNumber: _plateNumberIgnored,
       color,
       isDefault = false
     } = vehicleData;
@@ -103,17 +201,10 @@ class VehicleService {
       throw new AppError('Vehicle model ID is required', 400, 'VALIDATION_ERROR');
     }
 
-    // Validate plate data: either structured fields or full plateNumber
-    if (!plateDigits && !plateNumber) {
-      throw new AppError('Plate number or plate digits are required', 400, 'VALIDATION_ERROR');
-    }
-
-    // Auto-generate full plateNumber from components if not provided
-    let fullPlateNumber = plateNumber;
-    if (!fullPlateNumber && plateDigits) {
-      const letters = plateLettersAr || plateLettersEn || '';
-      const region = plateRegion ? ` ${plateRegion}` : '';
-      fullPlateNumber = `${letters} ${plateDigits}${region}`.trim();
+    // Validate plate: at least digits (plateNumber is computed, not stored)
+    const digits = (plateDigits || '').toString().trim();
+    if (!digits) {
+      throw new AppError('Plate digits are required', 400, 'VALIDATION_ERROR');
     }
 
     // Check if vehicle model exists
@@ -125,10 +216,16 @@ class VehicleService {
       throw new AppError('Invalid vehicle model ID', 400, 'VALIDATION_ERROR');
     }
 
-    // Check for duplicate plate number
+    // Duplicate check: same plate parts (plateNumber not stored)
+    const ar = (plateLettersAr || '').toString().trim() || null;
+    const en = (plateLettersEn || '').toString().trim() || null;
+    const region = (plateRegion || '').toString().trim() || null;
     const existing = await prisma.userVehicle.findFirst({
       where: {
-        plateNumber: fullPlateNumber
+        plateDigits: digits,
+        plateRegion: region,
+        plateLettersAr: ar,
+        plateLettersEn: en
       }
     });
 
@@ -147,16 +244,15 @@ class VehicleService {
       });
     }
 
-    // Create vehicle with structured plate data
+    // Create vehicle (plateNumber is computed on read, not stored)
     const vehicle = await prisma.userVehicle.create({
       data: {
         userId,
         vehicleModelId,
-        plateLettersAr,
-        plateLettersEn,
-        plateDigits: plateDigits || fullPlateNumber, // Fallback to full if only plateNumber provided
-        plateRegion,
-        plateNumber: fullPlateNumber,
+        plateLettersAr: ar,
+        plateLettersEn: en,
+        plateDigits: digits,
+        plateRegion: region,
         color,
         isDefault
       },
@@ -167,7 +263,7 @@ class VehicleService {
             name: true,
             nameAr: true,
             year: true,
-            size: true,
+            type: true,
             brand: {
               select: {
                 id: true,
@@ -182,7 +278,7 @@ class VehicleService {
 
     logger.info(`Vehicle added for user ${userId}: ${vehicle.id}`);
 
-    return vehicle;
+    return { ...vehicle, plateNumber: computePlateNumber(vehicle) };
   }
 
   /**
@@ -193,44 +289,59 @@ class VehicleService {
    * @returns {Object} Updated vehicle
    */
   async updateVehicle(vehicleId, userId, updateData) {
-    // Verify ownership
     const existing = await this.getVehicleById(vehicleId, userId);
+    const ownerId = existing.userId;
 
-    const { plateNumber, color, isDefault } = updateData;
+    const { color, isDefault, plateLettersAr, plateLettersEn, plateDigits, plateRegion } = updateData;
 
-    // If changing plate number, check for duplicates
-    if (plateNumber && plateNumber !== existing.plateNumber) {
+    // Merge plate parts with existing (plateNumber is not stored, computed on read)
+    const mergedLettersAr = plateLettersAr !== undefined ? plateLettersAr : (existing.plateLettersAr ?? '');
+    const mergedLettersEn = plateLettersEn !== undefined ? plateLettersEn : (existing.plateLettersEn ?? '');
+    const mergedDigits = plateDigits !== undefined ? plateDigits : (existing.plateDigits ?? '');
+    const mergedRegion = plateRegion !== undefined ? plateRegion : (existing.plateRegion ?? '');
+
+    const hasPlateChange = [plateLettersAr, plateLettersEn, plateDigits, plateRegion].some((v) => v !== undefined);
+    if (hasPlateChange) {
+      const ar = (mergedLettersAr || '').toString().trim() || null;
+      const en = (mergedLettersEn || '').toString().trim() || null;
+      const region = (mergedRegion || '').toString().trim() || null;
       const duplicate = await prisma.userVehicle.findFirst({
         where: {
-          plateNumber,
-          id: { not: vehicleId }
+          id: { not: vehicleId },
+          plateDigits: (mergedDigits || '').toString().trim(),
+          plateRegion: region,
+          plateLettersAr: ar,
+          plateLettersEn: en
         }
       });
-
       if (duplicate) {
         throw new AppError('Plate number already in use', 409, 'ALREADY_EXISTS');
       }
     }
 
-    // If setting as default, unset other default vehicles
+    // If setting as default, unset other default vehicles for this owner
     if (isDefault && !existing.isDefault) {
       await prisma.userVehicle.updateMany({
         where: {
-          userId,
+          userId: ownerId,
           isDefault: true
         },
         data: { isDefault: false }
       });
     }
 
-    // Update vehicle
+    const updatePayload = {
+      ...(color !== undefined && { color }),
+      ...(isDefault !== undefined && { isDefault }),
+      ...(plateLettersAr !== undefined && { plateLettersAr }),
+      ...(plateLettersEn !== undefined && { plateLettersEn }),
+      ...(plateDigits !== undefined && { plateDigits }),
+      ...(plateRegion !== undefined && { plateRegion }),
+    };
+
     const vehicle = await prisma.userVehicle.update({
       where: { id: vehicleId },
-      data: {
-        ...(plateNumber && { plateNumber }),
-        ...(color && { color }),
-        ...(isDefault !== undefined && { isDefault })
-      },
+      data: updatePayload,
       include: {
         vehicleModel: {
           select: {
@@ -238,7 +349,7 @@ class VehicleService {
             name: true,
             nameAr: true,
             year: true,
-            size: true,
+            type: true,
             brand: {
               select: {
                 id: true,
@@ -253,7 +364,7 @@ class VehicleService {
 
     logger.info(`Vehicle updated: ${vehicleId}`);
 
-    return vehicle;
+    return { ...vehicle, plateNumber: computePlateNumber(vehicle) };
   }
 
   /**
@@ -262,10 +373,8 @@ class VehicleService {
    * @param {string} userId - User ID
    */
   async deleteVehicle(vehicleId, userId) {
-    // Verify ownership
     await this.getVehicleById(vehicleId, userId);
 
-    // Delete vehicle
     await prisma.userVehicle.delete({
       where: { id: vehicleId }
     });
