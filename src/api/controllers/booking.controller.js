@@ -1,10 +1,12 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
 const { getPlatformCommissionPercent } = require('../../utils/pricing');
+const { buildStatusWhere, getDisplayStatus } = require('../../constants/bookingStatus');
 
 /**
  * Get all bookings (Admin). Paginated list with customer/vehicle summary.
  * GET /api/bookings
+ * Query status: PENDING | CONFIRMED | IN_PROGRESS | COMPLETED | CANCELLED (مبسّطة) أو أي قيمة من الـ enum
  */
 async function getAllBookings(req, res, next) {
   try {
@@ -13,7 +15,7 @@ async function getAllBookings(req, res, next) {
     const status = req.query.status || null;
     const skip = (page - 1) * limit;
 
-    const where = status ? { status } : {};
+    const where = status ? { ...buildStatusWhere(status) } : {};
 
     const [items, total] = await Promise.all([
       prisma.booking.findMany({
@@ -81,6 +83,42 @@ async function getAllBookings(req, res, next) {
               },
             },
           },
+          mobileWorkshop: {
+            select: {
+              id: true,
+              name: true,
+              nameAr: true,
+              vendor: {
+                select: {
+                  id: true,
+                  businessName: true,
+                  businessNameAr: true,
+                },
+              },
+            },
+          },
+          jobBroadcast: {
+            select: {
+              id: true,
+              offers: {
+                where: { isSelected: true },
+                take: 1,
+                select: {
+                  winch: {
+                    select: {
+                      vendor: {
+                        select: {
+                          id: true,
+                          businessName: true,
+                          businessNameAr: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
           services: {
             take: 3,
             select: {
@@ -110,9 +148,36 @@ async function getAllBookings(req, res, next) {
 
     const totalPages = Math.ceil(total / limit) || 1;
 
+    // إثراء كل حجز بمقدم الخدمة/الفيندور (للعرض) + الحالة المبسطة + التاريخ والوقت
+    const data = items.map((b) => {
+      const vendor =
+        b.workshop?.vendor
+          ? { name: b.workshop.vendor.businessName, nameAr: b.workshop.vendor.businessNameAr, source: 'workshop' }
+          : b.mobileWorkshop?.vendor
+            ? { name: b.mobileWorkshop.vendor.businessName, nameAr: b.mobileWorkshop.vendor.businessNameAr, source: 'mobileWorkshop' }
+            : b.jobBroadcast?.offers?.[0]?.winch?.vendor
+              ? { name: b.jobBroadcast.offers[0].winch.vendor.businessName, nameAr: b.jobBroadcast.offers[0].winch.vendor.businessNameAr, source: 'winch' }
+              : b.services?.[0]?.service?.vendor
+                ? { name: b.services[0].service.vendor.businessName, nameAr: b.services[0].service.vendor.businessNameAr, source: 'service' }
+                : null;
+      const providerDisplay = vendor?.nameAr || vendor?.name || (b.mobileWorkshop?.nameAr || b.mobileWorkshop?.name) || (b.workshop?.nameAr || b.workshop?.name) || '—';
+      const providerDisplayEn = vendor?.name || b.mobileWorkshop?.name || b.workshop?.name || '—';
+      const dateDisplay = b.scheduledDate ? new Date(b.scheduledDate).toLocaleDateString('ar-SA', { dateStyle: 'short' }) : (b.createdAt ? new Date(b.createdAt).toLocaleDateString('ar-SA', { dateStyle: 'short' }) : null);
+      const timeDisplay = b.scheduledTime || (b.createdAt ? new Date(b.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : null);
+      return {
+        ...b,
+        displayStatus: getDisplayStatus(b.status),
+        providerDisplay,
+        providerDisplayEn,
+        providerVendor: vendor,
+        dateDisplay,
+        timeDisplay,
+      };
+    });
+
     res.json({
       success: true,
-      data: items,
+      data,
       pagination: {
         page,
         limit,
@@ -169,6 +234,51 @@ async function getBookingById(req, res, next) {
             urgency: true,
             estimatedBudget: true,
             createdAt: true,
+            offers: {
+              where: { isSelected: true },
+              take: 1,
+              select: {
+                winch: {
+                  select: {
+                    vendor: {
+                      select: {
+                        id: true,
+                        businessName: true,
+                        businessNameAr: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        workshop: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            vendor: {
+              select: {
+                id: true,
+                businessName: true,
+                businessNameAr: true,
+              },
+            },
+          },
+        },
+        mobileWorkshop: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            vendor: {
+              select: {
+                id: true,
+                businessName: true,
+                businessNameAr: true,
+              },
+            },
           },
         },
         inspectionReport: {
@@ -251,7 +361,33 @@ async function getBookingById(req, res, next) {
     if (req.user.role !== 'ADMIN' && booking.customerId !== req.user.id) {
       throw new AppError('Not allowed to view this booking', 403, 'FORBIDDEN');
     }
-    res.json({ success: true, message: '', data: booking });
+    const b = booking;
+    const vendor =
+      b.workshop?.vendor
+        ? { name: b.workshop.vendor.businessName, nameAr: b.workshop.vendor.businessNameAr, source: 'workshop' }
+        : b.mobileWorkshop?.vendor
+          ? { name: b.mobileWorkshop.vendor.businessName, nameAr: b.mobileWorkshop.vendor.businessNameAr, source: 'mobileWorkshop' }
+          : b.jobBroadcast?.offers?.[0]?.winch?.vendor
+            ? { name: b.jobBroadcast.offers[0].winch.vendor.businessName, nameAr: b.jobBroadcast.offers[0].winch.vendor.businessNameAr, source: 'winch' }
+            : b.services?.[0]?.service?.vendor
+              ? { name: b.services[0].service.vendor.businessName, nameAr: b.services[0].service.vendor.businessNameAr, source: 'service' }
+              : null;
+    const providerDisplay = vendor?.nameAr || vendor?.name || (b.mobileWorkshop?.nameAr || b.mobileWorkshop?.name) || (b.workshop?.nameAr || b.workshop?.name) || '—';
+    const providerDisplayEn = vendor?.name || b.mobileWorkshop?.name || b.workshop?.name || '—';
+    const dateDisplay = b.scheduledDate ? new Date(b.scheduledDate).toLocaleDateString('ar-SA', { dateStyle: 'short' }) : (b.createdAt ? new Date(b.createdAt).toLocaleDateString('ar-SA', { dateStyle: 'short' }) : null);
+    const timeDisplay = b.scheduledTime || (b.createdAt ? new Date(b.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : null);
+    res.json({
+      success: true,
+      message: '',
+      data: {
+        ...booking,
+        providerDisplay,
+        providerDisplayEn,
+        providerVendor: vendor,
+        dateDisplay,
+        timeDisplay,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -477,6 +613,45 @@ async function createBooking(req, res, next) {
       }
     });
 
+    // إنشاء فاتورة تلقائياً لتمكين الدفع: العناية الشاملة، ورش الغسيل، والورش المعتمدة
+    if (booking.id) {
+      try {
+        const invNum = `INV-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        const invoice = await prisma.invoice.create({
+          data: {
+            invoiceNumber: invNum,
+            bookingId: booking.id,
+            customerId: booking.customerId,
+            subtotal: Number(booking.subtotal) || 0,
+            tax: 0,
+            discount: 0,
+            totalAmount: Number(booking.totalPrice) || 0,
+            paidAmount: 0,
+            status: 'PENDING',
+          },
+        });
+        const items = await prisma.bookingService.findMany({
+          where: { bookingId: booking.id },
+          include: { service: { select: { name: true, nameAr: true } }, workshopService: { select: { name: true, nameAr: true } } },
+        });
+        for (const item of items) {
+          const desc = item.workshopService?.name || item.service?.name || 'Service';
+          const descAr = item.workshopService?.nameAr || item.service?.nameAr || 'خدمة';
+          await prisma.invoiceLineItem.create({
+            data: {
+              invoiceId: invoice.id,
+              description: desc,
+              descriptionAr: descAr,
+              itemType: 'SERVICE',
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+            },
+          });
+        }
+      } catch (e) { /* ignore if duplicate or error */ }
+    }
+
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
@@ -500,7 +675,7 @@ async function getMyBookings(req, res, next) {
     const skip = (page - 1) * limit;
 
     const where = { customerId: req.user.id };
-    if (status) where.status = status;
+    if (status) Object.assign(where, buildStatusWhere(status));
 
     const [items, total] = await Promise.all([
       prisma.booking.findMany({
@@ -554,6 +729,42 @@ async function getMyBookings(req, res, next) {
               }
             }
           },
+          mobileWorkshop: {
+            select: {
+              id: true,
+              name: true,
+              nameAr: true,
+              vendor: {
+                select: {
+                  id: true,
+                  businessName: true,
+                  businessNameAr: true
+                }
+              }
+            }
+          },
+          jobBroadcast: {
+            select: {
+              id: true,
+              offers: {
+                where: { isSelected: true },
+                take: 1,
+                select: {
+                  winch: {
+                    select: {
+                      vendor: {
+                        select: {
+                          id: true,
+                          businessName: true,
+                          businessNameAr: true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           services: {
             include: {
               service: {
@@ -583,9 +794,35 @@ async function getMyBookings(req, res, next) {
       prisma.booking.count({ where })
     ]);
 
+    const data = items.map((b) => {
+      const vendor =
+        b.workshop?.vendor
+          ? { name: b.workshop.vendor.businessName, nameAr: b.workshop.vendor.businessNameAr, source: 'workshop' }
+          : b.mobileWorkshop?.vendor
+            ? { name: b.mobileWorkshop.vendor.businessName, nameAr: b.mobileWorkshop.vendor.businessNameAr, source: 'mobileWorkshop' }
+            : b.jobBroadcast?.offers?.[0]?.winch?.vendor
+              ? { name: b.jobBroadcast.offers[0].winch.vendor.businessName, nameAr: b.jobBroadcast.offers[0].winch.vendor.businessNameAr, source: 'winch' }
+              : b.services?.[0]?.service?.vendor
+                ? { name: b.services[0].service.vendor.businessName, nameAr: b.services[0].service.vendor.businessNameAr, source: 'service' }
+                : null;
+      const providerDisplay = vendor?.nameAr || vendor?.name || (b.mobileWorkshop?.nameAr || b.mobileWorkshop?.name) || (b.workshop?.nameAr || b.workshop?.name) || '—';
+      const providerDisplayEn = vendor?.name || b.mobileWorkshop?.name || b.workshop?.name || '—';
+      const dateDisplay = b.scheduledDate ? new Date(b.scheduledDate).toLocaleDateString('ar-SA', { dateStyle: 'short' }) : (b.createdAt ? new Date(b.createdAt).toLocaleDateString('ar-SA', { dateStyle: 'short' }) : null);
+      const timeDisplay = b.scheduledTime || (b.createdAt ? new Date(b.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : null);
+      return {
+        ...b,
+        displayStatus: getDisplayStatus(b.status),
+        providerDisplay,
+        providerDisplayEn,
+        providerVendor: vendor,
+        dateDisplay,
+        timeDisplay,
+      };
+    });
+
     res.json({
       success: true,
-      data: items,
+      data,
       pagination: {
         page,
         limit,
@@ -636,4 +873,64 @@ async function updateBookingStatus(req, res, next) {
   }
 }
 
-module.exports = { getAllBookings, getBookingById, createBooking, getMyBookings, updateBookingStatus };
+/**
+ * Vendor: mark booking as completed (عند اكتمال الخدمة في الورشة).
+ * PATCH /api/bookings/:id/complete
+ * الفيندور صاحب الخدمة فقط يمكنه استدعاء هذا.
+ */
+async function completeBookingAsVendor(req, res, next) {
+  try {
+    const { id } = req.params;
+    const vendorProfile = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!vendorProfile) throw new AppError('Vendor profile not found', 403, 'FORBIDDEN');
+
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        services: {
+          include: { service: { select: { vendorId: true } } },
+        },
+        workshop: { select: { vendorId: true } },
+      },
+    });
+    if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+
+    const byServiceVendor = booking.services?.some(
+      (bs) => bs.service && bs.service.vendorId === vendorProfile.id
+    );
+    const byWorkshopVendor = booking.workshopId && booking.workshop?.vendorId === vendorProfile.id;
+    const belongsToVendor = byServiceVendor || byWorkshopVendor;
+    if (!belongsToVendor) {
+      throw new AppError('Not allowed to complete this booking', 403, 'FORBIDDEN');
+    }
+
+    const oldStatus = booking.status;
+    const updated = await prisma.booking.update({
+      where: { id },
+      data: { status: 'COMPLETED' },
+    });
+
+    await prisma.bookingStatusHistory.create({
+      data: {
+        bookingId: id,
+        fromStatus: oldStatus,
+        toStatus: 'COMPLETED',
+        reason: 'Service completed at venue',
+        changedBy: req.user.id,
+      },
+    }).catch(() => null);
+
+    res.json({
+      success: true,
+      message: 'تم تحديث الحجز إلى مكتمل',
+      messageAr: 'تم تحديث الحجز إلى مكتمل',
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { getAllBookings, getBookingById, createBooking, getMyBookings, updateBookingStatus, completeBookingAsVendor };

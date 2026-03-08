@@ -51,7 +51,10 @@ class TechnicianCarWashService {
                         },
                         vehicle: {
                             select: {
-                                plateNumber: true,
+                                plateDigits: true,
+                                plateLettersAr: true,
+                                plateLettersEn: true,
+                                plateRegion: true,
                                 color: true,
                                 vehicleModel: {
                                     select: {
@@ -93,7 +96,7 @@ class TechnicianCarWashService {
                         make: broadcast.booking.vehicle?.vehicleModel?.brand?.name || 'Unknown Make',
                         model: broadcast.booking.vehicle?.vehicleModel?.name || 'Unknown Model',
                         year: broadcast.booking.vehicle?.vehicleModel?.year || 'Unknown Year',
-                        plateNumber: broadcast.booking.vehicle?.plateNumber || 'Unknown Plate'
+                        plateNumber: broadcast.booking.vehicle ? [broadcast.booking.vehicle.plateDigits, broadcast.booking.vehicle.plateLettersEn || broadcast.booking.vehicle.plateLettersAr].filter(Boolean).join(' ') || '—' : 'Unknown Plate'
                     },
                     location: {
                         address: broadcast.locationAddress,

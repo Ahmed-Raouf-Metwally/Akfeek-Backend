@@ -77,6 +77,73 @@ router.get('/', requireAdminOrPermission('invoices'), invoiceController.getAllIn
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  */
+
+/**
+ * @swagger
+ * /api/invoices/my/{id}:
+ *   get:
+ *     summary: Get my invoice (Customer) — جلب فاتورتي
+ *     description: |
+ *       العميل يجلب فاتورته بالمعرف (invoice id أو booking id). يُستخدم في فلو العناية الشاملة وورش الغسيل بعد الحجز.
+ *       Customer retrieves their invoice by id or bookingId. Used after booking in Comprehensive Care and Car Wash flows.
+ *     tags: [Invoices, 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: Invoice ID or Booking ID — معرف الفاتورة أو الحجز
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Invoice details with vendorSummary
+ *       403:
+ *         description: Not authorized to view this invoice
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.get('/my/:id', invoiceController.getMyInvoice);
+
+/**
+ * @swagger
+ * /api/invoices/my/{id}/pay:
+ *   patch:
+ *     summary: Pay my invoice (Customer) — دفع فاتورتي
+ *     description: |
+ *       العميل يدفع فاتورته (method: CARD أو WALLET). يُستخدم في فلو العناية الشاملة وورش الغسيل بعد الحجز.
+ *       Customer pays their invoice. Used in Comprehensive Care and Car Wash flows after booking.
+ *     tags: [Invoices, 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: Invoice ID — معرف الفاتورة
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               method:
+ *                 type: string
+ *                 enum: [CARD, WALLET]
+ *                 description: طريقة الدفع
+ *     responses:
+ *       200:
+ *         description: Payment successful — تم الدفع بنجاح
+ *       400:
+ *         description: Invalid amount or method
+ *       403:
+ *         description: Not authorized to pay this invoice
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.patch('/my/:id/pay', invoiceController.customerPayInvoice);
+
 router.get('/:id', requireAdminOrPermission('invoices'), invoiceController.getInvoiceById);
 
 /**

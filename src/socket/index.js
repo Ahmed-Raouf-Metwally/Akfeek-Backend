@@ -137,5 +137,49 @@ module.exports = {
     technicianIds.forEach(techId => {
       this.emitToTechnician(techId, event, data);
     });
-  }
+  },
+
+  /**
+   * Emit notification to a user (customer or vendor) — يصل لـ /customer أو /technician حسب اتصال المستخدم
+   * @param {string} userId - User ID
+   * @param {Object} payload - { type, title, titleAr?, message, requestId?, offerId?, ... }
+   */
+  emitNotification(userId, payload) {
+    if (!io || !userId) return;
+    const data = { ...payload, timestamp: new Date().toISOString() };
+    io.of('/customer').to(`user-${userId}`).emit('notification', data);
+    io.of('/technician').to(`user-${userId}`).emit('notification', data);
+  },
+
+  /**
+   * بعد اختيار العميل للعرض — إشعار الطرفين لفتح التتبع والشات
+   * @param {string} bookingId - Booking ID
+   * @param {Object} data - { customerId, driverId } (driverId = vendor userId)
+   */
+  emitBookingReady(bookingId, data) {
+    if (!io) return;
+    const payload = { bookingId, ...data, timestamp: new Date().toISOString() };
+    if (data.customerId) {
+      io.of('/customer').to(`user-${data.customerId}`).emit('booking_ready', payload);
+    }
+    if (data.driverId) {
+      io.of('/technician').to(`user-${data.driverId}`).emit('booking_ready', payload);
+    }
+  },
+
+  /**
+   * بعد دفع الفاتورة — فتح التتبع والشات للعميل والورشة
+   * @param {string} bookingId - Booking ID
+   * @param {Object} data - { customerId, technicianId (vendor userId) }
+   */
+  emitInvoicePaid(bookingId, data) {
+    if (!io) return;
+    const payload = { bookingId, trackingAndChatEnabled: true, timestamp: new Date().toISOString() };
+    if (data.customerId) {
+      io.of('/customer').to(`user-${data.customerId}`).emit('invoice_paid', payload);
+    }
+    if (data.technicianId) {
+      io.of('/technician').to(`user-${data.technicianId}`).emit('invoice_paid', payload);
+    }
+  },
 };

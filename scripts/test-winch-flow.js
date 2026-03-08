@@ -15,16 +15,17 @@
  *
  * Usage:
  *   npm run test:winch-flow
- *   API_BASE_URL=http://localhost:3000 TEST_CUSTOMER_EMAIL=ahmed.ali@example.com TEST_CUSTOMER_PASSWORD=Admin123! node scripts/test-winch-flow.js
+ *   API_BASE_URL=http://localhost:3000 (default customer: user1@akfeek.com / Customer123!, vendor: vendor-towing-service-1@akfeek.com / Vendor123!)
  */
 require('dotenv').config();
 const axios = require('axios');
 
 const BASE_URL = process.env.API_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3000';
-const CUSTOMER_EMAIL = process.env.TEST_CUSTOMER_EMAIL || 'ahmed.ali@example.com';
-const CUSTOMER_PASSWORD = process.env.TEST_CUSTOMER_PASSWORD || 'Admin123!';
-const VENDOR_EMAIL = process.env.TEST_WINCH_VENDOR_EMAIL || 'winch.vendor@test.com';
-const VENDOR_PASSWORD = process.env.TEST_WINCH_VENDOR_PASSWORD || 'Admin123!';
+// بيانات من الـ seed: user1@akfeek.com (seed-10-users)، vendor-towing-service-1 (seed-24-vendors)، admin (seed.js)
+const CUSTOMER_EMAIL = process.env.TEST_CUSTOMER_EMAIL || 'user1@akfeek.com';
+const CUSTOMER_PASSWORD = process.env.TEST_CUSTOMER_PASSWORD || 'Customer123!';
+const VENDOR_EMAIL = process.env.TEST_WINCH_VENDOR_EMAIL || 'vendor-towing-service-1@akfeek.com';
+const VENDOR_PASSWORD = process.env.TEST_WINCH_VENDOR_PASSWORD || 'Vendor123!';
 const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || 'admin@akfeek.com';
 const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'Admin123!';
 
@@ -51,7 +52,7 @@ function setAuth(token) {
 async function loginAsCustomer() {
   const res = await api.post('/auth/login', { identifier: CUSTOMER_EMAIL, password: CUSTOMER_PASSWORD });
   if (!res.data.success || !res.data.data?.token) {
-    throw new Error('Customer login failed. Run prisma seed for customer (e.g. ahmed.ali@example.com / Admin123!)');
+    throw new Error('Customer login failed. Run prisma seed (user1@akfeek.com / Customer123!)');
   }
   customerToken = res.data.data.token;
   setAuth(customerToken);
@@ -61,7 +62,7 @@ async function loginAsCustomer() {
 async function loginAsVendor() {
   const res = await api.post('/auth/login', { identifier: VENDOR_EMAIL, password: VENDOR_PASSWORD });
   if (!res.data.success || !res.data.data?.token) {
-    throw new Error('Vendor login failed. Run: node prisma/seed-towing-vendor-for-test.js');
+    throw new Error('Vendor login failed. Run: npm run prisma:seed:24vendors then prisma:seed:winches (vendor-towing-service-1@akfeek.com / Vendor123!)');
   }
   vendorToken = res.data.data.token;
   setAuth(vendorToken);

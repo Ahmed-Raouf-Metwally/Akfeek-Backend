@@ -85,7 +85,7 @@ router.get('/', vehicleController.getMyVehicles);
  * /api/vehicles/admin/all:
  *   get:
  *     summary: Get all vehicles (Admin)
- *     description: List all user vehicles with pagination. Query: page, limit, userId, search
+ *     description: "List all user vehicles with pagination. Query params: page, limit, userId, search"
  *     tags: [Vehicles]
  *     security:
  *       - bearerAuth: []

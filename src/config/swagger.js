@@ -13,7 +13,7 @@ Comprehensive car services platform supporting 4 service models:
 1. **Direct Booking** (Fixed Services) - Car Wash, Polishing
 2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement
 3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance
-4. **Ekfik Lifecycle** (Inspection Services) - Valet & Comprehensive Repair
+4. **Ekfik Lifecycle** - Valet & Comprehensive Repair
 
 ---
 
@@ -21,7 +21,7 @@ Comprehensive car services platform supporting 4 service models:
 1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع
 2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر
 3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق
-4. **دورة الفحص** (خدمات الفحص) - الفحص الشامل والإصلاح
+4. **دورة الفحص** - الفحص الشامل والإصلاح
 
 ---
 
@@ -39,6 +39,36 @@ Comprehensive car services platform supporting 4 service models:
   - الرابط (مع تشغيل السيرفر): \`http://localhost:3000/api-docs.json\`
   - أو الملف: \`openapi.json\` (من جذر المشروع بعد تشغيل \`npm run openapi\`)
 - **المصادقة:** في تبويب Authorization اختر Type: Bearer Token وأدخل الـ JWT بعد تسجيل الدخول من \`POST /api/auth/login\`.
+
+## فلو الورش المتنقلة / Mobile Workshop Flow
+
+1. **العميل:** GET \`/api/mobile-workshop-types\` → اختيار نوع الورشة والخدمة  
+2. **العميل:** POST \`/api/mobile-workshop-requests\` (vehicleId, workshopTypeId, workshopTypeServiceId?, latitude, longitude, addressText, city) → يُبث الطلب للورش المتطابقة  
+3. **فيندور الورشة:** GET \`/api/mobile-workshops/my/requests\` → طلبات ورشتي، ثم POST \`/api/mobile-workshops/{workshopId}/requests/{requestId}/offer\` (price, message)  
+4. **العميل:** GET \`/api/mobile-workshop-requests/{id}\` (عروض الطلب)، ثم POST \`/api/mobile-workshop-requests/{requestId}/select-offer\` (offerId) → يُنشأ الحجز والفاتورة  
+5. **العميل:** GET \`/api/invoices/my/{id}\` ثم PATCH \`/api/invoices/my/{id}/pay\` (method: CARD أو WALLET) → بعد الدفع يُفعّل التتبع والشات (حدث invoice_paid)
+
+---
+
+## فلو العناية الشاملة / Comprehensive Care Flow
+
+1. **العميل:** GET \`/api/services?category=COMPREHENSIVE_CARE\` → اختيار خدمة من ورشة عناية شاملة  
+2. **العميل:** POST \`/api/bookings\` (vehicleId, scheduledDate, scheduledTime, serviceIds) — بدون workshopId → يُنشأ الحجز والفاتورة تلقائياً  
+3. **العميل:** GET \`/api/invoices/my/{bookingId}\` ثم PATCH \`/api/invoices/my/{id}/pay\` (method: CARD أو WALLET) → دفع الفاتورة  
+4. **الفيندور:** بعد إتمام الخدمة في الورشة — PATCH \`/api/bookings/{id}/complete\` → تحديث الحجز إلى مكتمل (COMPLETED)
+
+---
+
+## فلو ورش الغسيل / Car Wash Flow
+
+(مشابه للعناية الشاملة — بدون فني؛ العميل يحجز خدمة غسيل من الفيندور ثم يدفع.)
+
+1. **العميل:** GET \`/api/services?category=CLEANING\` أو اختيار ورشة غسيل من الفيندورز — ثم اختيار خدمة غسيل  
+2. **العميل:** POST \`/api/bookings\` (vehicleId, scheduledDate, scheduledTime, serviceIds) — بدون workshopId → يُنشأ الحجز والفاتورة تلقائياً  
+3. **العميل:** GET \`/api/invoices/my/{bookingId}\` ثم PATCH \`/api/invoices/my/{id}/pay\` (method: CARD أو WALLET) → دفع الفاتورة  
+4. **الفيندور:** بعد إتمام الخدمة — PATCH \`/api/bookings/{id}/complete\` → تحديث الحجز إلى مكتمل (COMPLETED)
+
+---
 
 ## Authentication / المصادقة
 
@@ -430,11 +460,20 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: '2. ورش الغسيل (Car Wash)',
-            description: 'حجز غسيل السيارة: طلب → عروض → قبول. Car wash booking (request, offers, accept).'
+            description: `فلو ورش الغسيل — يشبه العناية الشاملة (بدون فني غسيل). العميل يختار خدمة غسيل من الفيندور، يحجز، يدفع، والفيندور يحدد مكتمل.
+1) العميل: GET /api/services?category=CLEANING أو اختيار ورشة غسيل (فيندور) وخدماتها
+2) العميل: POST /api/bookings (vehicleId, scheduledDate, scheduledTime, serviceIds فقط — بدون workshopId) — يُنشأ الحجز والفاتورة
+3) العميل: GET /api/invoices/my/{bookingId} ثم PATCH /api/invoices/my/{id}/pay (method: CARD|WALLET)
+4) الفيندور: PATCH /api/bookings/{id}/complete (بعد إتمام الخدمة → الحالة COMPLETED)`
         },
         {
             name: '3. العناية الشاملة (Comprehensive Care)',
-            description: 'حجز العناية الشاملة (POST /api/bookings بدون workshopId) + حجوزات الفيندور (GET /api/vendors/profile/me/comprehensive-care-bookings). Comprehensive care booking.'
+            description: `فلو العناية الشاملة — العميل يحجز خدمة من ورشة عناية شاملة، يدفع الفاتورة، والفيندور يحدد الحجز كمكتمل بعد إتمام الخدمة.
+1) العميل: GET /api/services?category=COMPREHENSIVE_CARE (اختيار خدمة)
+2) العميل: POST /api/bookings (vehicleId, scheduledDate, scheduledTime, serviceIds فقط — بدون workshopId) — يُنشأ الحجز والفاتورة
+3) العميل: GET /api/invoices/my/{bookingId} ثم PATCH /api/invoices/my/{id}/pay (method: CARD|WALLET)
+4) الفيندور: PATCH /api/bookings/{id}/complete (بعد إتمام الخدمة في الورشة → الحالة COMPLETED)
+خدمات الفيندور: GET /api/services?vendorId=me&category=COMPREHENSIVE_CARE`
         },
         {
             name: '4. الوينشات (Winches/Towing)',
@@ -453,7 +492,13 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: '5. الورش المتنقلة (Mobile Workshop)',
-            description: 'CRUD الورش المتنقلة + حجز الصيانة المتنقلة (POST /api/mobile-car-service/bookings). Mobile workshop & bookings.'
+            description: `فلو الورش المتنقلة — العميل يطلب، الورش ترسل عروضاً، العميل يختار ثم يدفع فيُفعّل التتبع والشات.
+1) العميل: GET /api/mobile-workshop-types (نوع الورشة + الخدمة)
+2) العميل: POST /api/mobile-workshop-requests (vehicleId, workshopTypeId, workshopTypeServiceId?, latitude, longitude, addressText, city) — يُبث للورش المتطابقة
+3) فيندور الورشة: GET /api/mobile-workshops/my/requests ثم POST /api/mobile-workshops/{workshopId}/requests/{requestId}/offer (price, message)
+4) العميل: GET /api/mobile-workshop-requests/{id} (عروض الطلب) ثم POST .../select-offer (offerId) — يُنشأ الحجز والفاتورة
+5) العميل: GET /api/invoices/my/{id} ثم PATCH /api/invoices/my/{id}/pay (method: CARD|WALLET) — بعد الدفع يُرسل حدث invoice_paid فيفتح التتبع والشات
+CRUD الورش: GET/POST/PUT/DELETE /api/mobile-workshops، أنواع الورش: /api/mobile-workshop-types.`
         },
         {
             name: 'Authentication',
@@ -493,11 +538,11 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: 'Broadcasts',
-            description: 'Emergency job broadcasts (Indrive model) - بث وظائف الطوارئ'
+            description: 'بث الوظائف — بث السحب + طلبات الورش المتنقلة. GET /api/broadcasts?type=towing|mobile-workshop|all. Emergency job broadcasts + mobile workshop requests.'
         },
         {
-            name: 'Inspections',
-            description: 'Vehicle inspections (Ekfik model) - فحص المركبات'
+            name: 'Mobile Workshop Requests',
+            description: 'فلو طلبات الورش المتنقلة: POST / (إنشاء طلب)، GET / (طلباتي)، GET /:id (تفاصيل + عروض)، POST /:requestId/select-offer (اختيار عرض → حجز + فاتورة). يكمّل الفلو: دفع الفاتورة PATCH /api/invoices/my/:id/pay ثم التتبع والشات.'
         },
         {
             name: 'Supply Requests',
@@ -505,7 +550,7 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: 'Invoices',
-            description: 'إدارة الفواتير — كل فاتورة تتضمن بيان الفيندور صاحبها (ورشة/خدمة/ونش). mark-paid: إيداع حصة الفيندور في محفظته وخصم عمولة المنصة (نسبة مسجلة وقت الحجز).'
+            description: 'إدارة الفواتير — vendorSummary يعرض الفيندور صاحب الفاتورة. العناية الشاملة وورش الغسيل: إنشاء فاتورة تلقائي عند الحجز؛ الدفع: GET /api/invoices/my/{id} ثم PATCH /api/invoices/my/{id}/pay.'
         },
         {
             name: 'Payments',
@@ -537,7 +582,7 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: 'Technician Car Wash',
-            description: 'Car Wash technician endpoints for viewing requests and offering services - نقاط خدمة غسيل السيارات للفنيين'
+            description: '(اختياري/قديم) نقاط فني الغسيل بالبث — الفلو الحالي لورش الغسيل يشبه العناية الشاملة (حجز مباشر من الفيندور بدون فني).'
         },
         {
             name: 'Admin Settings',

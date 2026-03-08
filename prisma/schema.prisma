@@ -15,12 +15,14 @@ datasource db {
 // USER & PROFILE MANAGEMENT
 // ================================================================================================
 
+// أدوار المستخدمين المعتمدة للعرض: عميل، مسؤول، موظف، مورد، فني (SUPPLIER قديم — يُعرض "مورد")
 enum UserRole {
-  CUSTOMER
-  TECHNICIAN
-  SUPPLIER
-  VENDOR
-  ADMIN
+  CUSTOMER   // عميل
+  ADMIN      // مسؤول
+  EMPLOYEE   // موظف (صلاحيات من لوحة الأدمن)
+  VENDOR     // مورد
+  TECHNICIAN // فني
+  SUPPLIER   // قديم — للتوافق مع بيانات موجودة، يُعرض كـ "مورد"
 }
 
 enum UserStatus {
@@ -60,6 +62,10 @@ model User {
   // Broadcasts & Offers
   jobBroadcasts JobBroadcast[]
   jobOffers     JobOffer[]
+
+  // Mobile Workshop Requests (customer)
+  mobileWorkshopRequests MobileWorkshopRequest[]
+  chatMessages           ChatMessage[]
 
   // Inspections & Supply
   inspectionReports InspectionReport[]
@@ -109,6 +115,10 @@ model User {
   performedPointTransactions PointTransaction[] @relation("PointTransactionPerformer")
   vendor                     Vendor?            @relation(fields: [vendorId], references: [id])
   vendorId                   String?
+
+  // موظفو المنصة (EMPLOYEE) — صلاحيات من لوحة الأدمن فقط (ربط بفيندور اختياري)
+  employeePermissions EmployeePermission[]
+  vendorEmployment    VendorEmployee? // ربط اختياري بفيندور إن لزم
 
   @@index([email])
   @@index([phone])
@@ -174,8 +184,9 @@ model Address {
   updatedAt DateTime @updatedAt
 
   // Relations
-  bookings      Booking[]
-  jobBroadcasts JobBroadcast[]
+  bookings               Booking[]
+  jobBroadcasts          JobBroadcast[]
+  mobileWorkshopRequests MobileWorkshopRequest[]
 
   @@index([userId])
 }
@@ -272,7 +283,8 @@ model UserVehicle {
   updatedAt DateTime @updatedAt
 
   // Relations
-  bookings Booking[]
+  bookings               Booking[]
+  mobileWorkshopRequests  MobileWorkshopRequest[]
 
   @@index([userId])
   @@index([vehicleModelId])
@@ -460,13 +472,38 @@ model VendorProfile {
   winch                     Winch? // فيندور الونش: سيارة سحب واحدة مرتبطة به
   mobileWorkshop            MobileWorkshop? // فيندور الورش المتنقلة: ورشة متنقلة واحدة مرتبطة به
 
-  reviews   VendorReview[]
-  documents VendorDocument[]
-  coupons   Coupon[]
+  reviews         VendorReview[]
+  documents       VendorDocument[]
+  coupons         Coupon[]
+  vendorEmployees VendorEmployee[] // موظفو هذا الفيندور
 
   @@index([userId])
   @@index([status])
   @@index([isVerified])
+}
+
+// صلاحيات الموظف — يُعيّنها الأدمن من الداشبورد (الموظف يشوف صلاحياته من لوحة الأدمن)
+model EmployeePermission {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissionKey String // مثلاً: bookings, vendors, invoices
+  createdAt     DateTime @default(now())
+
+  @@unique([userId, permissionKey])
+  @@index([userId])
+}
+
+// ربط اختياري للموظف بفيندور (إن وُجد — الموظف أساساً صلاحياته من الأدمن)
+model VendorEmployee {
+  id        String        @id @default(uuid())
+  userId    String        @unique
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vendorId  String
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@index([vendorId])
 }
 
 enum CouponDiscountType {
@@ -906,11 +943,60 @@ model Winch {
 // MOBILE WORKSHOP — ورشة متنقلة مرتبطة بفيندور MOBILE_WORKSHOP
 // ================================================================================================
 
+// أنواع الورش المتنقلة (يحددها الأدمن) — مثلاً: تغيير زيت، إطارات، بطارية، ...
+model MobileWorkshopType {
+  id          String  @id @default(uuid())
+  name        String
+  nameAr      String?
+  description String? @db.Text
+  serviceType String  @default("GENERAL") // OIL_CHANGE, TIRE, BATTERY, BRAKE, AC, ...
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // خدمات يضيفها الأدمن داخل هذا النوع (اختياري — الخدمة قد تكون بدون نوع)
+  typeServices MobileWorkshopTypeService[]
+  workshops    MobileWorkshop[]
+  requests     MobileWorkshopRequest[]
+
+  @@index([isActive])
+  @@index([serviceType])
+}
+
+// خدمات نوع الورشة — يضيفها الأدمن داخل كل نوع (مثلاً نوع "تغيير زيت" له: تغيير زيت عادي، تغيير زيت كامل)
+model MobileWorkshopTypeService {
+  id               String             @id @default(uuid())
+  workshopTypeId   String
+  workshopType     MobileWorkshopType @relation(fields: [workshopTypeId], references: [id], onDelete: Cascade)
+
+  name        String
+  nameAr      String?
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // خدمات الفيندور المرتبطة بهذا النوع (أو بدون نوع إذا workshopTypeServiceId = null)
+  vendorServices    MobileWorkshopService[]
+  mobileWorkshopRequests MobileWorkshopRequest[]
+
+  @@index([workshopTypeId])
+  @@index([isActive])
+}
+
 model MobileWorkshop {
   id          String  @id @default(uuid())
   name        String
   nameAr      String?
   description String? @db.Text
+
+  // نوع الورشة (من كاتالوج الأدمن)
+  workshopTypeId String?
+  workshopType   MobileWorkshopType? @relation(fields: [workshopTypeId], references: [id], onDelete: SetNull)
 
   // Vehicle / Equipment
   vehicleType  String? // نوع المركبة: Van, Pickup, Truck...
@@ -954,7 +1040,9 @@ model MobileWorkshop {
   vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
 
   // خدمات مفصّلة مع أسعار
-  services MobileWorkshopService[]
+  services  MobileWorkshopService[]
+  offers    MobileWorkshopOffer[]
+  bookings  Booking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -963,6 +1051,7 @@ model MobileWorkshop {
   @@index([isAvailable])
   @@index([vendorId])
   @@index([city])
+  @@index([workshopTypeId])
 }
 
 model MobileWorkshopService {
@@ -970,8 +1059,12 @@ model MobileWorkshopService {
   mobileWorkshopId String
   mobileWorkshop   MobileWorkshop @relation(fields: [mobileWorkshopId], references: [id], onDelete: Cascade)
 
+  // ربط اختياري بنوع الخدمة (من كاتالوج الأدمن) — إذا null فالخدمة مخصصة بدون نوع
+  workshopTypeServiceId String?
+  workshopTypeService   MobileWorkshopTypeService? @relation(fields: [workshopTypeServiceId], references: [id], onDelete: SetNull)
+
   serviceType       String // OIL_CHANGE, TIRE, BATTERY, BRAKE, AC, ELECTRICAL, ENGINE, SUSPENSION, DIAGNOSIS, GENERAL, CUSTOM
-  name              String // اسم الخدمة (مخصص)
+  name              String // اسم الخدمة (مخصص أو من النوع)
   nameAr            String?
   description       String? @db.Text // تفاصيل الخدمة
   price             Float // سعر الخدمة
@@ -982,8 +1075,90 @@ model MobileWorkshopService {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  bookingServices     BookingService[]
+  mobileWorkshopOffers MobileWorkshopOffer[]
+
   @@index([mobileWorkshopId])
   @@index([serviceType])
+  @@index([workshopTypeServiceId])
+}
+
+// طلب العميل — بحث بنوع الورشة والخدمة، يُبث للورش المتاحة
+enum MobileWorkshopRequestStatus {
+  BROADCASTING   // ينتظر عروض الورش
+  OFFERS_RECEIVED
+  ASSIGNED       // العميل اختار ورشة
+  CANCELLED
+  EXPIRED
+}
+
+model MobileWorkshopRequest {
+  id            String @id @default(uuid())
+  requestNumber String @unique // MW-REQ-20260123-001
+
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicleId  String?
+  vehicle    UserVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  addressId  String?
+  address    Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+
+  latitude     Float?
+  longitude    Float?
+  addressText  String?  @db.Text
+  city         String?
+
+  workshopTypeId String
+  workshopType   MobileWorkshopType @relation(fields: [workshopTypeId], references: [id], onDelete: Cascade)
+  workshopTypeServiceId String? // الخدمة المحددة من نوع الورشة (مثلاً "تغيير زيت عادي")
+  workshopTypeService   MobileWorkshopTypeService? @relation(fields: [workshopTypeServiceId], references: [id], onDelete: SetNull)
+  serviceType    String // للتوافق: GENERAL أو من النوع
+
+  status   MobileWorkshopRequestStatus @default(BROADCASTING)
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  offers   MobileWorkshopOffer[]
+  booking  Booking?
+
+  @@index([customerId])
+  @@index([workshopTypeId])
+  @@index([workshopTypeServiceId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum MobileWorkshopOfferStatus {
+  PENDING
+  ACCEPTED  // العميل اختار هذه الورشة
+  REJECTED
+}
+
+model MobileWorkshopOffer {
+  id                  String  @id @default(uuid())
+  requestId           String
+  request             MobileWorkshopRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  mobileWorkshopId    String
+  mobileWorkshop      MobileWorkshop @relation(fields: [mobileWorkshopId], references: [id], onDelete: Cascade)
+  mobileWorkshopServiceId String?
+  mobileWorkshopService   MobileWorkshopService? @relation(fields: [mobileWorkshopServiceId], references: [id], onDelete: SetNull)
+
+  price    Decimal @db.Decimal(10, 2)
+  currency String  @default("SAR")
+  message  String? @db.Text
+  estimatedMinutes Int?
+
+  status MobileWorkshopOfferStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  booking Booking?
+
+  @@index([requestId])
+  @@index([mobileWorkshopId])
+  @@index([status])
 }
 
 // ================================================================================================
@@ -1060,6 +1235,14 @@ model Booking {
   deliveryMethod DeliveryMethod?
   flatbedFee     Decimal?           @default(0) @db.Decimal(10, 2)
 
+  // Mobile Workshop (عند اختيار العميل لورشة من الطلب)
+  mobileWorkshopId        String?
+  mobileWorkshop          MobileWorkshop?         @relation(fields: [mobileWorkshopId], references: [id])
+  mobileWorkshopRequestId String?                 @unique
+  mobileWorkshopRequest   MobileWorkshopRequest?  @relation(fields: [mobileWorkshopRequestId], references: [id])
+  mobileWorkshopOfferId   String?                 @unique
+  mobileWorkshopOffer     MobileWorkshopOffer?    @relation(fields: [mobileWorkshopOfferId], references: [id])
+
   // Scheduling
   scheduledDate DateTime?
   scheduledTime String? // "09:00" - Store as string for flexibility
@@ -1113,12 +1296,14 @@ model Booking {
   workshopReview      WorkshopReview?
   notifications       Notification[]
   technicianLocations TechnicianLocation[]   @relation("BookingTracking")
+  chatRoom            ChatRoom?
 
   @@index([customerId])
   @@index([technicianId])
   @@index([status])
   @@index([scheduledDate])
   @@index([createdAt])
+  @@index([mobileWorkshopId])
 }
 
 model BookingService {
@@ -1133,16 +1318,21 @@ model BookingService {
   workshopServiceId String?
   workshopService   CertifiedWorkshopService? @relation(fields: [workshopServiceId], references: [id], onDelete: SetNull)
 
+  // عند الحجز من الورشة المتنقلة: ربط خدمة الورشة المتنقلة
+  mobileWorkshopServiceId String?
+  mobileWorkshopService   MobileWorkshopService? @relation(fields: [mobileWorkshopServiceId], references: [id], onDelete: SetNull)
+
   quantity         Int     @default(1)
   unitPrice        Decimal @db.Decimal(10, 2)
   totalPrice       Decimal @db.Decimal(10, 2)
-  estimatedMinutes Int? // وقت الخدمة بالدقائق (من Service أو CertifiedWorkshopService)
+  estimatedMinutes Int? // وقت الخدمة بالدقائق (من Service أو CertifiedWorkshopService أو MobileWorkshopService)
 
   createdAt DateTime @default(now())
 
   @@index([bookingId])
   @@index([serviceId])
   @@index([workshopServiceId])
+  @@index([mobileWorkshopServiceId])
 }
 
 // Spare parts on a booking (e.g. Mobile Car Service)
@@ -1739,6 +1929,37 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// ================================================================================================
+// CHAT (عميل + فيندور الورشة المتنقلة — غرفة لكل بوكينج)
+// ================================================================================================
+
+model ChatRoom {
+  id         String   @id @default(uuid())
+  bookingId  String   @unique
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@index([bookingId])
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([roomId])
+  @@index([userId])
   @@index([createdAt])
 }
 

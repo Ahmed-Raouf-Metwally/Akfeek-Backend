@@ -41,9 +41,10 @@ exports.createOrder = async (userId, data) => {
     });
   }
 
-  const shippingCost = 25.00; // Flat rate for now
-  const tax = subtotal * 0.15; // 15% VAT
-  const totalAmount = subtotal + tax + shippingCost;
+  const shippingCost = 35.00; // تكلفة الشحن (قيمة ثابتة أو تُحدد لاحقاً من الإعدادات)
+  // أسعار المنتجات شاملة الضريبة (الفيندور يضيفها) — لا نضيف ضريبة على الإجمالي
+  const tax = 0;
+  const totalAmount = subtotal + shippingCost;
   const discount = 0;
 
   // 2. Create Order Transaction

@@ -10,7 +10,6 @@ const vehicleRoutes = require('./vehicles.routes');
 const serviceRoutes = require('./services.routes');
 const bookingRoutes = require('./bookings.routes');
 const broadcastRoutes = require('./broadcasts.routes');
-const inspectionRoutes = require('./inspections.routes');
 const supplyRoutes = require('./supplies.routes');
 const invoiceRoutes = require('./invoices.routes');
 const paymentRoutes = require('./payments.routes');
@@ -28,6 +27,7 @@ const feedbackAdminRoutes = require('./admin/feedback.admin.routes');
 const winchRoutes = require('./winches.routes');
 // Mobile Workshop routes
 const mobileWorkshopRoutes = require('./mobileWorkshops.routes');
+const mobileWorkshopTypesRoutes = require('./mobileWorkshopTypes.routes');
 
 // Auto Parts Marketplace routes
 const vendorRoutes = require('./vendors.routes');
@@ -56,6 +56,11 @@ router.use('/workshops', workshopRoutes);
 router.use('/winches', winchRoutes);
 // Mobile Workshops
 router.use('/mobile-workshops', mobileWorkshopRoutes);
+router.use('/mobile-workshop-types', mobileWorkshopTypesRoutes);
+
+// تسميات الأدوار للعرض في الواجهة (بدون مفاتيح تقنية مثل users.roles.EMPLOYEE)
+const { ROLE_LABELS } = require('../../constants/roles');
+router.get('/role-labels', (req, res) => res.json({ success: true, data: ROLE_LABELS }));
 
 // Public routes (no authentication required)
 router.use('/auth', authRoutes);
@@ -85,7 +90,6 @@ router.use('/vehicles', vehicleRoutes);
 router.use('/services', serviceRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/broadcasts', broadcastRoutes);
-router.use('/inspections', inspectionRoutes);
 router.use('/supplies', supplyRoutes);
 router.use('/invoices', invoiceRoutes);
 router.use('/payments', paymentRoutes);

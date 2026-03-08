@@ -10,21 +10,25 @@ module.exports = (err, req, res, next) => {
 
   // Handle Prisma Errors
   if (err.code) {
-    switch (err.code) {
-      case 'P2002': // Unique constraint violation
-        // err.meta.target is usually an array of fields
-        const field = err.meta?.target ? err.meta.target.join(', ') : 'field';
-        err = new AppError(`Value for ${field} already exists`, 409, 'ALREADY_EXISTS');
-        break;
-      case 'P2025': // Record not found
-        err = new AppError('Record not found', 404, 'NOT_FOUND');
-        break;
-      case 'P2003': // Foreign key constraint failed
-        err = new AppError('Related record validation failed', 400, 'VALIDATION_ERROR');
-        break;
-      case 'P2001': // Record validation error
-        err = new AppError('Record validation failed', 404, 'NOT_FOUND');
-        break;
+    try {
+      switch (err.code) {
+        case 'P2002': // Unique constraint violation
+          const target = err.meta?.target;
+          const field = Array.isArray(target) ? target.join(', ') : (target && typeof target === 'object' ? Object.keys(target).join(', ') : String(target || 'field'));
+          err = new AppError(`Value for ${field} already exists`, 409, 'ALREADY_EXISTS');
+          break;
+        case 'P2025': // Record not found
+          err = new AppError('Record not found', 404, 'NOT_FOUND');
+          break;
+        case 'P2003': // Foreign key constraint failed
+          err = new AppError('Related record validation failed', 400, 'VALIDATION_ERROR');
+          break;
+        case 'P2001': // Record validation error
+          err = new AppError('Record validation failed', 404, 'NOT_FOUND');
+          break;
+      }
+    } catch (transformErr) {
+      logger.error('Error middleware: failed to transform Prisma error', { original: err.message, transform: transformErr.message });
     }
   }
 

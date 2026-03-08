@@ -3,6 +3,7 @@ const { AppError } = require('../middlewares/error.middleware');
 
 const SELECT = {
   id: true, name: true, nameAr: true, description: true,
+  workshopTypeId: true,
   vehicleType: true, vehicleModel: true, year: true, plateNumber: true,
   servicesOffered: true,
   city: true, latitude: true, longitude: true, serviceRadius: true,
@@ -11,13 +12,15 @@ const SELECT = {
   isAvailable: true, isActive: true, isVerified: true, verifiedAt: true,
   totalJobs: true, averageRating: true, totalReviews: true,
   vendorId: true, createdAt: true, updatedAt: true,
+  workshopType: { select: { id: true, name: true, nameAr: true } },
   services: {
     orderBy: { createdAt: 'asc' },
     select: {
-      id: true, serviceType: true, name: true, nameAr: true,
+      id: true, workshopTypeServiceId: true, serviceType: true, name: true, nameAr: true,
       description: true, price: true, currency: true,
       estimatedDuration: true, isActive: true,
       createdAt: true,
+      workshopTypeService: { select: { id: true, name: true, nameAr: true } },
     },
   },
   vendor: {
@@ -39,9 +42,15 @@ async function getAll(req, res, next) {
     const available = req.query.available;
     const city      = req.query.city;
 
+    const workshopTypeId = req.query.workshopTypeId;
+    const serviceType = req.query.serviceType;
     const where = {
       ...(available !== undefined && { isAvailable: available === 'true' }),
       ...(city && { city: { contains: city } }),
+      ...(workshopTypeId && { workshopTypeId }),
+      ...(serviceType && {
+        services: { some: { serviceType: String(serviceType).toUpperCase(), isActive: true } },
+      }),
       ...(search && {
         OR: [
           { name:         { contains: search } },
@@ -80,6 +89,7 @@ async function create(req, res, next) {
   try {
     const {
       name, nameAr, description,
+      workshopTypeId,
       vehicleType, vehicleModel, year, plateNumber,
       servicesOffered,
       city, latitude, longitude, serviceRadius,
@@ -103,6 +113,7 @@ async function create(req, res, next) {
     const item = await prisma.mobileWorkshop.create({
       data: {
         name, nameAr: nameAr || null, description: description || null,
+        workshopTypeId: workshopTypeId || null,
         vehicleType: vehicleType || null, vehicleModel: vehicleModel || null,
         year: year ? parseInt(year) : null,
         plateNumber: plateNumber || null,
@@ -136,6 +147,7 @@ async function update(req, res, next) {
 
     const {
       name, nameAr, description,
+      workshopTypeId,
       vehicleType, vehicleModel, year, plateNumber,
       servicesOffered,
       city, latitude, longitude, serviceRadius,
@@ -151,6 +163,7 @@ async function update(req, res, next) {
         ...(name             !== undefined && { name }),
         ...(nameAr           !== undefined && { nameAr }),
         ...(description      !== undefined && { description }),
+        ...(workshopTypeId   !== undefined && { workshopTypeId: workshopTypeId || null }),
         ...(vehicleType      !== undefined && { vehicleType }),
         ...(vehicleModel     !== undefined && { vehicleModel }),
         ...(year             !== undefined && { year: year ? parseInt(year) : null }),
@@ -198,7 +211,7 @@ async function remove(req, res, next) {
 async function addService(req, res, next) {
   try {
     const { id: mobileWorkshopId } = req.params;
-    const { serviceType, name, nameAr, description, price, currency, estimatedDuration } = req.body;
+    const { workshopTypeServiceId, serviceType, name, nameAr, description, price, currency, estimatedDuration } = req.body;
 
     if (!name) throw new AppError('name is required', 400, 'VALIDATION_ERROR');
     if (price == null || isNaN(parseFloat(price))) throw new AppError('price is required', 400, 'VALIDATION_ERROR');
@@ -209,6 +222,7 @@ async function addService(req, res, next) {
     const svc = await prisma.mobileWorkshopService.create({
       data: {
         mobileWorkshopId,
+        workshopTypeServiceId: workshopTypeServiceId || null,
         serviceType: serviceType || 'GENERAL',
         name, nameAr: nameAr || null,
         description: description || null,
@@ -226,7 +240,7 @@ async function addService(req, res, next) {
 async function updateService(req, res, next) {
   try {
     const { svcId } = req.params;
-    const { serviceType, name, nameAr, description, price, currency, estimatedDuration, isActive } = req.body;
+    const { workshopTypeServiceId, serviceType, name, nameAr, description, price, currency, estimatedDuration, isActive } = req.body;
 
     const existing = await prisma.mobileWorkshopService.findUnique({ where: { id: svcId } });
     if (!existing) throw new AppError('Service not found', 404, 'NOT_FOUND');
@@ -234,6 +248,7 @@ async function updateService(req, res, next) {
     const svc = await prisma.mobileWorkshopService.update({
       where: { id: svcId },
       data: {
+        ...(workshopTypeServiceId !== undefined && { workshopTypeServiceId: workshopTypeServiceId || null }),
         ...(serviceType       !== undefined && { serviceType }),
         ...(name              !== undefined && { name }),
         ...(nameAr            !== undefined && { nameAr }),

@@ -421,24 +421,22 @@ class AdminFinanceController {
     }
 
     /**
-     * Get refunds list (transactions with type REFUND)
+     * Get refunds list: معاملات محفظة نوع REFUND + مدفوعات حالتها REFUNDED (دفع مُسترد)
      * GET /api/admin/finance/refunds?page=&limit=&status=
      */
     async getRefunds(req, res, next) {
         try {
             const page = Math.max(1, parseInt(req.query.page) || 1);
             const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
-            const status = req.query.status || null;
+            const statusFilter = req.query.status || null;
             const skip = (page - 1) * limit;
 
-            const where = { type: 'REFUND' };
-            if (status) where.status = status;
+            const txWhere = { type: 'REFUND' };
+            if (statusFilter) txWhere.status = statusFilter;
 
-            const [transactions, total] = await Promise.all([
+            const [refundTransactions, refundedPayments] = await Promise.all([
                 prisma.transaction.findMany({
-                    where,
-                    skip,
-                    take: limit,
+                    where: txWhere,
                     orderBy: { createdAt: 'desc' },
                     include: {
                         user: {
@@ -449,7 +447,6 @@ class AdminFinanceController {
                                 profile: { select: { firstName: true, lastName: true } },
                             },
                         },
-                        wallet: { select: { id: true, userId: true } },
                         performedBy: {
                             select: {
                                 id: true,
@@ -459,28 +456,61 @@ class AdminFinanceController {
                         },
                     },
                 }),
-                prisma.transaction.count({ where }),
+                prisma.payment.findMany({
+                    where: { status: 'REFUNDED' },
+                    orderBy: { updatedAt: 'desc' },
+                    include: {
+                        customer: {
+                            select: {
+                                id: true,
+                                email: true,
+                                phone: true,
+                                profile: { select: { firstName: true, lastName: true } },
+                            },
+                        },
+                        invoice: {
+                            select: { id: true, invoiceNumber: true },
+                        },
+                    },
+                }),
             ]);
 
-            const data = transactions.map((t) => ({
+            const fromTx = refundTransactions.map((t) => ({
                 id: t.id,
+                source: 'transaction',
                 transactionNumber: t.transactionNumber,
                 userId: t.userId,
                 user: t.user,
                 amount: Number(t.amount),
-                balanceBefore: Number(t.balanceBefore),
-                balanceAfter: Number(t.balanceAfter),
-                description: t.description,
+                description: t.description || 'Wallet refund',
                 status: t.status,
-                metadata: t.metadata,
-                performedBy: t.performedBy,
                 createdAt: t.createdAt,
+                performedBy: t.performedBy,
             }));
+
+            const fromPayments = refundedPayments.map((p) => ({
+                id: p.id,
+                source: 'payment',
+                transactionNumber: p.paymentNumber,
+                userId: p.customerId,
+                user: p.customer,
+                amount: Number(p.amount),
+                description: p.invoice?.invoiceNumber ? `Refund: Invoice ${p.invoice.invoiceNumber}` : 'Payment refund',
+                status: 'COMPLETED',
+                createdAt: p.processedAt || p.updatedAt || p.createdAt,
+                performedBy: null,
+            }));
+
+            const merged = [...fromTx, ...fromPayments].sort(
+                (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+            );
+            const total = merged.length;
+            const list = merged.slice(skip, skip + limit);
 
             res.json({
                 success: true,
                 data: {
-                    list: data,
+                    list,
                     pagination: {
                         page,
                         limit,

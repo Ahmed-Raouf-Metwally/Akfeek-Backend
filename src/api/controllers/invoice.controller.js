@@ -1,7 +1,7 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
 const { getPlatformCommissionPercent } = require('../../utils/pricing');
-const { emitBookingReady } = require('../../socket');
+const { emitInvoicePaid } = require('../../socket');
 
 /**
  * Get all invoices (Admin). Paginated list with customer/booking summary.
@@ -150,7 +150,7 @@ const invoiceInclude = {
           },
         },
       },
-      // حجوزات السحب/الونش: الفيندور من العرض المختار
+      // حجوزات السحب/الونش أو غسيل السيارة: الفيندور من الوينش أو الفني من العرض المختار
       jobBroadcast: {
         select: {
           id: true,
@@ -182,6 +182,47 @@ const invoiceInclude = {
                   },
                 },
               },
+              technician: {
+                select: {
+                  id: true,
+                  email: true,
+                  phone: true,
+                  profile: {
+                    select: {
+                      firstName: true,
+                      lastName: true,
+                      avatar: true,
+                    },
+                  },
+                },
+              },
+              bidAmount: true,
+            },
+          },
+        },
+      },
+      // حجوزات الورش المتنقلة: الفيندور من الورشة المتنقلة
+      mobileWorkshop: {
+        select: {
+          id: true,
+          name: true,
+          nameAr: true,
+          vendorId: true,
+          vendor: {
+            select: {
+              id: true,
+              userId: true,
+              businessName: true,
+              businessNameAr: true,
+              taxNumber: true,
+              commercialLicense: true,
+              contactPhone: true,
+              contactEmail: true,
+              address: true,
+              city: true,
+              country: true,
+              commissionPercent: true,
+              user: { select: { id: true, email: true, phone: true } },
             },
           },
         },
@@ -209,12 +250,42 @@ const invoiceInclude = {
 function serializeInvoice(inv) {
   if (!inv) return inv;
   const toNum = (v) => (v == null ? v : (typeof v === 'number' ? v : Number(v)));
-  // بيان الفيندور صاحب الفاتورة: ورشة، خدمة، أو ونش سحب
+  // بيان الفيندور صاحب الفاتورة: الورشة المعتمدة أولاً، ثم خدمة، ونش، ورشة متنقلة (حتى لا يظهر "غسيل سيارات" لحجز ورشة معتمدة)
   const vendor =
     inv.booking?.workshop?.vendor ??
     inv.booking?.services?.[0]?.service?.vendor ??
     inv.booking?.jobBroadcast?.offers?.[0]?.winch?.vendor ??
+    inv.booking?.mobileWorkshop?.vendor ??
     null;
+  const vendorSource = inv.booking?.workshop?.vendor
+    ? 'workshop'
+    : inv.booking?.mobileWorkshop?.vendor
+      ? 'mobileWorkshop'
+      : inv.booking?.jobBroadcast?.offers?.[0]?.winch?.vendor
+        ? 'winch'
+        : inv.booking?.services?.[0]?.service?.vendor
+          ? 'service'
+          : null;
+
+  // حجوزات غسيل السيارة: الفني (مقدم الخدمة) من العرض المختار — نعرضه كمعلومات البائع إن لم يكن هناك فيندور
+  const selectedOffer = inv.booking?.jobBroadcast?.offers?.[0];
+  const technician = selectedOffer?.technician ?? null;
+  const technicianName = technician?.profile
+    ? [technician.profile.firstName, technician.profile.lastName].filter(Boolean).join(' ') || '—'
+    : '—';
+  const technicianSummary = technician
+    ? {
+        id: technician.id,
+        email: technician.email,
+        phone: technician.phone,
+        name: technicianName,
+        nameAr: technicianName,
+        avatar: technician.profile?.avatar ?? null,
+        bidAmount: selectedOffer.bidAmount != null ? Number(selectedOffer.bidAmount) : null,
+      }
+    : null;
+
+  // vendorSummary: من الفيندور إن وُجد، وإلا من الفني (غسيل) حتى تظهر "معلومات البائع" ولا تظهر "لم يتم ربط البائع"
   const vendorSummary = vendor
     ? {
         id: vendor.id,
@@ -223,13 +294,28 @@ function serializeInvoice(inv) {
         businessNameAr: vendor.businessNameAr,
         contactPhone: vendor.contactPhone,
         contactEmail: vendor.contactEmail,
+        source: 'vendor',
         ...(vendor.user && { user: vendor.user }),
       }
-    : null;
+    : technicianSummary
+      ? {
+          id: technician.id,
+          userId: technician.id,
+          businessName: technicianName,
+          businessNameAr: technicianName,
+          contactPhone: technician.phone ?? null,
+          contactEmail: technician.email ?? null,
+          source: 'technician',
+        }
+      : null;
+
   return {
     ...inv,
-    vendor,
-    vendorSummary, // بيان الفيندور صاحب الفاتورة
+    vendor: vendor ?? undefined,
+    vendorSource, // 'workshop' | 'mobileWorkshop' | 'winch' | 'service' — للتمييز في الواجهة (الورش المعتمدة ≠ خدمة غسيل)
+    vendorSummary, // بيان البائع/الفيندور أو مقدم الخدمة (الفني في الغسيل)
+    technician: technician ?? undefined,
+    technicianSummary,
     subtotal: toNum(inv.subtotal),
     tax: toNum(inv.tax),
     discount: toNum(inv.discount),
@@ -274,6 +360,49 @@ async function getInvoiceById(req, res, next) {
 }
 
 /**
+ * Get my invoice (Customer) — العميل يجلب فاتورته بالمعرف أو بمعرف الحجز
+ * GET /api/invoices/my/:id  — id = invoice id or booking id
+ */
+async function getMyInvoice(req, res, next) {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    let invoice = await prisma.invoice.findUnique({
+      where: { id },
+      include: invoiceInclude,
+    });
+    if (!invoice) {
+      invoice = await prisma.invoice.findFirst({
+        where: { bookingId: id },
+        include: invoiceInclude,
+      });
+    }
+    if (!invoice) throw new AppError('Invoice not found', 404, 'NOT_FOUND');
+    if (invoice.customerId !== userId) {
+      throw new AppError('Not authorized to view this invoice', 403, 'FORBIDDEN');
+    }
+    res.json({ success: true, data: serializeInvoice(invoice) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** Resolve invoice by id (invoice id or booking id) */
+async function resolveInvoice(id) {
+  let invoice = await prisma.invoice.findUnique({
+    where: { id },
+    include: { customer: { select: { id: true } } },
+  });
+  if (!invoice) {
+    invoice = await prisma.invoice.findFirst({
+      where: { bookingId: id },
+      include: { customer: { select: { id: true } } },
+    });
+  }
+  return invoice;
+}
+
+/**
  * Mark invoice as paid (Admin).
  * PATCH /api/invoices/:id/mark-paid
  * Body: { method?: 'CASH' | 'WALLET' | 'CARD' | 'BANK_TRANSFER' | 'MADA' | 'APPLE_PAY' }
@@ -289,13 +418,7 @@ async function markInvoicePaid(req, res, next) {
       throw new AppError('Invalid payment method', 400, 'VALIDATION_ERROR');
     }
 
-    let invoice = await prisma.invoice.findUnique({ where: { id }, include: { customer: { select: { id: true } } } });
-    if (!invoice) {
-      invoice = await prisma.invoice.findFirst({
-        where: { bookingId: id },
-        include: { customer: { select: { id: true } } },
-      });
-    }
+    const invoice = await resolveInvoice(id);
     if (!invoice) throw new AppError('Invoice not found', 404, 'NOT_FOUND');
     if (invoice.status === 'PAID') {
       return res.json({ success: true, message: 'الفاتورة مدفوعة بالفعل', data: invoice });
@@ -304,9 +427,39 @@ async function markInvoicePaid(req, res, next) {
     const amount = Number(invoice.totalAmount) || 0;
     if (amount <= 0) throw new AppError('Invoice amount must be positive', 400, 'VALIDATION_ERROR');
 
+    const performedById = req.user?.id ?? null;
     const defaultCommissionPercent = await getPlatformCommissionPercent();
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await runPaymentTransaction(invoice, amount, method, performedById, defaultCommissionPercent);
+
+    // بعد الدفع: إشعار الطرفين لفتح التتبع والشات (ورشة متنقلة / ونش / إلخ)
+    try {
+      const booking = await prisma.booking.findUnique({
+        where: { id: invoice.bookingId },
+        select: { id: true, customerId: true, technicianId: true },
+      });
+      if (booking?.customerId && booking?.technicianId) {
+        emitInvoicePaid(booking.id, {
+          customerId: booking.customerId,
+          technicianId: booking.technicianId,
+        });
+      }
+    } catch (_) { /* socket not ready */ }
+
+    res.json({
+      success: true,
+      message: method === 'WALLET' ? 'تم الدفع من المحفظة وتسجيل المعاملة' : 'تم تحديد الفاتورة كمدفوعة',
+      data: result.invoice,
+      payment: result.payment,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** Shared payment transaction (used by Admin mark-paid and Customer pay) */
+async function runPaymentTransaction(invoice, amount, method, performedById, defaultCommissionPercent) {
+  return prisma.$transaction(async (tx) => {
       // 1) إنشاء سجل الدفع دائماً
       const paymentNumber = `PAY-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
       const payment = await tx.payment.create({
@@ -344,11 +497,11 @@ async function markInvoicePaid(req, res, next) {
             amount: -amount,
             balanceBefore,
             balanceAfter,
-            description: `دفع فاتورة ${invoice.invoiceNumber || id}`,
+            description: `دفع فاتورة ${invoice.invoiceNumber || invoice.id}`,
             status: 'COMPLETED',
             paymentId: payment.id,
             metadata: { paymentId: payment.id, invoiceId: invoice.id },
-            performedById: req.user?.id,
+            performedById,
           },
         });
         await tx.wallet.update({
@@ -395,10 +548,10 @@ async function markInvoicePaid(req, res, next) {
             amount: pointsToAward,
             balanceBefore: pointsBefore,
             balanceAfter: pointsAfter,
-            description: `نقاط من دفع الفاتورة ${invoice.invoiceNumber || id}`,
+            description: `نقاط من دفع الفاتورة ${invoice.invoiceNumber || invoice.id}`,
             paymentId: payment.id,
             metadata: { paymentId: payment.id, invoiceId: invoice.id },
-            performedById: req.user?.id,
+            performedById,
           },
         });
         await tx.wallet.update({
@@ -436,6 +589,11 @@ async function markInvoicePaid(req, res, next) {
               },
             },
           },
+          mobileWorkshop: {
+            select: {
+              vendor: { select: { userId: true, commissionPercent: true } },
+            },
+          },
         },
       });
 
@@ -462,6 +620,12 @@ async function markInvoicePaid(req, res, next) {
         vendorUserId = winchVendor.userId;
         vendorCommissionPercent = winchVendor.commissionPercent != null
           ? Number(winchVendor.commissionPercent)
+          : null;
+      } else if (booking?.mobileWorkshop?.vendor) {
+        const mwVendor = booking.mobileWorkshop.vendor;
+        vendorUserId = mwVendor.userId;
+        vendorCommissionPercent = mwVendor.commissionPercent != null
+          ? Number(mwVendor.commissionPercent)
           : null;
       }
       // نسبة عمولة المنصة: المُسجلة وقت الحجز أولاً، ثم المسجلة عند الفيندور، ثم الإعداد العام (لتجنب تغيير الحجوزات القديمة)
@@ -505,7 +669,7 @@ async function markInvoicePaid(req, res, next) {
                 platformCommission,
                 vendorEarnings,
               },
-              performedById: req.user?.id,
+              performedById,
             },
           });
           await tx.wallet.update({
@@ -516,25 +680,54 @@ async function markInvoicePaid(req, res, next) {
       }
 
       return { payment, invoice: updatedInvoice };
-    });
+  });
+}
 
-    // بعد الدفع: فتح السوكت بين العميل وفيندور الوينش (تتبع + محادثة) إن كان الحجز له سائق معيّن
+/**
+ * Customer: pay my invoice (دفع الفاتورة — يفتح التتبع والشات بعد الدفع)
+ * PATCH /api/invoices/my/:id/pay
+ * Body: { method?: 'WALLET' | 'CARD' | 'MADA' | 'APPLE_PAY' }
+ */
+async function customerPayInvoice(req, res, next) {
+  try {
+    const { id } = req.params;
+    const method = (req.body?.method || 'WALLET').toUpperCase();
+    const validMethods = ['WALLET', 'CARD', 'MADA', 'APPLE_PAY', 'BANK_TRANSFER'];
+    if (!validMethods.includes(method)) {
+      throw new AppError('Invalid payment method', 400, 'VALIDATION_ERROR');
+    }
+
+    const invoice = await resolveInvoice(id);
+    if (!invoice) throw new AppError('Invoice not found', 404, 'NOT_FOUND');
+    if (invoice.customerId !== req.user.id) {
+      throw new AppError('Not authorized to pay this invoice', 403, 'FORBIDDEN');
+    }
+    if (invoice.status === 'PAID') {
+      return res.json({ success: true, message: 'الفاتورة مدفوعة بالفعل', data: invoice });
+    }
+
+    const amount = Number(invoice.totalAmount) || 0;
+    if (amount <= 0) throw new AppError('Invoice amount must be positive', 400, 'VALIDATION_ERROR');
+
+    const defaultCommissionPercent = await getPlatformCommissionPercent();
+    const result = await runPaymentTransaction(invoice, amount, method, req.user.id, defaultCommissionPercent);
+
     try {
       const booking = await prisma.booking.findUnique({
         where: { id: invoice.bookingId },
-        select: { customerId: true, technicianId: true },
+        select: { id: true, customerId: true, technicianId: true },
       });
-      if (booking?.technicianId) {
-        emitBookingReady(invoice.bookingId, {
+      if (booking?.customerId && booking?.technicianId) {
+        emitInvoicePaid(booking.id, {
           customerId: booking.customerId,
-          driverId: booking.technicianId,
+          technicianId: booking.technicianId,
         });
       }
     } catch (_) { /* socket not ready */ }
 
     res.json({
       success: true,
-      message: method === 'WALLET' ? 'تم الدفع من المحفظة وتسجيل المعاملة' : 'تم تحديد الفاتورة كمدفوعة',
+      message: method === 'WALLET' ? 'تم الدفع من المحفظة؛ تم تفعيل التتبع والمحادثة' : 'تم الدفع؛ تم تفعيل التتبع والمحادثة',
       data: result.invoice,
       payment: result.payment,
     });
@@ -543,4 +736,4 @@ async function markInvoicePaid(req, res, next) {
   }
 }
 
-module.exports = { getAllInvoices, getInvoiceById, markInvoicePaid };
+module.exports = { getAllInvoices, getInvoiceById, getMyInvoice, markInvoicePaid, customerPayInvoice };

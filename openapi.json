@@ -3,7 +3,7 @@
   "info": {
     "title": "AutoService (أكفيك) API",
     "version": "1.0.0",
-    "description": "\n# AutoService API Documentation\n\nComprehensive car services platform supporting 4 service models:\n1. **Direct Booking** (Fixed Services) - Car Wash, Polishing\n2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement\n3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance\n4. **Ekfik Lifecycle** (Inspection Services) - Valet & Comprehensive Repair\n\n---\n\nمنصة شاملة لخدمات السيارات تدعم 4 نماذج خدمة:\n1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع\n2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر\n3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق\n4. **دورة الفحص** (خدمات الفحص) - الفحص الشامل والإصلاح\n\n---\n\n## Features / المميزات\n\n- ✅ Bilingual support (Arabic/English) - دعم اللغتين\n- ✅ Real-time updates via Socket.io - تحديثات فورية\n- ✅ Multiple payment gateways - بوابات دفع متعددة\n- ✅ Supply chain integration - تكامل سلسلة التوريد\n- ✅ Geolocation-based services - خدمات الموقع الجغرافي\n\n## Postman / اختبار الـ API\n\n- **استيراد المواصفات:** في Postman اختر File → Import ثم إما:\n  - الرابط (مع تشغيل السيرفر): `http://localhost:3000/api-docs.json`\n  - أو الملف: `openapi.json` (من جذر المشروع بعد تشغيل `npm run openapi`)\n- **المصادقة:** في تبويب Authorization اختر Type: Bearer Token وأدخل الـ JWT بعد تسجيل الدخول من `POST /api/auth/login`.\n\n## Authentication / المصادقة\n\nAll protected endpoints require Bearer token in Authorization header:\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n      ",
+    "description": "\n# AutoService API Documentation\n\nComprehensive car services platform supporting 4 service models:\n1. **Direct Booking** (Fixed Services) - Car Wash, Polishing\n2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement\n3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance\n4. **Ekfik Lifecycle** (Inspection Services) - Valet & Comprehensive Repair\n\n---\n\nمنصة شاملة لخدمات السيارات تدعم 4 نماذج خدمة:\n1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع\n2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر\n3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق\n4. **دورة الفحص** (خدمات الفحص) - الفحص الشامل والإصلاح\n\n---\n\n## Features / المميزات\n\n- ✅ Bilingual support (Arabic/English) - دعم اللغتين\n- ✅ Real-time updates via Socket.io - تحديثات فورية\n- ✅ Multiple payment gateways - بوابات دفع متعددة\n- ✅ Supply chain integration - تكامل سلسلة التوريد\n- ✅ Geolocation-based services - خدمات الموقع الجغرافي\n\n## Postman / اختبار الـ API\n\n- **استيراد المواصفات:** في Postman اختر File → Import ثم إما:\n  - الرابط (مع تشغيل السيرفر): `http://localhost:3000/api-docs.json`\n  - أو الملف: `openapi.json` (من جذر المشروع بعد تشغيل `npm run openapi`)\n- **المصادقة:** في تبويب Authorization اختر Type: Bearer Token وأدخل الـ JWT بعد تسجيل الدخول من `POST /api/auth/login`.\n\n## فلو الورش المتنقلة / Mobile Workshop Flow\n\n1. **العميل:** GET `/api/mobile-workshop-types` → اختيار نوع الورشة والخدمة  \n2. **العميل:** POST `/api/mobile-workshop-requests` (vehicleId, workshopTypeId, workshopTypeServiceId?, latitude, longitude, addressText, city) → يُبث الطلب للورش المتطابقة  \n3. **فيندور الورشة:** GET `/api/mobile-workshops/my/requests` → طلبات ورشتي، ثم POST `/api/mobile-workshops/{workshopId}/requests/{requestId}/offer` (price, message)  \n4. **العميل:** GET `/api/mobile-workshop-requests/{id}` (عروض الطلب)، ثم POST `/api/mobile-workshop-requests/{requestId}/select-offer` (offerId) → يُنشأ الحجز والفاتورة  \n5. **العميل:** GET `/api/invoices/my/{id}` ثم PATCH `/api/invoices/my/{id}/pay` (method: CARD أو WALLET) → بعد الدفع يُفعّل التتبع والشات (حدث invoice_paid)\n\n---\n\n## فلو العناية الشاملة / Comprehensive Care Flow\n\n1. **العميل:** GET `/api/services?category=COMPREHENSIVE_CARE` → اختيار خدمة من ورشة عناية شاملة  \n2. **العميل:** POST `/api/bookings` (vehicleId, scheduledDate, scheduledTime, serviceIds) — بدون workshopId → يُنشأ الحجز والفاتورة تلقائياً  \n3. **العميل:** GET `/api/invoices/my/{bookingId}` ثم PATCH `/api/invoices/my/{id}/pay` (method: CARD أو WALLET) → دفع الفاتورة  \n4. **الفيندور:** بعد إتمام الخدمة في الورشة — PATCH `/api/bookings/{id}/complete` → تحديث الحجز إلى مكتمل (COMPLETED)\n\n---\n\n## فلو ورش الغسيل / Car Wash Flow\n\n(مشابه للعناية الشاملة — بدون فني؛ العميل يحجز خدمة غسيل من الفيندور ثم يدفع.)\n\n1. **العميل:** GET `/api/services?category=CLEANING` أو اختيار ورشة غسيل من الفيندورز — ثم اختيار خدمة غسيل  \n2. **العميل:** POST `/api/bookings` (vehicleId, scheduledDate, scheduledTime, serviceIds) — بدون workshopId → يُنشأ الحجز والفاتورة تلقائياً  \n3. **العميل:** GET `/api/invoices/my/{bookingId}` ثم PATCH `/api/invoices/my/{id}/pay` (method: CARD أو WALLET) → دفع الفاتورة  \n4. **الفيندور:** بعد إتمام الخدمة — PATCH `/api/bookings/{id}/complete` → تحديث الحجز إلى مكتمل (COMPLETED)\n\n---\n\n## Authentication / المصادقة\n\nAll protected endpoints require Bearer token in Authorization header:\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n      ",
     "contact": {
       "name": "AutoService API Support",
       "email": "support@autoservice.com",
@@ -593,23 +593,23 @@
     },
     {
       "name": "2. ورش الغسيل (Car Wash)",
-      "description": "حجز غسيل السيارة: طلب → عروض → قبول. Car wash booking (request, offers, accept)."
+      "description": "فلو ورش الغسيل — يشبه العناية الشاملة (بدون فني غسيل). العميل يختار خدمة غسيل من الفيندور، يحجز، يدفع، والفيندور يحدد مكتمل.\n1) العميل: GET /api/services?category=CLEANING أو اختيار ورشة غسيل (فيندور) وخدماتها\n2) العميل: POST /api/bookings (vehicleId, scheduledDate, scheduledTime, serviceIds فقط — بدون workshopId) — يُنشأ الحجز والفاتورة\n3) العميل: GET /api/invoices/my/{bookingId} ثم PATCH /api/invoices/my/{id}/pay (method: CARD|WALLET)\n4) الفيندور: PATCH /api/bookings/{id}/complete (بعد إتمام الخدمة → الحالة COMPLETED)"
     },
     {
       "name": "3. العناية الشاملة (Comprehensive Care)",
-      "description": "حجز العناية الشاملة (POST /api/bookings بدون workshopId) + حجوزات الفيندور (GET /api/vendors/profile/me/comprehensive-care-bookings). Comprehensive care booking."
+      "description": "فلو العناية الشاملة — العميل يحجز خدمة من ورشة عناية شاملة، يدفع الفاتورة، والفيندور يحدد الحجز كمكتمل بعد إتمام الخدمة.\n1) العميل: GET /api/services?category=COMPREHENSIVE_CARE (اختيار خدمة)\n2) العميل: POST /api/bookings (vehicleId, scheduledDate, scheduledTime, serviceIds فقط — بدون workshopId) — يُنشأ الحجز والفاتورة\n3) العميل: GET /api/invoices/my/{bookingId} ثم PATCH /api/invoices/my/{id}/pay (method: CARD|WALLET)\n4) الفيندور: PATCH /api/bookings/{id}/complete (بعد إتمام الخدمة في الورشة → الحالة COMPLETED)\nخدمات الفيندور: GET /api/services?vendorId=me&category=COMPREHENSIVE_CARE"
     },
     {
       "name": "4. الوينشات (Winches/Towing)",
-      "description": "فلو الوينش من الطلب حتى إتمام النقل:\n1) العميل: POST /api/bookings/towing/request (من أين إلى أين)\n2) الوينش: GET /api/winches/my/broadcasts (طلبات قريبة + push عبر Socket winch:new_request)\n3) الوينش: POST /api/winches/my/broadcasts/{broadcastId}/offer (السعر من pricePerKm)\n4) العميل: GET /api/bookings/towing/{broadcastId}/offers ثم POST .../offers/{offerId}/accept\n5) العميل يدفع: PATCH /api/invoices/{id}/mark-paid ثم يتفتح السوكت (تتبع + محادثة)\n6) السائق: GET /api/technician/towing/jobs و PATCH .../jobs/{jobId}/status (EN_ROUTE, ARRIVED, IN_PROGRESS, COMPLETED)\n+ Socket: customer:join_booking / driver:join_booking (بعد الدفع)، driver:location، booking:message"
+      "description": "فلو الوينش — فيندور الوينش هو المتحكم بالكامل (لا دور للفني):\n1) العميل: POST /api/bookings/towing/request (من أين إلى أين)\n2) فيندور الوينش: GET /api/winches/my/broadcasts (طلبات قريبة + push عبر Socket winch:new_request)\n3) فيندور الوينش: POST /api/winches/my/broadcasts/{broadcastId}/offer (السعر من pricePerKm)\n4) العميل: GET /api/bookings/towing/{broadcastId}/offers ثم POST .../offers/{offerId}/accept\n5) أدمن/العميل يدفع: PATCH /api/invoices/{id}/mark-paid — إيداع حصة الفيندور في محفظته وخصم عمولة المنصة (نسبة مسجلة وقت الحجز)، ثم يتفتح السوكت\n6) فيندور الوينش: GET /api/winches/my/jobs و PATCH /api/winches/my/jobs/{jobId}/status (TECHNICIAN_EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED)\n+ Socket: customer:join_booking / driver:join_booking (بعد الدفع)، driver:location، booking:message"
     },
     {
-      "name": "Winch Driver (مهام الوينش)",
-      "description": "السائق (فيندور الوينش): قائمة المهام المحددة له وتحديث الحالة حتى إتمام النقل. GET /api/technician/towing/jobs و PATCH /api/technician/towing/jobs/{jobId}/status"
+      "name": "فيندور الوينش (مهام الوينش)",
+      "description": "فيندور الوينش (VENDOR) هو المتحكم: قائمة مهامه وتحديث الحالة عبر GET /api/winches/my/jobs و PATCH /api/winches/my/jobs/{jobId}/status"
     },
     {
       "name": "5. الورش المتنقلة (Mobile Workshop)",
-      "description": "CRUD الورش المتنقلة + حجز الصيانة المتنقلة (POST /api/mobile-car-service/bookings). Mobile workshop & bookings."
+      "description": "فلو الورش المتنقلة — العميل يطلب، الورش ترسل عروضاً، العميل يختار ثم يدفع فيُفعّل التتبع والشات.\n1) العميل: GET /api/mobile-workshop-types (نوع الورشة + الخدمة)\n2) العميل: POST /api/mobile-workshop-requests (vehicleId, workshopTypeId, workshopTypeServiceId?, latitude, longitude, addressText, city) — يُبث للورش المتطابقة\n3) فيندور الورشة: GET /api/mobile-workshops/my/requests ثم POST /api/mobile-workshops/{workshopId}/requests/{requestId}/offer (price, message)\n4) العميل: GET /api/mobile-workshop-requests/{id} (عروض الطلب) ثم POST .../select-offer (offerId) — يُنشأ الحجز والفاتورة\n5) العميل: GET /api/invoices/my/{id} ثم PATCH /api/invoices/my/{id}/pay (method: CARD|WALLET) — بعد الدفع يُرسل حدث invoice_paid فيفتح التتبع والشات\nCRUD الورش: GET/POST/PUT/DELETE /api/mobile-workshops، أنواع الورش: /api/mobile-workshop-types."
     },
     {
       "name": "Authentication",
@@ -649,11 +649,11 @@
     },
     {
       "name": "Broadcasts",
-      "description": "Emergency job broadcasts (Indrive model) - بث وظائف الطوارئ"
+      "description": "بث الوظائف — بث السحب + طلبات الورش المتنقلة. GET /api/broadcasts?type=towing|mobile-workshop|all. Emergency job broadcasts + mobile workshop requests."
     },
     {
-      "name": "Inspections",
-      "description": "Vehicle inspections (Ekfik model) - فحص المركبات"
+      "name": "Mobile Workshop Requests",
+      "description": "فلو طلبات الورش المتنقلة: POST / (إنشاء طلب)، GET / (طلباتي)، GET /:id (تفاصيل + عروض)، POST /:requestId/select-offer (اختيار عرض → حجز + فاتورة). يكمّل الفلو: دفع الفاتورة PATCH /api/invoices/my/:id/pay ثم التتبع والشات."
     },
     {
       "name": "Supply Requests",
@@ -661,7 +661,7 @@
     },
     {
       "name": "Invoices",
-      "description": "Invoice management - إدارة الفواتير"
+      "description": "إدارة الفواتير — vendorSummary يعرض الفيندور صاحب الفاتورة. العناية الشاملة وورش الغسيل: إنشاء فاتورة تلقائي عند الحجز؛ الدفع: GET /api/invoices/my/{id} ثم PATCH /api/invoices/my/{id}/pay."
     },
     {
       "name": "Payments",
@@ -693,7 +693,7 @@
     },
     {
       "name": "Technician Car Wash",
-      "description": "Car Wash technician endpoints for viewing requests and offering services - نقاط خدمة غسيل السيارات للفنيين"
+      "description": "(اختياري/قديم) نقاط فني الغسيل بالبث — الفلو الحالي لورش الغسيل يشبه العناية الشاملة (حجز مباشر من الفيندور بدون فني)."
     },
     {
       "name": "Admin Settings",
@@ -721,7 +721,7 @@
     },
     {
       "name": "4. الوينشات (Towing/Winch)",
-      "description": "فلو الوينش - العميل يطلب من أين إلى أين، الوينشات القريبة ترسل عروض، العميل يوافق ويدفع ثم يتفتح السوكت للتتبع والمحادثة."
+      "description": "فلو الوينش — فيندور الوينش هو المتحكم. العميل يطلب من أين إلى أين، فيندور الوينش يرسل عرضاً، العميل يوافق ويدفع (إيداع حصة الفيندور وخصم عمولة المنصة) ثم يتفتح السوكت للتتبع."
     },
     {
       "name": "Tracking",
@@ -1752,7 +1752,7 @@
     "/api/bookings": {
       "get": {
         "summary": "List all bookings (Admin)",
-        "description": "Get paginated list of all bookings. Admin only.\nقائمة الحجوزات مع الصفحات - للمسؤول فقط.\n",
+        "description": "Get paginated list of all bookings. Admin only.\nقائمة الحجوزات مع الصفحات - للمسؤول فقط.\nEach item includes providerDisplay (مقدم الخدمة/الفيندور), dateDisplay (التاريخ), timeDisplay (الوقت).\n",
         "tags": [
           "Bookings"
         ],
@@ -1777,7 +1777,9 @@
               "enum": [
                 "PENDING",
                 "CONFIRMED",
-                "IN_PROGRESS",
+                "TECHNICIAN_ASSIGNED",
+                "BROADCASTING",
+                "OFFERS_RECEIVED",
                 "COMPLETED",
                 "CANCELLED"
               ]
@@ -1786,19 +1788,75 @@
         ],
         "responses": {
           "200": {
-            "description": "List of bookings",
+            "description": "List of bookings with provider, date and time for display",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "success": {
-                      "type": "boolean"
+                      "type": "boolean",
+                      "example": true
                     },
                     "data": {
                       "type": "array",
                       "items": {
-                        "type": "object"
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "bookingNumber": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "providerDisplay": {
+                            "type": "string",
+                            "description": "مقدم الخدمة / الفيندور (عربي)"
+                          },
+                          "providerDisplayEn": {
+                            "type": "string",
+                            "description": "Service provider / Vendor (English)"
+                          },
+                          "dateDisplay": {
+                            "type": "string",
+                            "description": "التاريخ للعرض"
+                          },
+                          "timeDisplay": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "الوقت للعرض"
+                          },
+                          "scheduledDate": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "scheduledTime": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "totalPrice": {
+                            "type": "number"
+                          },
+                          "customer": {
+                            "type": "object"
+                          },
+                          "vehicle": {
+                            "type": "object"
+                          },
+                          "workshop": {
+                            "type": "object",
+                            "nullable": true
+                          },
+                          "mobileWorkshop": {
+                            "type": "object",
+                            "nullable": true
+                          }
+                        }
                       }
                     },
                     "pagination": {
@@ -1819,10 +1877,11 @@
       },
       "post": {
         "summary": "Create booking (الورش المعتمدة / العناية الشاملة)",
-        "description": "إنشاء حجز جديد. يُستخدم لنوعين من الخدمات:\n\n**1) الورش المعتمدة (Certified Workshop):** أرسل workshopId + deliveryMethod، ثم إما:\n- **workshopServiceIds** — مصفوفة معرفات خدمات الورشة (من GET /api/workshops/{id}/services)، أو\n- **serviceIds** — مصفوفة معرفات الخدمات من الكتالوج العام.\n\n**2) العناية الشاملة (Comprehensive Care):** أرسل serviceIds فقط (بدون workshopId وبدون deliveryMethod). serviceIds = خدمات تابعة لفيندور عناية شاملة.\n\nCreate a new booking. (1) Certified Workshop — workshopId, deliveryMethod, and either workshopServiceIds (from GET /api/workshops/:id/services) or serviceIds; (2) Comprehensive Care — serviceIds only.\n",
+        "description": "إنشاء حجز جديد. يُستخدم لنوعين من الخدمات:\n\n**1) الورش المعتمدة (Certified Workshop):** أرسل workshopId + deliveryMethod، ثم إما:\n- **workshopServiceIds** — مصفوفة معرفات خدمات الورشة (من GET /api/workshops/{id}/services)، أو\n- **serviceIds** — مصفوفة معرفات الخدمات من الكتالوج العام.\n\n**2) العناية الشاملة (Comprehensive Care):** أرسل serviceIds فقط (بدون workshopId). serviceIds = خدمات تابعة لفيندور عناية شاملة.\n\n**3) ورش الغسيل (Car Wash):** نفس (2) — أرسل serviceIds فقط (خدمات تابعة لفيندور غسيل، من GET /api/services?category=CLEANING أو vendorId).\n\nCreate a new booking. (1) Certified Workshop — workshopId + deliveryMethod + workshopServiceIds or serviceIds; (2) Comprehensive Care; (3) Car Wash — serviceIds only (like 2).\n",
         "tags": [
           "Bookings",
           "1. الورش المعتمدة (Certified Workshops)",
+          "2. ورش الغسيل (Car Wash)",
           "3. العناية الشاملة (Comprehensive Care)"
         ],
         "security": [
@@ -1946,6 +2005,18 @@
                     "addressId": "uuid-العنوان",
                     "notes": "ملاحظات"
                   }
+                },
+                "carWash": {
+                  "summary": "حجز ورش غسيل — Car Wash (مثل العناية الشاملة)",
+                  "value": {
+                    "vehicleId": "uuid-المركبة",
+                    "scheduledDate": "2026-03-15T00:00:00.000Z",
+                    "scheduledTime": "10:00",
+                    "serviceIds": [
+                      "uuid-خدمة-غسيل-من-فيندور-غسيل"
+                    ],
+                    "notes": "غسيل خارجي"
+                  }
                 }
               }
             }
@@ -1967,7 +2038,7 @@
     "/api/bookings/my": {
       "get": {
         "summary": "My bookings (current user)",
-        "description": "Get current user's bookings (customer appointments). Includes workshop/vendor info.\nحجوزاتي - حجوزات المستخدم الحالي مع بيانات الورشة/الفيندور.\n",
+        "description": "Get current user's bookings (customer appointments). Includes workshop/vendor info and display fields.\nحجوزاتي - حجوزات المستخدم الحالي مع مقدم الخدمة/الفيندور والتاريخ والوقت.\n",
         "tags": [
           "Bookings"
         ],
@@ -1991,7 +2062,7 @@
               "enum": [
                 "PENDING",
                 "CONFIRMED",
-                "IN_PROGRESS",
+                "TECHNICIAN_ASSIGNED",
                 "COMPLETED",
                 "CANCELLED"
               ]
@@ -2000,7 +2071,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Current user bookings",
+            "description": "Current user bookings with providerDisplay, dateDisplay, timeDisplay",
             "content": {
               "application/json": {
                 "schema": {
@@ -2012,7 +2083,45 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "type": "object"
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "bookingNumber": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "providerDisplay": {
+                            "type": "string"
+                          },
+                          "providerDisplayEn": {
+                            "type": "string"
+                          },
+                          "dateDisplay": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "timeDisplay": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "scheduledDate": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "scheduledTime": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "totalPrice": {
+                            "type": "number"
+                          }
+                        }
                       }
                     },
                     "pagination": {
@@ -2032,7 +2141,7 @@
     "/api/bookings/{id}": {
       "get": {
         "summary": "Get booking by ID",
-        "description": "Get single booking details. Admin or booking owner.",
+        "description": "Get single booking details. Admin or booking owner.\nيتضمن providerDisplay, dateDisplay, timeDisplay (مقدم الخدمة، التاريخ، الوقت).\n",
         "tags": [
           "Bookings"
         ],
@@ -2054,7 +2163,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Booking details",
+            "description": "Booking details with provider, date, time",
             "content": {
               "application/json": {
                 "schema": {
@@ -2064,7 +2173,51 @@
                       "type": "boolean"
                     },
                     "data": {
-                      "type": "object"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "bookingNumber": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "providerDisplay": {
+                          "type": "string"
+                        },
+                        "providerDisplayEn": {
+                          "type": "string"
+                        },
+                        "dateDisplay": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "timeDisplay": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "customer": {
+                          "type": "object"
+                        },
+                        "vehicle": {
+                          "type": "object"
+                        },
+                        "workshop": {
+                          "type": "object",
+                          "nullable": true
+                        },
+                        "mobileWorkshop": {
+                          "type": "object",
+                          "nullable": true
+                        },
+                        "invoice": {
+                          "type": "object",
+                          "nullable": true
+                        }
+                      }
                     }
                   }
                 }
@@ -2073,6 +2226,9 @@
           },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "description": "Not allowed to view this booking"
           },
           "404": {
             "$ref": "#/components/responses/NotFoundError"
@@ -2155,6 +2311,44 @@
           },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}/complete": {
+      "patch": {
+        "summary": "Mark booking as completed (Vendor)",
+        "description": "الفيندور صاحب الخدمة يحدد الحجز كمكتمل بعد إتمام الخدمة في الورشة (عناية شاملة أو ورش غسيل).\nVendor marks booking as COMPLETED when service is done at venue.\n",
+        "tags": [
+          "Bookings",
+          "2. ورش الغسيل (Car Wash)",
+          "3. العناية الشاملة (Comprehensive Care)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking marked as completed"
+          },
+          "403": {
+            "description": "Not the vendor of this booking"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         }
       }
@@ -2489,6 +2683,218 @@
         }
       }
     },
+    "/api/broadcasts": {
+      "get": {
+        "summary": "List all broadcasts (Admin)",
+        "description": "قائمة بث السحب (JobBroadcast) وطلبات الورش المتنقلة (MobileWorkshopRequest). يمكن تصفية حسب النوع.\nList towing broadcasts and mobile workshop requests. Filter by type.\n",
+        "tags": [
+          "Broadcasts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "نوع البث - towing فقط، mobile-workshop فقط، أو all (الافتراضي)",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "towing",
+                "mobile-workshop",
+                "all"
+              ],
+              "default": "all"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by status (optional)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of broadcasts (each item has type 'towing' or 'mobile_workshop')",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "towing",
+                              "mobile_workshop"
+                            ],
+                            "description": "نوع العنصر"
+                          },
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "customer": {
+                            "type": "object",
+                            "description": "بيانات العميل"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "offersCount": {
+                            "type": "integer"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "locationAddress": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "workshopType": {
+                            "type": "object",
+                            "nullable": true,
+                            "description": "لنوع mobile_workshop"
+                          },
+                          "workshopTypeService": {
+                            "type": "object",
+                            "nullable": true
+                          },
+                          "booking": {
+                            "type": "object",
+                            "nullable": true,
+                            "description": "لنوع towing"
+                          }
+                        }
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/broadcasts/{id}": {
+      "get": {
+        "summary": "Get broadcast by ID (towing or mobile workshop request)",
+        "description": "تفاصيل بث واحد — يدعم معرف بث السحب (JobBroadcast) أو معرف طلب ورشة متنقلة (MobileWorkshopRequest).\nReturns type 'towing' or 'mobile_workshop' with full details.\n",
+        "tags": [
+          "Broadcasts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Broadcast details (towing or mobile_workshop)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "towing",
+                            "mobile_workshop"
+                          ]
+                        },
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "customer": {
+                          "type": "object"
+                        },
+                        "offers": {
+                          "type": "array"
+                        },
+                        "booking": {
+                          "type": "object",
+                          "nullable": true
+                        },
+                        "workshopType": {
+                          "type": "object",
+                          "nullable": true
+                        },
+                        "workshopTypeService": {
+                          "type": "object",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
     "/api/cart": {
       "get": {
         "summary": "Get my cart (with items)",
@@ -2669,11 +3075,12 @@
     },
     "/api/bookings/carwash/request": {
       "post": {
-        "summary": "إنشاء طلب غسيل — Create car wash request",
-        "description": "إنشاء طلب غسيل وبثه للفنيين. ثم GET عروض ثم POST قبول عرض.",
+        "summary": "(اختياري) إنشاء طلب غسيل وبث للفنيين",
+        "description": "لفلو البث مع الفني. الفلو المعتمد لورش الغسيل هو الحجز المباشر من الفيندور عبر POST /api/bookings مع serviceIds (بدون workshopId).\nإنشاء طلب غسيل وبثه للفنيين. ثم GET عروض ثم POST قبول عرض.\n",
         "tags": [
           "2. ورش الغسيل (Car Wash)"
         ],
+        "deprecated": true,
         "security": [
           {
             "bearerAuth": []
@@ -2807,8 +3214,8 @@
     },
     "/api/bookings/carwash/{broadcastId}/offers": {
       "get": {
-        "summary": "Get offers for a car wash broadcast",
-        "description": "Retrieve all offers submitted by technicians for a specific car wash broadcast.\nEach offer includes technician details, bid amount, and estimated arrival time.\n\nالحصول على جميع العروض المقدمة من الفنيين لطلب غسيل السيارة\n",
+        "summary": "(اختياري) عروض طلب الغسيل (فلو البث)",
+        "description": "لفلو البث مع الفني. الفلو المعتمد هو الحجز المباشر (POST /api/bookings + serviceIds).\nRetrieve all offers submitted by technicians for a specific car wash broadcast.\n\nالحصول على جميع العروض المقدمة من الفنيين لطلب غسيل السيارة\n",
         "tags": [
           "2. ورش الغسيل (Car Wash)"
         ],
@@ -2968,16 +3375,18 @@
           "404": {
             "$ref": "#/components/responses/NotFoundError"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/bookings/carwash/{broadcastId}/offers/{offerId}/accept": {
       "post": {
         "summary": "Accept a car wash offer",
-        "description": "Accept a specific offer from a technician for the car wash service.\nThis will assign the technician to the booking and close the broadcast.\n\nقبول عرض محدد من فني لخدمة غسيل السيارة\n",
+        "description": "(اختياري) لفلو البث مع الفني. الفلو المعتمد لورش الغسيل هو الحجز المباشر عبر POST /api/bookings مع serviceIds.\nAccept a specific offer from a technician for the car wash service.\n",
         "tags": [
           "2. ورش الغسيل (Car Wash)"
         ],
+        "deprecated": true,
         "security": [
           {
             "bearerAuth": []
@@ -3102,6 +3511,92 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/comprehensive-care/providers": {
+      "get": {
+        "summary": "Get all comprehensive care providers (Merged Vendors & Workshops)",
+        "description": "Returns a unified list of vendors of type COMPREHENSIVE_CARE and workshops offering care services.",
+        "tags": [
+          "📱 Customer | Comprehensive Care"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "city",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of providers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "nameAr": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "VENDOR",
+                              "WORKSHOP"
+                            ]
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "city": {
+                            "type": "string"
+                          },
+                          "phone": {
+                            "type": "string"
+                          },
+                          "logo": {
+                            "type": "string"
+                          },
+                          "averageRating": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -3317,7 +3812,7 @@
     "/api/invoices/{id}": {
       "get": {
         "summary": "Get invoice by ID",
-        "description": "Get single invoice details by ID or by bookingId. Admin only.\nتفاصيل فاتورة بالمعرف أو معرف الحجز - للمسؤول فقط.\n",
+        "description": "Get single invoice details by ID or by bookingId. Admin only.\nتفاصيل فاتورة بالمعرف أو معرف الحجز - للمسؤول فقط. تتضمن بيانات الفاتورة وبيان الفيندور صاحبها (vendor, vendorSummary) — ورشة أو خدمة أو ونش سحب.\n",
         "tags": [
           "Invoices"
         ],
@@ -3340,7 +3835,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Invoice details - تفاصيل الفاتورة",
+            "description": "Invoice details - تفاصيل الفاتورة (مع vendor و vendorSummary)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3353,7 +3848,9 @@
                       "type": "object",
                       "description": "Invoice with booking",
                       "lineItems": null,
-                      "payments": null
+                      "payments": null,
+                      "vendor": null,
+                      "vendorSummary (بيان الفيندور صاحب الفاتورة)": null
                     }
                   }
                 }
@@ -3369,10 +3866,110 @@
         }
       }
     },
+    "/api/invoices/my/{id}": {
+      "get": {
+        "summary": "Get my invoice (Customer) — جلب فاتورتي",
+        "description": "العميل يجلب فاتورته بالمعرف (invoice id أو booking id). يُستخدم في فلو العناية الشاملة وورش الغسيل بعد الحجز.\nCustomer retrieves their invoice by id or bookingId. Used after booking in Comprehensive Care and Car Wash flows.\n",
+        "tags": [
+          "Invoices",
+          "2. ورش الغسيل (Car Wash)",
+          "3. العناية الشاملة (Comprehensive Care)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Invoice ID or Booking ID — معرف الفاتورة أو الحجز",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice details with vendorSummary"
+          },
+          "403": {
+            "description": "Not authorized to view this invoice"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/invoices/my/{id}/pay": {
+      "patch": {
+        "summary": "Pay my invoice (Customer) — دفع فاتورتي",
+        "description": "العميل يدفع فاتورته (method: CARD أو WALLET). يُستخدم في فلو العناية الشاملة وورش الغسيل بعد الحجز.\nCustomer pays their invoice. Used in Comprehensive Care and Car Wash flows after booking.\n",
+        "tags": [
+          "Invoices",
+          "2. ورش الغسيل (Car Wash)",
+          "3. العناية الشاملة (Comprehensive Care)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Invoice ID — معرف الفاتورة",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "CARD",
+                      "WALLET"
+                    ],
+                    "description": "طريقة الدفع"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment successful — تم الدفع بنجاح"
+          },
+          "400": {
+            "description": "Invalid amount or method"
+          },
+          "403": {
+            "description": "Not authorized to pay this invoice"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
     "/api/invoices/{id}/mark-paid": {
       "patch": {
-        "summary": "Mark invoice as paid (Admin) — لحجز الوينش يفتح السوكت بعد الدفع",
-        "description": "تحديد الفاتورة كمدفوعة. يسجل الدفع ويودع رصيد الفيندور ويمنح النقاط للعميل.\nلحجز السحب/الوينش: بعد الدفع يُرسل حدث booking:ready للعميل والسائق فيفتح السوكت للتتبع والمحادثة.\n",
+        "summary": "Mark invoice as paid (Admin) — إيداع حصة الفيندور وخصم عمولة المنصة",
+        "description": "تحديد الفاتورة كمدفوعة. يسجل الدفع، يودع حصة الفيندور في محفظته ويخصم عمولة المنصة (نسبة مسجلة وقت الحجز — لا تتأثر الحجوزات القديمة بتغيير النسبة)، ويمنح النقاط للعميل.\nلحجز السحب/الوينش: بعد الدفع يُرسل حدث booking:ready للعميل وفيندور الوينش فيفتح السوكت للتتبع والمحادثة.\n",
         "tags": [
           "Invoices",
           "4. الوينشات (Winches/Towing)"
@@ -3592,12 +4189,28 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "status"
-                ],
                 "properties": {
                   "status": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "CONFIRMED",
+                      "PROCESSING",
+                      "SHIPPED",
+                      "DELIVERED",
+                      "CANCELLED",
+                      "REFUNDED"
+                    ],
+                    "description": "حالة الطلب"
+                  },
+                  "paymentStatus": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "PAID",
+                      "FAILED"
+                    ],
+                    "description": "حالة الدفع (أدمن فقط)"
                   }
                 }
               }
@@ -3757,6 +4370,228 @@
           },
           "401": {
             "description": "غير مصرح — Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/mobile-workshop-requests": {
+      "post": {
+        "summary": "Create mobile workshop request (Customer)",
+        "description": "إنشاء طلب ورشة متنقلة. يُبث للورش من نفس النوع والخدمة.\nBody: vehicleId, workshopTypeId, workshopTypeServiceId (optional), latitude, longitude, addressText, city.\n",
+        "tags": [
+          "Mobile Workshop Requests",
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vehicleId",
+                  "workshopTypeId"
+                ],
+                "properties": {
+                  "vehicleId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "workshopTypeId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "workshopTypeServiceId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "addressText": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Request created; workshops notified"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "get": {
+        "summary": "My mobile workshop requests (Customer)",
+        "description": "قائمة طلبات الورش المتنقلة للمستخدم الحالي (العميل).",
+        "tags": [
+          "Mobile Workshop Requests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BROADCASTING",
+                "OFFERS_RECEIVED",
+                "ASSIGNED",
+                "CANCELLED",
+                "EXPIRED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of my requests"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/api/mobile-workshop-requests/{id}": {
+      "get": {
+        "summary": "Get mobile workshop request by ID",
+        "description": "تفاصيل طلب ورشة متنقلة (مع العروض إن وُجدت). للعميل صاحب الطلب.",
+        "tags": [
+          "Mobile Workshop Requests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request details with offers"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/mobile-workshop-requests/{requestId}/select-offer": {
+      "post": {
+        "summary": "Select offer (Customer) — create booking and invoice",
+        "description": "اختيار عرض ورشة متنقلة. يُنشأ الحجز والفاتورة وغرفة المحادثة.\nBody: { offerId }. بعد الدفع يتفعّل التتبع والشات.\n",
+        "tags": [
+          "Mobile Workshop Requests",
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "offerId"
+                ],
+                "properties": {
+                  "offerId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Offer selected; booking and invoice created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "booking": {
+                      "type": "object"
+                    },
+                    "invoice": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         }
       }
@@ -4813,9 +5648,11 @@
     "/api/services": {
       "get": {
         "summary": "Get all services",
-        "description": "Retrieve a list of all available services with filtering",
+        "description": "Retrieve a list of all available services with filtering.\n**ورش الغسيل (Car Wash):** استخدم category=CLEANING لخدمات الغسيل، أو vendorId={id} لخدمات فيندور غسيل معيّن.\n**العناية الشاملة:** استخدم category=COMPREHENSIVE_CARE أو vendorId=me (مع تسجيل دخول الفيندور).\n",
         "tags": [
-          "Services"
+          "Services",
+          "2. ورش الغسيل (Car Wash)",
+          "3. العناية الشاملة (Comprehensive Care)"
         ],
         "security": [
           {
@@ -4833,11 +5670,19 @@
                 "MAINTENANCE",
                 "REPAIR",
                 "EMERGENCY",
-                "INSPECTION",
                 "CUSTOMIZATION",
                 "COMPREHENSIVE_CARE"
               ]
-            }
+            },
+            "description": "CLEANING = خدمات الغسيل، COMPREHENSIVE_CARE = العناية الشاملة"
+          },
+          {
+            "in": "query",
+            "name": "vendorId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "تصفية بخدمات فيندور (uuid) أو \"me\" للفيندور الحالي"
           },
           {
             "in": "query",
@@ -4847,8 +5692,7 @@
               "enum": [
                 "FIXED",
                 "CATALOG",
-                "EMERGENCY",
-                "INSPECTION"
+                "EMERGENCY"
               ]
             }
           },
@@ -5032,10 +5876,506 @@
         }
       }
     },
+    "/api/technical-support-requests": {
+      "post": {
+        "summary": "Submit technical support request (طلب دعم فني)",
+        "description": "المستخدم يقدم طلب دعم فني يتضمن:\nالرقم التسلسلي للسيارة، رقم اللوحة، هل يوجد تأمين واسم شركة التأمين،\nعنوان التسليم، اختياري إذن إصلاح/وثيقة نجم/تقرير مرور، أضرار الحادث، صور السيارة (اختياري).\n",
+        "tags": [
+          "📱 Customer | Technical Support"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vehicleSerialNumber",
+                  "plateNumber",
+                  "deliveryAddress",
+                  "accidentDamages"
+                ],
+                "properties": {
+                  "vehicleSerialNumber": {
+                    "type": "string",
+                    "description": "الرقم التسلسلي للسيارة"
+                  },
+                  "plateNumber": {
+                    "type": "string",
+                    "description": "رقم اللوحة"
+                  },
+                  "hasInsurance": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "insuranceCompany": {
+                    "type": "string",
+                    "description": "اسم شركة التأمين"
+                  },
+                  "deliveryAddress": {
+                    "type": "string",
+                    "description": "عنوان التسليم"
+                  },
+                  "repairAuthUrl": {
+                    "type": "string",
+                    "description": "رابط إذن إصلاح (اختياري)"
+                  },
+                  "najmDocUrl": {
+                    "type": "string",
+                    "description": "رابط وثيقة نجم (اختياري)"
+                  },
+                  "trafficReportUrl": {
+                    "type": "string",
+                    "description": "رابط تقرير مرور (اختياري)"
+                  },
+                  "accidentDamages": {
+                    "type": "string",
+                    "description": "أضرار الحادث"
+                  },
+                  "carImageUrls": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "روابط صور السيارة (اختياري)"
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Request created"
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/my": {
+      "get": {
+        "summary": "Get my technical support requests",
+        "tags": [
+          "📱 Customer | Technical Support"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "ASSIGNED",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of my requests"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/admin/list": {
+      "get": {
+        "summary": "[Admin] List all technical support requests",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "ASSIGNED",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of requests"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/admin/{id}/assign": {
+      "post": {
+        "summary": "[Admin] Assign technician to request",
+        "description": "الأدمن يحدد الفني الذي سيراجع العميل",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "technicianId"
+                ],
+                "properties": {
+                  "technicianId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID الفني"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Technician assigned"
+          },
+          "400": {
+            "description": "Invalid technician or request state"
+          },
+          "404": {
+            "description": "Request not found"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/admin/{id}/status": {
+      "patch": {
+        "summary": "[Admin] Update request status",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "ASSIGNED",
+                      "IN_PROGRESS",
+                      "COMPLETED",
+                      "CANCELLED"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/technicians": {
+      "get": {
+        "summary": "[Admin] List technicians for assign dropdown",
+        "tags": [
+          "⚙️ Admin | Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of technicians (id, email, profile.firstName, profile.lastName)"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/{id}/track": {
+      "get": {
+        "summary": "Get tracking info (technician location) for customer",
+        "description": "العميل يتابع موقع الفني. ثم يتصل بالسوكيت وغرفة tsr لاستقبال التحديثات اللحظية.",
+        "tags": [
+          "📱 Customer | Technical Support"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "request, technician, currentLocation"
+          }
+        }
+      }
+    },
+    "/api/technical-support-requests/{id}": {
+      "get": {
+        "summary": "Get request by ID (owner or admin)",
+        "tags": [
+          "📱 Customer | Technical Support"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request details"
+          },
+          "403": {
+            "description": "Not owner"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/technician/bookings": {
+      "get": {
+        "summary": "Get my assigned bookings (Technician)",
+        "description": "الحجوزات العامة المعينة للفني (غير الونش والغسيل)\nReturns general bookings assigned to the authenticated technician.\n",
+        "tags": [
+          "🔧 Technician | My Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by booking status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "CONFIRMED",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of assigned bookings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/api/technician/technical-support-requests": {
+      "get": {
+        "summary": "Get my assigned technical support requests (Technician)",
+        "description": "طلبات الدعم الفني المعينة للفني المسجل دخوله\nReturns technical support requests assigned to the authenticated technician.\n",
+        "tags": [
+          "🔧 Technician | My Jobs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of assigned support requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
     "/api/technician/carwash/broadcasts": {
       "get": {
-        "summary": "Get active car wash broadcasts",
-        "description": "Fetch all active car wash requests within the technician's service radius.\n\nجلب جميع طلبات غسيل السيارات النشطة في نطاق خدمة الفني\n",
+        "summary": "(اختياري/قديم) طلبات غسيل بالبث للفني",
+        "description": "الفلو المعتمد لورش الغسيل هو الحجز المباشر من الفيندور (POST /api/bookings + serviceIds). هذا الـ endpoint لفلو البث مع الفني إن وُجد.\nFetch all active car wash requests within the technician's service radius.\n",
+        "deprecated": "true\nجلب جميع طلبات غسيل السيارات النشطة في نطاق خدمة الفني",
         "tags": [
           "Technician Car Wash"
         ],
@@ -5129,8 +6469,9 @@
     },
     "/api/technician/carwash/{broadcastId}/offers": {
       "post": {
-        "summary": "Submit an offer for a car wash request",
-        "description": "Submit a price and ETA offer for a specific car wash job broadcast.\n\nتقديم عرض سعر ووقت وصول لطلب غسيل سيارة محدد\n",
+        "summary": "(اختياري/قديم) تقديم عرض لطلب غسيل",
+        "description": "الفلو المعتمد لورش الغسيل هو الحجز المباشر من الفيندور. هذا الـ endpoint لفلو البث مع الفني.\nSubmit a price and ETA offer for a specific car wash job broadcast.\n",
+        "deprecated": "true\nتقديم عرض سعر ووقت وصول لطلب غسيل سيارة محدد",
         "tags": [
           "Technician Car Wash"
         ],
@@ -5200,8 +6541,7 @@
         "summary": "Get active towing broadcasts (for technicians)",
         "description": "قائمة طلبات السحب النشطة التي يمكن للفني المزايدة عليها. ملاحظة - فيندور الوينش يستخدم GET /api/winches/my/broadcasts.",
         "tags": [
-          "Technician Towing",
-          "Winch Driver (مهام الوينش)"
+          "Technician Towing"
         ],
         "security": [
           {
@@ -5403,9 +6743,7 @@
         "summary": "6. قائمة مهام السائق — Get assigned towing jobs",
         "description": "المهام المحددة للسائق (فني أو فيندور ونش) بعد قبول العميل للعرض. يعرض الحجوزات بحالة TECHNICIAN_ASSIGNED أو EN_ROUTE أو ARRIVED أو IN_PROGRESS.\nبعد الدفع يتفتح السوكت بين العميل والسائق للتتبع والمحادثة.\n",
         "tags": [
-          "Technician Towing",
-          "Winch Driver (مهام الوينش)",
-          "4. الوينشات (Winches/Towing)"
+          "Technician Towing"
         ],
         "security": [
           {
@@ -5476,9 +6814,7 @@
         "summary": "6. تحديث حالة المهمة حتى إتمام النقل — Update job status",
         "description": "السائق يحدّث الحالة أثناء تنفيذ المهمة. التسلسل: TECHNICIAN_ASSIGNED -> TECHNICIAN_EN_ROUTE -> TECHNICIAN_ARRIVED -> IN_PROGRESS -> COMPLETED.\nعند COMPLETED تُسجّل completedAt. العميل يستقبل التحديثات عبر Socket (booking:status_changed) إن كان متصلاً.\n",
         "tags": [
-          "Technician Towing",
-          "Winch Driver (مهام الوينش)",
-          "4. الوينشات (Winches/Towing)"
+          "Technician Towing"
         ],
         "security": [
           {
@@ -5535,7 +6871,7 @@
     "/api/bookings/towing/request": {
       "post": {
         "summary": "1. إنشاء طلب سحب (ونش) — Create towing request",
-        "description": "العميل يحدد من أين (pickup) إلى أين (destination). يُنشأ الحجز والبث ويُرسل push للوينشات القريبة عبر Socket (winch:new_request).\nالخطوة التالية: الوينشات ترسل عروض، العميل يستدعي GET offers ثم POST accept.\n",
+        "description": "العميل يحدد موقع الالتقاط (من أين) والجهة/الوجهة (إلى أين) مع إحداثيات كل منهما (latitude, longitude, address).\nالمسافة تُحسب من الإحداثيات، وعندما فيندور الوينش يوافق يُرد عليه السعر المحسوب من (basePrice + مسافة الرحلة × pricePerKm).\nيُنشأ الحجز والبث ويُرسل push للوينشات القريبة عبر Socket (winch:new_request). ثم GET offers ثم POST accept.\n",
         "tags": [
           "4. الوينشات (Winches/Towing)"
         ],
@@ -5563,6 +6899,7 @@
                   },
                   "pickupLocation": {
                     "type": "object",
+                    "description": "موقع الالتقاط — إحداثيات وعنوان (لحساب المسافة والسعر عند موافقة الفيندور)",
                     "required": [
                       "latitude",
                       "longitude",
@@ -5571,11 +6908,13 @@
                     "properties": {
                       "latitude": {
                         "type": "number",
-                        "example": 24.7136
+                        "example": 24.7136,
+                        "description": "خط العرض"
                       },
                       "longitude": {
                         "type": "number",
-                        "example": 46.6753
+                        "example": 46.6753,
+                        "description": "خط الطول"
                       },
                       "address": {
                         "type": "string",
@@ -5585,6 +6924,7 @@
                   },
                   "destinationLocation": {
                     "type": "object",
+                    "description": "الجهة/الوجهة — إحداثيات وعنوان (لحساب مسافة الرحلة والسعر)",
                     "required": [
                       "latitude",
                       "longitude",
@@ -5593,11 +6933,13 @@
                     "properties": {
                       "latitude": {
                         "type": "number",
-                        "example": 24.75
+                        "example": 24.75,
+                        "description": "خط العرض"
                       },
                       "longitude": {
                         "type": "number",
-                        "example": 46.7
+                        "example": 46.7,
+                        "description": "خط الطول"
                       },
                       "address": {
                         "type": "string",
@@ -5822,8 +7164,8 @@
     },
     "/api/bookings/towing/{broadcastId}/offers/{offerId}/accept": {
       "post": {
-        "summary": "4. قبول عرض ونش/فني — Accept winch or technician offer",
-        "description": "العميل يوافق على عرض واحد. يُربط الحجز بالسائق ويُنشأ فاتورة (PENDING). العميل يدفع الفاتورة ثم يتفتح السوكت للتتبع والمحادثة.\nاستخدم data.invoice.id للدفع عبر PATCH /api/invoices/{id}/mark-paid.\n",
+        "summary": "4. قبول عرض الوينش — Accept winch offer",
+        "description": "العميل يوافق على عرض فيندور الوينش. يُربط الحجز بفيندور الوينش ويُسجّل نسبة عمولة المنصة وقت الحجز، ويُنشأ فاتورة (PENDING).\nالدفع: PATCH /api/invoices/{id}/mark-paid — إيداع حصة الفيندور في محفظته وخصم عمولة المنصة (النسبة المسجلة وقت الحجز)، ثم يتفتح السوكت للتتبع. استخدم data.invoice.id.\n",
         "tags": [
           "4. الوينشات (Winches/Towing)"
         ],
@@ -7374,8 +8716,8 @@
     },
     "/api/winches/my/broadcasts": {
       "get": {
-        "summary": "2. طلبات السحب القريبة من ونشي — Get nearby towing requests (Winch vendor)",
-        "description": "فيندور الوينش يستدعي هذا لرؤية الطلبات القريبة من موقع ونشه. يُرسل أيضاً push عبر Socket (حدث winch:new_request) عند إنشاء أي طلب جديد قريب.\nيتطلب تسجيل دخول كـ VENDOR ووجود ونش مرتبط بحسابك. يرجع قائمة مع المسافة وسعرك المقترح (yourPrice من pricePerKm).\n",
+        "summary": "2. طلبات السحب القريبة — Get nearby towing requests (Winch vendor)",
+        "description": "فيندور الوينش (المتحكم بفلو الوينش) يستدعي هذا لرؤية الطلبات القريبة من موقع ونشه. يُرسل أيضاً push عبر Socket (حدث winch:new_request) عند إنشاء أي طلب جديد قريب.\nيتطلب تسجيل دخول كـ VENDOR ووجود ونش مرتبط بحسابك. يرجع قائمة مع المسافة وسعرك المقترح (yourPrice من pricePerKm).\n",
         "tags": [
           "4. الوينشات (Winches/Towing)"
         ],
@@ -7467,8 +8809,8 @@
     },
     "/api/winches/my/broadcasts/{broadcastId}/offer": {
       "post": {
-        "summary": "3. إرسال عرض (الونش يوافق) — Submit winch offer",
-        "description": "الوينش يرسل عرضاً للطلب. السعر يُحسب تلقائياً من basePrice + (مسافة الرحلة × pricePerKm) مع احترام minPrice.\nBody اختياري (مثلاً message فقط). لا حاجة لإرسال السعر — يُحسب من إعدادات الوينش.\n",
+        "summary": "3. إرسال عرض — Submit winch offer (Winch vendor)",
+        "description": "فيندور الوينش يرسل عرضاً للطلب. السعر يُحسب تلقائياً من basePrice + (مسافة الرحلة × pricePerKm) مع احترام minPrice.\nBody اختياري (مثلاً message فقط). لا حاجة لإرسال السعر — يُحسب من إعدادات الوينش.\n",
         "tags": [
           "4. الوينشات (Winches/Towing)"
         ],
@@ -7547,6 +8889,139 @@
           },
           "404": {
             "description": "Broadcast not found or no winch linked"
+          }
+        }
+      }
+    },
+    "/api/winches/my/jobs": {
+      "get": {
+        "summary": "5. مهام فيندور الوينش — Get my assigned jobs (Winch vendor)",
+        "description": "فيندور الوينش (VENDOR) هو المتحكم — قائمة الحجوزات التي قبل العميل عرض هذا الوينش لها.\nيعرض الحجوزات بحالة TECHNICIAN_ASSIGNED أو TECHNICIAN_EN_ROUTE أو ARRIVED أو IN_PROGRESS. بعد الدفع يتفتح السوكت للتتبع والمحادثة.\n",
+        "tags": [
+          "4. الوينشات (Winches/Towing)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة المهام المعينة لفيندور الوينش",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "jobs": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "bookingNumber": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string"
+                              },
+                              "customer": {
+                                "type": "object"
+                              },
+                              "vehicle": {
+                                "type": "object"
+                              },
+                              "pickupLocation": {
+                                "type": "object"
+                              },
+                              "destinationLocation": {
+                                "type": "object"
+                              },
+                              "agreedPrice": {
+                                "type": "number"
+                              },
+                              "scheduledDate": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/winches/my/jobs/{jobId}/status": {
+      "patch": {
+        "summary": "5. تحديث حالة المهمة — Update job status (Winch vendor)",
+        "description": "فيندور الوينش يحدّث الحالة أثناء تنفيذ النقل. التسلسل: TECHNICIAN_ASSIGNED → TECHNICIAN_EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED.\n",
+        "tags": [
+          "4. الوينشات (Winches/Towing)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Booking ID (معرف الحجز)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "TECHNICIAN_EN_ROUTE",
+                      "ARRIVED",
+                      "IN_PROGRESS",
+                      "COMPLETED"
+                    ],
+                    "description": "الحالة التالية في التسلسل (لا استخدام لـ TECHNICIAN_ARRIVED — استخدم ARRIVED)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث الحالة"
+          },
+          "400": {
+            "description": "Invalid status transition"
+          },
+          "403": {
+            "description": "Unauthorized (الحجز غير معيّن لونشك)"
           }
         }
       }
@@ -8797,7 +10272,6 @@
                               "GENERAL",
                               "MAINTENANCE",
                               "REPAIR",
-                              "INSPECTION",
                               "OTHER"
                             ]
                           },

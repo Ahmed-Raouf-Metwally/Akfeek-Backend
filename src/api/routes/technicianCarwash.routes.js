@@ -12,9 +12,11 @@ router.use(requireRole(['TECHNICIAN']));
  * @swagger
  * /api/technician/carwash/broadcasts:
  *   get:
- *     summary: Get active car wash broadcasts
+ *     summary: "(اختياري/قديم) طلبات غسيل بالبث للفني"
  *     description: |
+ *       الفلو المعتمد لورش الغسيل هو الحجز المباشر من الفيندور (POST /api/bookings + serviceIds). هذا الـ endpoint لفلو البث مع الفني إن وُجد.
  *       Fetch all active car wash requests within the technician's service radius.
+ *     deprecated: true
  *       
  *       جلب جميع طلبات غسيل السيارات النشطة في نطاق خدمة الفني
  *     tags: [Technician Car Wash]
@@ -67,9 +69,11 @@ router.get('/broadcasts', technicianCarWashController.getBroadcasts);
  * @swagger
  * /api/technician/carwash/{broadcastId}/offers:
  *   post:
- *     summary: Submit an offer for a car wash request
+ *     summary: "(اختياري/قديم) تقديم عرض لطلب غسيل"
  *     description: |
+ *       الفلو المعتمد لورش الغسيل هو الحجز المباشر من الفيندور. هذا الـ endpoint لفلو البث مع الفني.
  *       Submit a price and ETA offer for a specific car wash job broadcast.
+ *     deprecated: true
  *       
  *       تقديم عرض سعر ووقت وصول لطلب غسيل سيارة محدد
  *     tags: [Technician Car Wash]

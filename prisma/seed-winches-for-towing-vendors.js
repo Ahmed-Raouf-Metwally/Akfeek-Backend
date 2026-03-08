@@ -39,6 +39,9 @@ async function main() {
     const name = vendor.businessNameAr || vendor.businessName || `ونش ${i + 1}`;
     const nameAr = vendor.businessNameAr || `ونش ${vendor.businessName || i + 1}`;
 
+    // إحداثيات الرياض — ضرورية لـ findNearbyWinches واختبار فلو السحب (test:winch-flow)
+    const riyadhLat = 24.7136;
+    const riyadhLng = 46.6753;
     const winch = await prisma.winch.create({
       data: {
         name: name.slice(0, 80),
@@ -48,6 +51,8 @@ async function main() {
         year: new Date().getFullYear(),
         capacity: 3,
         city: vendor.city || 'Riyadh',
+        latitude: riyadhLat,
+        longitude: riyadhLng,
         basePrice: 150,
         pricePerKm: 2.5,
         minPrice: 100,

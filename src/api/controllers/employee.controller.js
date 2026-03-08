@@ -18,53 +18,50 @@ async function listEmployees(req, res, next) {
     if (search) {
       where.email = { contains: search };
     }
+    const vendorIdFilter = req.query.vendorId;
+    if (vendorIdFilter) {
+      where.vendorEmployment = { vendorId: vendorIdFilter };
+    }
 
     const skip = (pageNum - 1) * limitNum;
 
-    let users = [];
-    let total = 0;
-    try {
-      [users, total] = await Promise.all([
-        prisma.user.findMany({
-          where,
-          skip,
-          take: limitNum,
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            email: true,
-            phone: true,
-            status: true,
-            createdAt: true,
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          status: true,
+          createdAt: true,
+          profile: {
+            select: { firstName: true, lastName: true, avatar: true },
           },
-        }),
-        prisma.user.count({ where }),
-      ]);
-    } catch (dbErr) {
-      if (dbErr.code === 'P2001' || (dbErr.message && /enum|EMPLOYEE|unknown column/i.test(dbErr.message))) {
-        logger.warn('listEmployees: DB may need migration for EMPLOYEE role', dbErr.message);
-        return res.json({
-          success: true,
-          data: [],
-          pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 1 },
-        });
-      }
-      throw dbErr;
-    }
+          vendorEmployment: {
+            select: {
+              vendorId: true,
+              vendor: {
+                select: {
+                  id: true,
+                  businessName: true,
+                  businessNameAr: true,
+                  contactEmail: true,
+                  contactPhone: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.user.count({ where }),
+    ]);
 
     const userIds = users.map((u) => u.id);
-    let profileMap = {};
     let permissionsMap = {};
     if (userIds.length > 0) {
-      try {
-        const profiles = await prisma.profile.findMany({
-          where: { userId: { in: userIds } },
-          select: { userId: true, firstName: true, lastName: true, avatar: true },
-        });
-        profiles.forEach((p) => { profileMap[p.userId] = p; });
-      } catch (e) {
-        logger.warn('listEmployees: profiles', e.message);
-      }
       try {
         const perms = await prisma.employeePermission.findMany({
           where: { userId: { in: userIds } },
@@ -85,8 +82,10 @@ async function listEmployees(req, res, next) {
       phone: u.phone,
       status: u.status,
       createdAt: u.createdAt,
-      profile: profileMap[u.id] || null,
+      profile: u.profile || null,
       permissions: permissionsMap[u.id] || [],
+      vendor: u.vendorEmployment?.vendor ?? null,
+      vendorId: u.vendorEmployment?.vendorId ?? null,
     }));
 
     res.json({
@@ -108,7 +107,7 @@ async function listEmployees(req, res, next) {
 /**
  * إضافة موظف أكفيك (أدمن فقط).
  * POST /api/admin/employees
- * Body: email, password, firstName, lastName, phone?
+ * Body: email, password, firstName, lastName, phone?, vendorId? (ربط الموظف بفيندور)
  */
 async function createEmployee(req, res, next) {
   try {
@@ -118,6 +117,7 @@ async function createEmployee(req, res, next) {
     const lastName = req.body.lastName != null ? String(req.body.lastName).trim() : '';
     const phoneRaw = req.body.phone;
     const phone = phoneRaw != null && String(phoneRaw).trim() !== '' ? String(phoneRaw).trim() : null;
+    const vendorId = req.body.vendorId != null ? String(req.body.vendorId).trim() : null;
 
     if (!email || !password || !firstName || !lastName) {
       throw new AppError('email, password, firstName, lastName are required', 400, 'VALIDATION_ERROR');
@@ -131,9 +131,15 @@ async function createEmployee(req, res, next) {
       throw new AppError('البريد الإلكتروني مسجل مسبقاً', 409, 'CONFLICT');
     }
 
+    if (vendorId) {
+      const vendor = await prisma.vendorProfile.findUnique({ where: { id: vendorId } });
+      if (!vendor) {
+        throw new AppError('الفيندور غير موجود', 404, 'NOT_FOUND');
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // إنشاء المستخدم ثم البروفايل على مرحلتين لتفادي مشاكل nested create مع MySQL
     const user = await prisma.user.create({
       data: {
         email,
@@ -154,6 +160,12 @@ async function createEmployee(req, res, next) {
       },
     });
 
+    if (vendorId) {
+      await prisma.vendorEmployee.create({
+        data: { userId: user.id, vendorId },
+      });
+    }
+
     const userWithProfile = await prisma.user.findUnique({
       where: { id: user.id },
       select: {
@@ -163,14 +175,32 @@ async function createEmployee(req, res, next) {
         status: true,
         createdAt: true,
         profile: { select: { firstName: true, lastName: true } },
+        vendorEmployment: {
+          select: {
+            vendorId: true,
+            vendor: {
+              select: {
+                id: true,
+                businessName: true,
+                businessNameAr: true,
+              },
+            },
+          },
+        },
       },
     });
+
+    const data = userWithProfile || user;
+    if (data.vendorEmployment) {
+      data.vendor = data.vendorEmployment.vendor;
+      data.vendorId = data.vendorEmployment.vendorId;
+    }
 
     res.status(201).json({
       success: true,
       message: 'تم إضافة الموظف',
       messageAr: 'تم إضافة الموظف بنجاح',
-      data: userWithProfile || user,
+      data,
     });
   } catch (error) {
     logger.error('createEmployee error:', { message: error.message, stack: error.stack, code: error.code });
@@ -192,6 +222,14 @@ async function getEmployeePermissions(req, res, next) {
         role: true,
         profile: { select: { firstName: true, lastName: true } },
         employeePermissions: { select: { permissionKey: true } },
+        vendorEmployment: {
+          select: {
+            vendorId: true,
+            vendor: {
+              select: { id: true, businessName: true, businessNameAr: true },
+            },
+          },
+        },
       },
     });
     if (!user || user.role !== 'EMPLOYEE') {
@@ -203,6 +241,8 @@ async function getEmployeePermissions(req, res, next) {
       data: {
         ...user,
         permissions,
+        vendor: user.vendorEmployment?.vendor ?? null,
+        vendorId: user.vendorEmployment?.vendorId ?? null,
         allKeys: PERMISSION_KEYS,
         labels: PERMISSION_LABELS,
       },

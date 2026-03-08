@@ -1,4 +1,5 @@
 const prisma = require('../../utils/database/prisma');
+const { getDisplayStatus } = require('../../constants/bookingStatus');
 
 const DAY_NAMES_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_NAMES_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -19,12 +20,73 @@ function getLast7Days(locale = 'en') {
 }
 
 /**
+ * حساب إجمالي عمولة المنصة من الحجوزات المكتملة وطلبات المتجر المدفوعة
+ */
+async function getTotalPlatformCommission(prisma) {
+  const bookingWhere = { status: { in: ['COMPLETED', 'DELIVERED', 'READY_FOR_DELIVERY'] } };
+  const orderWhere = { status: { in: ['DELIVERED', 'SHIPPED'] }, paymentStatus: 'PAID' };
+
+  const [bookings, marketplaceOrders] = await Promise.all([
+    prisma.booking.findMany({
+      where: bookingWhere,
+      select: {
+        platformCommissionPercent: true,
+        subtotal: true,
+        laborFee: true,
+        deliveryFee: true,
+        partsTotal: true,
+        discount: true,
+        workshop: { select: { vendor: { select: { commissionPercent: true } } } },
+        jobBroadcast: {
+          select: {
+            offers: {
+              where: { isSelected: true },
+              take: 1,
+              select: { winch: { select: { vendor: { select: { commissionPercent: true } } } } },
+            },
+          },
+        },
+      },
+    }),
+    prisma.marketplaceOrder.findMany({
+      where: orderWhere,
+      select: {
+        items: { select: { totalPrice: true, vendor: { select: { commissionPercent: true } } } },
+      },
+    }),
+  ]);
+
+  let totalCommission = 0;
+  for (const b of bookings) {
+    const price =
+      Number(b.subtotal ?? 0) +
+      Number(b.laborFee ?? 0) +
+      Number(b.deliveryFee ?? 0) +
+      Number(b.partsTotal ?? 0) -
+      Number(b.discount ?? 0);
+    const commP =
+      b.platformCommissionPercent != null
+        ? Number(b.platformCommissionPercent)
+        : (b.workshop?.vendor?.commissionPercent ?? b.jobBroadcast?.offers?.[0]?.winch?.vendor?.commissionPercent) ?? 0;
+    totalCommission += price * (commP / 100);
+  }
+  for (const o of marketplaceOrders) {
+    for (const it of o.items || []) {
+      const itemTotal = Number(it.totalPrice ?? 0);
+      const pct = it.vendor?.commissionPercent != null ? Number(it.vendor.commissionPercent) : 0;
+      totalCommission += itemTotal * (pct / 100);
+    }
+  }
+  return Math.round(totalCommission * 100) / 100;
+}
+
+/**
  * Dashboard Controller — إحصائيات لوحة التحكم والتحليلات
  */
 class DashboardController {
   /**
    * GET /api/dashboard/stats
-   * إحصائيات عامة + آخر 7 أيام للحجوزات (للرسم) + نشاط وحجوزات حديثة
+   * إحصائيات عامة + آخر 7 أيام للحجوزات (للرسم) + نشاط وحجوزات حديثة + إجمالي عمولة المنصة
    */
   async getStats(req, res, next) {
     try {
@@ -35,6 +97,7 @@ class DashboardController {
         totalRevenueAgg,
         totalVendors,
         totalOrders,
+        totalCommission,
       ] = await Promise.all([
         prisma.user.count(),
         prisma.booking.count(),
@@ -45,6 +108,7 @@ class DashboardController {
         }),
         prisma.vendorProfile.count().catch(() => 0),
         prisma.marketplaceOrder.count().catch(() => 0),
+        getTotalPlatformCommission(prisma),
       ]);
 
       const revenue = Number(totalRevenueAgg._sum?.totalAmount ?? 0);
@@ -83,7 +147,7 @@ class DashboardController {
         },
       });
 
-      const recentBookings = await prisma.booking.findMany({
+      const recentBookingsRaw = await prisma.booking.findMany({
         take: 5,
         orderBy: { createdAt: 'desc' },
         select: {
@@ -95,6 +159,7 @@ class DashboardController {
           vehicle: { select: { vehicleModel: { select: { name: true } } } },
         },
       });
+      const recentBookings = recentBookingsRaw.map((b) => ({ ...b, displayStatus: getDisplayStatus(b.status) }));
 
       res.json({
         success: true,
@@ -106,6 +171,7 @@ class DashboardController {
             totalVendors,
             totalOrders,
             revenue,
+            totalCommission,
           },
           chartWeeklyBookings,
           recentActivity,

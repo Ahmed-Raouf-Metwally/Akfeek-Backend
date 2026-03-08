@@ -141,7 +141,7 @@ function init(server) {
             }
         });
 
-        // محادثة داخل الحجز: العميل أو السائق يرسل رسالة → تُبث للطرف الآخر
+        // محادثة داخل الحجز: العميل أو السائق/الفيندور يرسل رسالة → تُحفظ وتُبث للطرف الآخر
         socket.on('booking:message', async (payload) => {
             const { bookingId, text } = payload || {};
             if (!bookingId || !text || typeof text !== 'string') {
@@ -150,21 +150,29 @@ function init(server) {
             try {
                 const booking = await prisma.booking.findUnique({
                     where: { id: bookingId },
-                    select: { customerId: true, technicianId: true }
+                    select: { customerId: true, technicianId: true, chatRoom: { select: { id: true } } },
+                    include: { mobileWorkshop: { select: { vendor: { select: { userId: true } } } } }
                 });
                 if (!booking) return socket.emit('error', { message: 'Booking not found' });
+                const vendorUserId = booking.mobileWorkshop?.vendor?.userId || null;
                 const isCustomer = booking.customerId === socket.userId;
-                const isDriver = booking.technicianId === socket.userId;
+                const isDriver = booking.technicianId === socket.userId || vendorUserId === socket.userId;
                 if (!isCustomer && !isDriver) {
                     return socket.emit('error', { message: 'Not authorized for this booking' });
                 }
+                const content = text.trim().slice(0, 2000);
                 const msg = {
                     bookingId,
                     from: isCustomer ? 'customer' : 'driver',
                     userId: socket.userId,
-                    text: text.trim().slice(0, 2000),
+                    text: content,
                     timestamp: new Date().toISOString()
                 };
+                if (booking.chatRoom?.id) {
+                    await prisma.chatMessage.create({
+                        data: { roomId: booking.chatRoom.id, userId: socket.userId, content }
+                    });
+                }
                 io.to(`booking:${bookingId}`).emit('booking:message', msg);
             } catch (err) {
                 socket.emit('error', { message: err.message || 'Failed to send message' });

@@ -17,8 +17,11 @@ router.post('/upload-image', requireRole(['ADMIN', 'VENDOR']), uploadServiceImag
  * /api/services:
  *   get:
  *     summary: Get all services
- *     description: Retrieve a list of all available services with filtering
- *     tags: [Services]
+ *     description: |
+ *       Retrieve a list of all available services with filtering.
+ *       **ورش الغسيل (Car Wash):** استخدم category=CLEANING لخدمات الغسيل، أو vendorId={id} لخدمات فيندور غسيل معيّن.
+ *       **العناية الشاملة:** استخدم category=COMPREHENSIVE_CARE أو vendorId=me (مع تسجيل دخول الفيندور).
+ *     tags: [Services, 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -26,12 +29,18 @@ router.post('/upload-image', requireRole(['ADMIN', 'VENDOR']), uploadServiceImag
  *         name: category
  *         schema:
  *           type: string
- *           enum: [CLEANING, MAINTENANCE, REPAIR, EMERGENCY, INSPECTION, CUSTOMIZATION, COMPREHENSIVE_CARE]
+ *           enum: [CLEANING, MAINTENANCE, REPAIR, EMERGENCY, CUSTOMIZATION, COMPREHENSIVE_CARE]
+ *         description: CLEANING = خدمات الغسيل، COMPREHENSIVE_CARE = العناية الشاملة
+ *       - in: query
+ *         name: vendorId
+ *         schema:
+ *           type: string
+ *         description: تصفية بخدمات فيندور (uuid) أو "me" للفيندور الحالي
  *       - in: query
  *         name: type
  *         schema:
  *           type: string
- *           enum: [FIXED, CATALOG, EMERGENCY, INSPECTION]
+ *           enum: [FIXED, CATALOG, EMERGENCY]
  *       - in: query
  *         name: search
  *         schema:

@@ -6,6 +6,7 @@ const router  = express.Router();
 const auth    = require('../middlewares/auth.middleware');
 const role    = require('../middlewares/role.middleware');
 const ctrl    = require('../controllers/mobileWorkshop.controller');
+const reqCtrl = require('../controllers/mobileWorkshopRequest.controller');
 const prisma  = require('../../utils/database/prisma');
 
 const mwUploadDir = path.join(__dirname, '../../../uploads/mobile-workshops');
@@ -46,6 +47,10 @@ router.use(auth);
  *         description: List of mobile workshops
  */
 router.get('/',     ctrl.getAll);
+
+// Vendor: طلبات ورشتي + إرسال عرض (يجب أن تأتي قبل /:id وإلا "my" يُفسَّر كمعرف)
+router.get('/my/requests', role('VENDOR'), reqCtrl.getRequestsForMyWorkshop);
+router.post('/:workshopId/requests/:requestId/offer', role('VENDOR'), reqCtrl.submitOffer);
 
 /**
  * @swagger

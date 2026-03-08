@@ -12,16 +12,22 @@ router.use(requireRole(['CUSTOMER']));
  * @swagger
  * tags:
  *   name: 2. ورش الغسيل (Car Wash)
- *   description: حجز غسيل السيارة: طلب → عروض → قبول.
+ *   description: |
+ *     الفلو المعتمد: مثل العناية الشاملة — العميل يختار خدمة غسيل من الفيندور (GET /api/services?category=CLEANING أو vendorId)،
+ *     يحجز بـ POST /api/bookings (vehicleId, scheduledDate, scheduledTime, serviceIds بدون workshopId)، يدفع الفاتورة، الفيندور يحدد مكتمل.
+ *     الـ endpoints أدناه (request / offers / accept) اختيارية — لفلو البث مع الفني إن وُجد.
  */
 
 /**
  * @swagger
  * /api/bookings/carwash/request:
  *   post:
- *     summary: إنشاء طلب غسيل — Create car wash request
- *     description: إنشاء طلب غسيل وبثه للفنيين. ثم GET عروض ثم POST قبول عرض.
+ *     summary: "(اختياري) إنشاء طلب غسيل وبث للفنيين"
+ *     description: |
+ *       لفلو البث مع الفني. الفلو المعتمد لورش الغسيل هو الحجز المباشر من الفيندور عبر POST /api/bookings مع serviceIds (بدون workshopId).
+ *       إنشاء طلب غسيل وبثه للفنيين. ثم GET عروض ثم POST قبول عرض.
  *     tags: [2. ورش الغسيل (Car Wash)]
+ *     deprecated: true
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -123,10 +129,10 @@ router.post('/request', carWashController.requestWash);
  * @swagger
  * /api/bookings/carwash/{broadcastId}/offers:
  *   get:
- *     summary: Get offers for a car wash broadcast
+ *     summary: "(اختياري) عروض طلب الغسيل (فلو البث)"
  *     description: |
+ *       لفلو البث مع الفني. الفلو المعتمد هو الحجز المباشر (POST /api/bookings + serviceIds).
  *       Retrieve all offers submitted by technicians for a specific car wash broadcast.
- *       Each offer includes technician details, bid amount, and estimated arrival time.
  *       
  *       الحصول على جميع العروض المقدمة من الفنيين لطلب غسيل السيارة
  *     tags: [2. ورش الغسيل (Car Wash)]
@@ -237,6 +243,7 @@ router.post('/request', carWashController.requestWash);
  *         $ref: '#/components/responses/ForbiddenError'
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
+ *     deprecated: true
  */
 router.get('/:broadcastId/offers', carWashController.getOffers);
 
@@ -246,11 +253,10 @@ router.get('/:broadcastId/offers', carWashController.getOffers);
  *   post:
  *     summary: Accept a car wash offer
  *     description: |
+ *       (اختياري) لفلو البث مع الفني. الفلو المعتمد لورش الغسيل هو الحجز المباشر عبر POST /api/bookings مع serviceIds.
  *       Accept a specific offer from a technician for the car wash service.
- *       This will assign the technician to the booking and close the broadcast.
- *       
- *       قبول عرض محدد من فني لخدمة غسيل السيارة
  *     tags: [2. ورش الغسيل (Car Wash)]
+ *     deprecated: true
  *     security:
  *       - bearerAuth: []
  *     parameters:

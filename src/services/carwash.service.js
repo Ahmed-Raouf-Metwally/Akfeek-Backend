@@ -240,18 +240,46 @@ class CarWashService {
                 data: { status: 'TECHNICIAN_SELECTED' }
             });
 
+            const amount = Number(offer.bidAmount) || 0;
+
             // Update booking
             const updatedBooking = await tx.booking.update({
                 where: { id: broadcast.booking.id },
                 data: {
                     technicianId: offer.technicianId,
                     status: 'TECHNICIAN_ASSIGNED',
-                    totalPrice: offer.bidAmount,
-                    subtotal: offer.bidAmount // Assuming flat rate for now
-                    // acceptedAt removed as it's not in schema
+                    totalPrice: amount,
+                    subtotal: amount
                 },
                 include: {
                     technician: { include: { profile: true } }
+                }
+            });
+
+            // إنشاء فاتورة لتمكين الدفع بعد قبول العرض
+            const invNum = `INV-WASH-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+            const invoice = await tx.invoice.create({
+                data: {
+                    invoiceNumber: invNum,
+                    bookingId: updatedBooking.id,
+                    customerId: broadcast.booking.customerId,
+                    subtotal: amount,
+                    tax: 0,
+                    discount: 0,
+                    totalAmount: amount,
+                    paidAmount: 0,
+                    status: 'PENDING'
+                }
+            });
+            await tx.invoiceLineItem.create({
+                data: {
+                    invoiceId: invoice.id,
+                    description: 'Car Wash Service',
+                    descriptionAr: 'خدمة غسيل السيارة',
+                    itemType: 'SERVICE',
+                    quantity: 1,
+                    unitPrice: amount,
+                    totalPrice: amount
                 }
             });
 
@@ -269,7 +297,7 @@ class CarWashService {
                     phone: result.technician.phone,
                     avatar: result.technician.profile.avatar
                 },
-                agreedPrice: result.agreedPrice
+                agreedPrice: Number(result.totalPrice)
             }
         };
     }

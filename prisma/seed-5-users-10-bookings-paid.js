@@ -72,25 +72,46 @@ async function main() {
   for (let u = 0; u < CUSTOMERS.length; u++) {
     const cust = CUSTOMERS[u];
 
-    const user = await prisma.user.upsert({
-      where: { email: cust.email },
-      update: {},
-      create: {
-        email: cust.email,
-        phone: cust.phone,
-        passwordHash: hash,
-        role: 'CUSTOMER',
-        status: 'ACTIVE',
-        emailVerified: true,
-        phoneVerified: true,
-        profile: {
-          create: {
-            firstName: cust.firstName,
-            lastName: cust.lastName,
+    // upsert: إما بالـ email أو بالـ phone لأن الاثنين unique
+    let user = await prisma.user.findFirst({
+      where: { OR: [{ email: cust.email }, { phone: cust.phone }] },
+      include: { profile: true },
+    });
+    if (user) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email: cust.email,
+          phone: cust.phone,
+          passwordHash: hash,
+          role: 'CUSTOMER',
+          status: 'ACTIVE',
+          emailVerified: true,
+          phoneVerified: true,
+          ...(user.profile
+            ? { profile: { update: { firstName: cust.firstName, lastName: cust.lastName } } }
+            : { profile: { create: { firstName: cust.firstName, lastName: cust.lastName } } }),
+        },
+      });
+    } else {
+      user = await prisma.user.create({
+        data: {
+          email: cust.email,
+          phone: cust.phone,
+          passwordHash: hash,
+          role: 'CUSTOMER',
+          status: 'ACTIVE',
+          emailVerified: true,
+          phoneVerified: true,
+          profile: {
+            create: {
+              firstName: cust.firstName,
+              lastName: cust.lastName,
+            },
           },
         },
-      },
-    });
+      });
+    }
     createdUsers.push(user);
     console.log(`  ✅ مستخدم: ${cust.email} (${cust.firstName} ${cust.lastName})`);
 

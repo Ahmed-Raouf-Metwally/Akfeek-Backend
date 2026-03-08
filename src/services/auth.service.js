@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../utils/database/prisma');
 const { AppError } = require('../api/middlewares/error.middleware');
 const logger = require('../utils/logger/logger');
+const { getRoleLabels } = require('../constants/roles');
 
 /**
  * Authentication Service
@@ -264,6 +265,12 @@ class AuthService {
       userWithoutPassword.permissions = (perms || []).map((p) => p.permissionKey);
     }
 
+    try {
+      Object.assign(userWithoutPassword, getRoleLabels(userWithoutPassword.role));
+    } catch (e) {
+      logger.warn('getRoleLabels on login', e.message);
+    }
+
     logger.info(`User logged in: ${user.id} (${user.role})`);
 
     return { user: userWithoutPassword, token };
@@ -394,6 +401,12 @@ class AuthService {
         select: { permissionKey: true },
       });
       user.permissions = (perms || []).map((p) => p.permissionKey);
+    }
+
+    try {
+      Object.assign(user, getRoleLabels(user.role));
+    } catch (e) {
+      logger.warn('getRoleLabels on getUserById', e.message);
     }
 
     return user;

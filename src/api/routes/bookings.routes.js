@@ -4,6 +4,7 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
 const { requireAdminOrPermission } = require('../middlewares/permission.middleware');
 const bookingController = require('../controllers/booking.controller');
+const chatController = require('../controllers/chat.controller');
 
 router.use(authMiddleware);
 
@@ -12,8 +13,8 @@ router.use(authMiddleware);
  * tags:
  *   name: Bookings
  *   description: |
- *     حجز الخدمات — الورش المعتمدة (Certified Workshop) والعناية الشاملة (Comprehensive Care) عبر POST /api/bookings.
- *     ورش الغسيل والوينشات والورش المتنقلة لها اند بوينتات منفصلة (Car Wash, Towing, Mobile Workshop).
+ *     حجز الخدمات — الورش المعتمدة، العناية الشاملة، وورش الغسيل عبر POST /api/bookings (بدون workshopId = حجز خدمة من الفيندور مباشرة).
+ *     الوينشات والورش المتنقلة لها اند بوينتات منفصلة (Towing, Mobile Workshop).
  */
 
 /**
@@ -24,6 +25,7 @@ router.use(authMiddleware);
  *     description: |
  *       Get paginated list of all bookings. Admin only.
  *       قائمة الحجوزات مع الصفحات - للمسؤول فقط.
+ *       Each item includes providerDisplay (مقدم الخدمة/الفيندور), dateDisplay (التاريخ), timeDisplay (الوقت).
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -35,17 +37,35 @@ router.use(authMiddleware);
  *         description: Filter by booking status
  *         schema:
  *           type: string
- *           enum: [PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED]
+ *           enum: [PENDING, CONFIRMED, TECHNICIAN_ASSIGNED, BROADCASTING, OFFERS_RECEIVED, COMPLETED, CANCELLED]
  *     responses:
  *       200:
- *         description: List of bookings
+ *         description: List of bookings with provider, date and time for display
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success: { type: boolean }
- *                 data: { type: array, items: { type: object } }
+ *                 success: { type: boolean, example: true }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string, format: uuid }
+ *                       bookingNumber: { type: string }
+ *                       status: { type: string }
+ *                       providerDisplay: { type: string, description: مقدم الخدمة / الفيندور (عربي) }
+ *                       providerDisplayEn: { type: string, description: Service provider / Vendor (English) }
+ *                       dateDisplay: { type: string, description: التاريخ للعرض }
+ *                       timeDisplay: { type: string, nullable: true, description: الوقت للعرض }
+ *                       scheduledDate: { type: string, format: date-time, nullable: true }
+ *                       scheduledTime: { type: string, nullable: true }
+ *                       totalPrice: { type: number }
+ *                       customer: { type: object }
+ *                       vehicle: { type: object }
+ *                       workshop: { type: object, nullable: true }
+ *                       mobileWorkshop: { type: object, nullable: true }
  *                 pagination: { $ref: '#/components/schemas/Pagination' }
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
@@ -60,8 +80,8 @@ router.get('/', requireAdminOrPermission('bookings'), bookingController.getAllBo
  *   get:
  *     summary: My bookings (current user)
  *     description: |
- *       Get current user's bookings (customer appointments). Includes workshop/vendor info.
- *       حجوزاتي - حجوزات المستخدم الحالي مع بيانات الورشة/الفيندور.
+ *       Get current user's bookings (customer appointments). Includes workshop/vendor info and display fields.
+ *       حجوزاتي - حجوزات المستخدم الحالي مع مقدم الخدمة/الفيندور والتاريخ والوقت.
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -72,17 +92,31 @@ router.get('/', requireAdminOrPermission('bookings'), bookingController.getAllBo
  *         in: query
  *         schema:
  *           type: string
- *           enum: [PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED]
+ *           enum: [PENDING, CONFIRMED, TECHNICIAN_ASSIGNED, COMPLETED, CANCELLED]
  *     responses:
  *       200:
- *         description: Current user bookings
+ *         description: Current user bookings with providerDisplay, dateDisplay, timeDisplay
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
  *                 success: { type: boolean }
- *                 data: { type: array, items: { type: object } }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string, format: uuid }
+ *                       bookingNumber: { type: string }
+ *                       status: { type: string }
+ *                       providerDisplay: { type: string }
+ *                       providerDisplayEn: { type: string }
+ *                       dateDisplay: { type: string, nullable: true }
+ *                       timeDisplay: { type: string, nullable: true }
+ *                       scheduledDate: { type: string, format: date-time, nullable: true }
+ *                       scheduledTime: { type: string, nullable: true }
+ *                       totalPrice: { type: number }
  *                 pagination: { $ref: '#/components/schemas/Pagination' }
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
@@ -94,7 +128,9 @@ router.get('/my', bookingController.getMyBookings);
  * /api/bookings/{id}:
  *   get:
  *     summary: Get booking by ID
- *     description: Get single booking details. Admin or booking owner.
+ *     description: |
+ *       Get single booking details. Admin or booking owner.
+ *       يتضمن providerDisplay, dateDisplay, timeDisplay (مقدم الخدمة، التاريخ، الوقت).
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -105,19 +141,39 @@ router.get('/my', bookingController.getMyBookings);
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200:
- *         description: Booking details
+ *         description: Booking details with provider, date, time
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
  *                 success: { type: boolean }
- *                 data: { type: object }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string, format: uuid }
+ *                     bookingNumber: { type: string }
+ *                     status: { type: string }
+ *                     providerDisplay: { type: string }
+ *                     providerDisplayEn: { type: string }
+ *                     dateDisplay: { type: string, nullable: true }
+ *                     timeDisplay: { type: string, nullable: true }
+ *                     customer: { type: object }
+ *                     vehicle: { type: object }
+ *                     workshop: { type: object, nullable: true }
+ *                     mobileWorkshop: { type: object, nullable: true }
+ *                     invoice: { type: object, nullable: true }
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: Not allowed to view this booking
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  */
+// Chat (عميل + فيندور الورشة المتنقلة) — قبل :id لتفادي التطابق
+router.get('/:bookingId/chat/messages', chatController.getMessages);
+router.post('/:bookingId/chat/messages', chatController.sendMessage);
+
 router.get('/:id', bookingController.getBookingById);
 
 /**
@@ -132,10 +188,12 @@ router.get('/:id', bookingController.getBookingById);
  *       - **workshopServiceIds** — مصفوفة معرفات خدمات الورشة (من GET /api/workshops/{id}/services)، أو
  *       - **serviceIds** — مصفوفة معرفات الخدمات من الكتالوج العام.
  *
- *       **2) العناية الشاملة (Comprehensive Care):** أرسل serviceIds فقط (بدون workshopId وبدون deliveryMethod). serviceIds = خدمات تابعة لفيندور عناية شاملة.
+ *       **2) العناية الشاملة (Comprehensive Care):** أرسل serviceIds فقط (بدون workshopId). serviceIds = خدمات تابعة لفيندور عناية شاملة.
  *
- *       Create a new booking. (1) Certified Workshop — workshopId, deliveryMethod, and either workshopServiceIds (from GET /api/workshops/:id/services) or serviceIds; (2) Comprehensive Care — serviceIds only.
- *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops), 3. العناية الشاملة (Comprehensive Care)]
+ *       **3) ورش الغسيل (Car Wash):** نفس (2) — أرسل serviceIds فقط (خدمات تابعة لفيندور غسيل، من GET /api/services?category=CLEANING أو vendorId).
+ *
+ *       Create a new booking. (1) Certified Workshop — workshopId + deliveryMethod + workshopServiceIds or serviceIds; (2) Comprehensive Care; (3) Car Wash — serviceIds only (like 2).
+ *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops), 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -220,6 +278,14 @@ router.get('/:id', bookingController.getBookingById);
  *                 serviceIds: ["uuid-خدمة-عناية-1", "uuid-خدمة-عناية-2"]
  *                 addressId: "uuid-العنوان"
  *                 notes: "ملاحظات"
+ *             carWash:
+ *               summary: حجز ورش غسيل — Car Wash (مثل العناية الشاملة)
+ *               value:
+ *                 vehicleId: "uuid-المركبة"
+ *                 scheduledDate: "2026-03-15T00:00:00.000Z"
+ *                 scheduledTime: "10:00"
+ *                 serviceIds: ["uuid-خدمة-غسيل-من-فيندور-غسيل"]
+ *                 notes: "غسيل خارجي"
  *     responses:
  *       201:
  *         description: تم إنشاء الحجز بنجاح — Booking created successfully
@@ -276,6 +342,32 @@ router.post('/', bookingController.createBooking);
  *         $ref: '#/components/responses/ForbiddenError'
  */
 router.patch('/:id/status', requireAdminOrPermission('bookings'), bookingController.updateBookingStatus);
+
+/**
+ * @swagger
+ * /api/bookings/{id}/complete:
+ *   patch:
+ *     summary: Mark booking as completed (Vendor)
+ *     description: |
+ *       الفيندور صاحب الخدمة يحدد الحجز كمكتمل بعد إتمام الخدمة في الورشة (عناية شاملة أو ورش غسيل).
+ *       Vendor marks booking as COMPLETED when service is done at venue.
+ *     tags: [Bookings, 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Booking marked as completed
+ *       403:
+ *         description: Not the vendor of this booking
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.patch('/:id/complete', requireRole('VENDOR'), bookingController.completeBookingAsVendor);
 
 // Real-time tracking endpoints (for customers)
 const trackingController = require('../controllers/tracking.controller');
