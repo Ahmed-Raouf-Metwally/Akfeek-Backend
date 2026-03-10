@@ -1,4 +1,4 @@
-const { PrismaClient, VendorType } = require('@prisma/client');
+const { PrismaClient, VendorType, AutoPartRootType } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
 
@@ -1269,11 +1269,12 @@ async function main() {
   for (const cat of categoriesData) {
     const parent = await prisma.autoPartCategory.upsert({
       where: { name: cat.name },
-      update: {},
+      update: { rootType: AutoPartRootType.CAR },
       create: {
         name: cat.name,
         nameAr: cat.nameAr,
         imageUrl: cat.icon,
+        rootType: AutoPartRootType.CAR,
       }
     });
     categoryMap[cat.name] = parent.id;
@@ -1483,13 +1484,13 @@ async function main() {
         selectedParts.push(allAutoParts[Math.floor(Math.random() * allAutoParts.length)]);
       }
 
-      // Calculate totals
+      // Calculate totals — أسعار المنتجات شاملة الضريبة، الإجمالي = المجموع الفرعي + الشحن فقط
       let subtotal = 0;
       selectedParts.forEach(p => subtotal += Number(p.price));
 
       const shippingCost = 35;
-      const tax = subtotal * 0.15;
-      const totalAmount = subtotal + shippingCost + tax;
+      const tax = 0;
+      const totalAmount = subtotal + shippingCost;
 
       const status = orderStatuses[Math.floor(Math.random() * orderStatuses.length)];
       const orderDate = new Date();
@@ -1505,13 +1506,13 @@ async function main() {
           totalAmount,
           status,
           paymentStatus: status === 'PENDING' ? 'PENDING' : 'PAID',
-          paymentMethod: ['CARD', 'APPLE_PAY', 'STC_PAY'][Math.floor(Math.random() * 3)],
+          paymentMethod: ['CARD', 'CASH', 'WALLET'][Math.floor(Math.random() * 3)],
           createdAt: orderDate,
           recipientName: `${customer.profile?.firstName || 'Customer'} ${customer.profile?.lastName || ''}`.trim(),
           recipientPhone: customer.phone,
           shippingAddress: `Building ${Math.floor(Math.random() * 100)}, Street ${Math.floor(Math.random() * 10)}`,
           shippingCity: customer.profile?.addresses?.[0]?.city || 'Riyadh',
-          shippingCountry: 'Saudi Arabia',
+          shippingCountry: 'SA',
           items: {
             create: selectedParts.map(part => ({
               autoPartId: part.id,

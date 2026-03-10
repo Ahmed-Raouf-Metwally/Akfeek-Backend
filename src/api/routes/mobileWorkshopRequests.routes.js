@@ -2,30 +2,18 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middlewares/auth.middleware');
 const role = require('../middlewares/role.middleware');
-const reqCtrl = require('../controllers/mobileWorkshopRequest.controller');
+const ctrl = require('../controllers/mobileWorkshopRequest.controller');
 
 router.use(auth);
 
 /**
  * @swagger
- * tags:
- *   name: Mobile Workshop Requests
- *   description: |
- *     طلبات الورش المتنقلة — العميل ينشئ طلباً، الورش المتطابقة ترسل عروضاً، العميل يختار عرضاً فيُنشأ الحجز والفاتورة.
- *     Mobile workshop request flow: customer creates request → workshops submit offers → customer selects offer → booking + invoice.
- */
-
-/**
- * @swagger
  * /api/mobile-workshop-requests:
  *   post:
- *     summary: Create mobile workshop request (Customer)
- *     description: |
- *       إنشاء طلب ورشة متنقلة. يُبث للورش من نفس النوع والخدمة.
- *       Body: vehicleId, workshopTypeId, workshopTypeServiceId (optional), latitude, longitude, addressText, city.
- *     tags: [Mobile Workshop Requests, 5. الورش المتنقلة (Mobile Workshop)]
- *     security:
- *       - bearerAuth: []
+ *     summary: إنشاء طلب ورشة متنقلة (عميل) — Create mobile workshop request
+ *     description: العميل يرسل طلباً؛ يُبث للورش المتنقلة المتطابقة (نوع الورشة + الخدمة).
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
  *     requestBody:
  *       required: true
  *       content:
@@ -36,84 +24,52 @@ router.use(auth);
  *             properties:
  *               vehicleId: { type: string, format: uuid }
  *               workshopTypeId: { type: string, format: uuid }
- *               workshopTypeServiceId: { type: string, format: uuid, nullable: true }
+ *               workshopTypeServiceId: { type: string, format: uuid }
  *               latitude: { type: number }
  *               longitude: { type: number }
  *               addressText: { type: string }
  *               city: { type: string }
+ *               addressId: { type: string, format: uuid }
  *     responses:
  *       201:
  *         description: Request created; workshops notified
- *       400:
- *         $ref: '#/components/responses/ValidationError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.post('/', reqCtrl.createRequest);
+router.post('/', role('CUSTOMER'), ctrl.createRequest);
 
 /**
  * @swagger
  * /api/mobile-workshop-requests:
  *   get:
- *     summary: My mobile workshop requests (Customer)
- *     description: قائمة طلبات الورش المتنقلة للمستخدم الحالي (العميل).
- *     tags: [Mobile Workshop Requests]
- *     security:
- *       - bearerAuth: []
+ *     summary: طلباتي (عميل) — Get my mobile workshop requests
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
  *     parameters:
- *       - $ref: '#/components/parameters/PageParam'
- *       - $ref: '#/components/parameters/LimitParam'
- *       - name: status
- *         in: query
- *         schema:
- *           type: string
- *           enum: [BROADCASTING, OFFERS_RECEIVED, ASSIGNED, CANCELLED, EXPIRED]
+ *       - in: query
+ *         name: status
+ *         schema: { type: string }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer }
  *     responses:
  *       200:
  *         description: List of my requests
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/', reqCtrl.getMyRequests);
+router.get('/', role('CUSTOMER'), ctrl.getMyRequests);
 
-/**
- * @swagger
- * /api/mobile-workshop-requests/{id}:
- *   get:
- *     summary: Get mobile workshop request by ID
- *     description: تفاصيل طلب ورشة متنقلة (مع العروض إن وُجدت). للعميل صاحب الطلب.
- *     tags: [Mobile Workshop Requests]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: id
- *         in: path
- *         required: true
- *         schema: { type: string, format: uuid }
- *     responses:
- *       200:
- *         description: Request details with offers
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       404:
- *         $ref: '#/components/responses/NotFoundError'
- */
-router.get('/:id', reqCtrl.getRequestById);
-
+// يجب أن تأتي قبل /:id حتى لا يُفسَّر "select-offer" كـ id
 /**
  * @swagger
  * /api/mobile-workshop-requests/{requestId}/select-offer:
  *   post:
- *     summary: Select offer (Customer) — create booking and invoice
- *     description: |
- *       اختيار عرض ورشة متنقلة. يُنشأ الحجز والفاتورة وغرفة المحادثة.
- *       Body: { offerId }. بعد الدفع يتفعّل التتبع والشات.
- *     tags: [Mobile Workshop Requests, 5. الورش المتنقلة (Mobile Workshop)]
- *     security:
- *       - bearerAuth: []
+ *     summary: اختيار عرض (عميل) — Select offer → creates booking & invoice
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
  *     parameters:
- *       - name: requestId
- *         in: path
+ *       - in: path
+ *         name: requestId
  *         required: true
  *         schema: { type: string, format: uuid }
  *     requestBody:
@@ -128,21 +84,25 @@ router.get('/:id', reqCtrl.getRequestById);
  *     responses:
  *       200:
  *         description: Offer selected; booking and invoice created
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean }
- *                 booking: { type: object }
- *                 invoice: { type: object }
- *       400:
- *         $ref: '#/components/responses/ValidationError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       404:
- *         $ref: '#/components/responses/NotFoundError'
  */
-router.post('/:requestId/select-offer', reqCtrl.selectOffer);
+router.post('/:requestId/select-offer', role('CUSTOMER'), ctrl.selectOffer);
+
+/**
+ * @swagger
+ * /api/mobile-workshop-requests/{id}:
+ *   get:
+ *     summary: تفاصيل الطلب مع العروض (عميل) — Get request by ID with offers
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Request details with offers
+ */
+router.get('/:id', role('CUSTOMER'), ctrl.getRequestById);
 
 module.exports = router;

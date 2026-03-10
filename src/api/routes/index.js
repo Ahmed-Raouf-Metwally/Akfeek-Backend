@@ -28,6 +28,7 @@ const winchRoutes = require('./winches.routes');
 // Mobile Workshop routes
 const mobileWorkshopRoutes = require('./mobileWorkshops.routes');
 const mobileWorkshopTypesRoutes = require('./mobileWorkshopTypes.routes');
+const mobileWorkshopRequestsRoutes = require('./mobileWorkshopRequests.routes');
 
 // Auto Parts Marketplace routes
 const vendorRoutes = require('./vendors.routes');
@@ -57,6 +58,7 @@ router.use('/winches', winchRoutes);
 // Mobile Workshops
 router.use('/mobile-workshops', mobileWorkshopRoutes);
 router.use('/mobile-workshop-types', mobileWorkshopTypesRoutes);
+router.use('/mobile-workshop-requests', mobileWorkshopRequestsRoutes);
 
 // تسميات الأدوار للعرض في الواجهة (بدون مفاتيح تقنية مثل users.roles.EMPLOYEE)
 const { ROLE_LABELS } = require('../../constants/roles');
