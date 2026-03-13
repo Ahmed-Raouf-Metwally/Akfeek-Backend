@@ -74,8 +74,72 @@ router.use(authMiddleware);
 router.get('/', workshopController.getAllWorkshops);
 
 // Vendor (CERTIFIED_WORKSHOP) – my workshop & bookings – must be before /:id
+/**
+ * @swagger
+ * /api/workshops/profile/me:
+ *   get:
+ *     summary: Get my workshop (Vendor)
+ *     description: |
+ *       فيندور الورش المعتمدة فقط — يجلب بيانات ورشته المرتبطة بحسابه.
+ *       Certified workshop vendor retrieves their linked workshop.
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Workshop data
+ *       403:
+ *         description: Not a certified workshop vendor
+ *       404:
+ *         description: No workshop linked to your account
+ */
 router.get('/profile/me', requireRole('VENDOR'), workshopController.getMyWorkshop);
 router.put('/profile/me', requireRole('VENDOR'), workshopController.updateMyWorkshop);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me/bookings:
+ *   get:
+ *     summary: Get my workshop bookings (Vendor)
+ *     description: |
+ *       فيندور الورش المعتمدة — قائمة الحجوزات الخاصة بالورشة المعتمدة فقط (للتأكيد والإكمال).
+ *       Certified workshop vendor gets paginated list of bookings for their workshop.
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 10 }
+ *         description: Items per page
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED] }
+ *         description: Filter by booking status
+ *     responses:
+ *       200:
+ *         description: List of bookings with customer, vehicle, pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 data: { type: array, items: { type: object } }
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page: { type: integer }
+ *                     limit: { type: integer }
+ *                     total: { type: integer }
+ *                     totalPages: { type: integer }
+ *       403:
+ *         description: Not a certified workshop vendor
+ */
 router.get('/profile/me/bookings', requireRole('VENDOR'), workshopController.getMyWorkshopBookings);
 // Vendor: إدارة الخدمات (مع الأسعار) — نوع الخدمة، اسم، سعر، مدة، وصف
 router.get('/profile/me/services', requireRole('VENDOR'), workshopServiceController.getMyServices);

@@ -214,7 +214,8 @@ include: {
 }
 
 /**
- * Customer: get single request with offers
+ * Customer: get single request with offers.
+ * مع كل عرض (ورشة وافقت) نرجع قائمة خدمات الورشة بأسعارها — ليختار العميل خدمة واحدة.
  */
 async function getRequestById(requestId, customerId) {
   const request = await prisma.mobileWorkshopRequest.findFirst({
@@ -227,17 +228,13 @@ async function getRequestById(requestId, customerId) {
       offers: {
         include: {
           mobileWorkshop: {
-            select: {
-              id: true,
-              name: true,
-              nameAr: true,
-              imageUrl: true,
-              vehicleImageUrl: true,
-              city: true,
-              averageRating: true,
-              totalJobs: true,
-              totalReviews: true,
+            include: {
               vendor: { select: { businessName: true, businessNameAr: true, user: { select: { phone: true } } } },
+              services: {
+                where: { isActive: true },
+                orderBy: { createdAt: 'asc' },
+                select: { id: true, name: true, nameAr: true, price: true, currency: true, estimatedDuration: true },
+              },
             },
           },
           mobileWorkshopService: { select: { id: true, name: true, nameAr: true, price: true, estimatedDuration: true } },
@@ -247,7 +244,14 @@ async function getRequestById(requestId, customerId) {
     },
   });
   if (!request) throw new AppError('Request not found', 404, 'NOT_FOUND');
-  return request;
+  // تنسيق العروض: إضافة services للورشة (قائمة خدمات بأسعارها) إن لم تكن مضمّنة
+  const offers = (request.offers || []).map((o) => ({
+    ...o,
+    price: Number(o.price),
+    acceptOnly: Number(o.price) === 0 && !o.mobileWorkshopServiceId,
+    workshopServices: o.mobileWorkshop?.services || [],
+  }));
+  return { ...request, offers };
 }
 
 /**
@@ -259,11 +263,11 @@ async function getRequestsForMyWorkshop(vendorUserId) {
     include: { mobileWorkshop: { select: { id: true, workshopTypeId: true, services: { where: { isActive: true }, select: { workshopTypeServiceId: true, serviceType: true } } } } },
   });
   if (!vendor?.mobileWorkshop) {
-    return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    return { data: [], myWorkshopId: null, pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   }
   const mw = vendor.mobileWorkshop;
   if (!mw.workshopTypeId) {
-    return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    return { data: [], myWorkshopId: mw.id, pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   }
 
   const myTypeServiceIds = (mw.services || []).map((s) => s.workshopTypeServiceId).filter(Boolean);
@@ -293,14 +297,19 @@ async function getRequestsForMyWorkshop(vendorUserId) {
     },
   });
 
-  return { data: requests, pagination: { page: 1, limit: 50, total: requests.length, totalPages: 1 } };
+  return {
+    data: requests,
+    myWorkshopId: mw.id,
+    pagination: { page: 1, limit: 50, total: requests.length, totalPages: 1 },
+  };
 }
 
 /**
- * Vendor: submit offer (accept request with price)
+ * Vendor: accept request (موافق على الطلب) — بدون سعر؛ العميل لاحقاً يختار خدمة من قائمة خدمات الورشة بأسعارها.
+ * Body اختياري: message فقط. إذا أُرسل price يصبح سلوك "عرض بسعر مخصص" (للتوافق مع القديم).
  */
 async function submitOffer(mobileWorkshopId, requestId, vendorUserId, data) {
-  const { price, message, mobileWorkshopServiceId } = data;
+  const { price, message, mobileWorkshopServiceId } = data || {};
   const workshop = await prisma.mobileWorkshop.findFirst({
     where: { id: mobileWorkshopId },
     include: { vendor: true, services: { where: { isActive: true } } },
@@ -323,19 +332,28 @@ async function submitOffer(mobileWorkshopId, requestId, vendorUserId, data) {
   if (request.workshopTypeId !== workshop.workshopTypeId) {
     throw new AppError('Your workshop type does not match this request', 400, 'INVALID_TYPE');
   }
-  const workshopService = request.workshopTypeServiceId
-    ? workshop.services.find((s) => s.workshopTypeServiceId === request.workshopTypeServiceId)
-    : workshop.services.find((s) => s.serviceType === request.serviceType);
-  if (!workshopService) throw new AppError('Your workshop does not offer this service', 400, 'INVALID_SERVICE');
 
   const existingOffer = request.offers && request.offers[0];
   if (existingOffer) throw new AppError('You already submitted an offer for this request', 400, 'DUPLICATE_OFFER');
 
-  let finalPrice = price != null ? Number(price) : null;
-  let finalServiceId = mobileWorkshopServiceId || workshopService.id;
-  const estimatedMinutes = workshopService.estimatedDuration;
-  if (finalPrice == null) finalPrice = Number(workshopService.price);
-  if (finalPrice < 0) throw new AppError('Valid price is required', 400, 'VALIDATION_ERROR');
+  const isAcceptOnly = price == null && !mobileWorkshopServiceId;
+  let finalPrice = 0;
+  let finalServiceId = null;
+  let estimatedMinutes = null;
+
+  if (isAcceptOnly) {
+    // موافقة فقط — العميل لاحقاً يختار خدمة من خدمات الورشة
+    finalPrice = 0;
+  } else {
+    const workshopService = request.workshopTypeServiceId
+      ? workshop.services.find((s) => s.workshopTypeServiceId === request.workshopTypeServiceId)
+      : workshop.services.find((s) => s.serviceType === request.serviceType);
+    if (!workshopService) throw new AppError('Your workshop does not offer this service', 400, 'INVALID_SERVICE');
+    finalServiceId = mobileWorkshopServiceId || workshopService.id;
+    estimatedMinutes = workshopService.estimatedDuration;
+    finalPrice = price != null ? Number(price) : Number(workshopService.price);
+    if (finalPrice < 0) throw new AppError('Valid price is required', 400, 'VALIDATION_ERROR');
+  }
 
   const offer = await prisma.mobileWorkshopOffer.create({
     data: {
@@ -344,7 +362,7 @@ async function submitOffer(mobileWorkshopId, requestId, vendorUserId, data) {
       mobileWorkshopServiceId: finalServiceId,
       price: finalPrice,
       currency: workshop.currency || 'SAR',
-      message: message || null,
+      message: message != null ? message : (isAcceptOnly ? 'موافق على الطلب' : null),
       estimatedMinutes,
       status: 'PENDING',
     },
@@ -362,31 +380,61 @@ async function submitOffer(mobileWorkshopId, requestId, vendorUserId, data) {
     },
   });
 
-  // Update request status if we have offers
   await prisma.mobileWorkshopRequest.update({
     where: { id: requestId },
     data: { status: 'OFFERS_RECEIVED' },
   });
 
-  // Notify customer
   try {
     emitNotification(request.customerId, {
       type: 'MOBILE_WORKSHOP_OFFER',
-      title: 'عرض جديد من ورشة متنقلة',
-      titleAr: 'عرض جديد من ورشة متنقلة',
-      message: `${workshop.name} عرضت سعر ${finalPrice} ${workshop.currency || 'SAR'}`,
+      title: isAcceptOnly ? 'ورشة وافقت على طلبك' : 'عرض جديد من ورشة متنقلة',
+      titleAr: isAcceptOnly ? 'ورشة وافقت على طلبك' : 'عرض جديد من ورشة متنقلة',
+      message: isAcceptOnly
+        ? `${workshop.nameAr || workshop.name} وافقت على الطلب — اختر خدمة من قائمة الخدمات`
+        : `${workshop.nameAr || workshop.name} عرضت سعر ${finalPrice} ${workshop.currency || 'SAR'}`,
       requestId,
       offerId: offer.id,
     });
   } catch (_) {}
 
-  return { offer: { ...offer, price: Number(offer.price) } };
+  return { offer: { ...offer, price: Number(offer.price), acceptOnly: isAcceptOnly } };
 }
 
 /**
- * Customer: select an offer → create Booking, Invoice, ChatRoom; reject other offers
+ * Vendor: reject request (رفض الطلب) — الطلب يختفي من قائمة طلباته
  */
-async function selectOffer(requestId, offerId, customerId) {
+async function rejectRequest(mobileWorkshopId, requestId, vendorUserId) {
+  const workshop = await prisma.mobileWorkshop.findFirst({
+    where: { id: mobileWorkshopId },
+    include: { vendor: true },
+  });
+  if (!workshop || workshop.vendor?.userId !== vendorUserId) {
+    throw new AppError('Mobile workshop not found or not yours', 404, 'NOT_FOUND');
+  }
+  const request = await prisma.mobileWorkshopRequest.findUnique({
+    where: { id: requestId },
+    include: { rejections: { where: { mobileWorkshopId } } },
+  });
+  if (!request) throw new AppError('Request not found', 404, 'NOT_FOUND');
+  if (request.status !== 'BROADCASTING') {
+    throw new AppError('Request is no longer accepting responses', 400, 'INVALID_STATUS');
+  }
+  if (request.rejections?.length > 0) {
+    return { message: 'Already rejected', messageAr: 'تم رفض هذا الطلب مسبقاً' };
+  }
+  await prisma.mobileWorkshopRequestRejection.create({
+    data: { requestId, mobileWorkshopId },
+  });
+  return { message: 'Request rejected', messageAr: 'تم رفض الطلب' };
+}
+
+/**
+ * Customer: select an offer (وربما خدمة معينة من الورشة) → create Booking, Invoice, ChatRoom.
+ * إذا العرض "موافقة فقط" (price=0) يجب إرسال mobileWorkshopServiceId ويُستخدم سعر الخدمة.
+ */
+async function selectOffer(requestId, offerId, customerId, body = {}) {
+  const { mobileWorkshopServiceId: chosenServiceId } = body;
   const request = await prisma.mobileWorkshopRequest.findFirst({
     where: { id: requestId, customerId },
     include: {
@@ -417,9 +465,21 @@ async function selectOffer(requestId, offerId, customerId) {
   const workshop = offer.mobileWorkshop;
   if (!workshop || !workshop.vendor) throw new AppError('Workshop data invalid', 400, 'INVALID_OFFER');
 
+  const isAcceptOnly = Number(offer.price) === 0 && !offer.mobileWorkshopServiceId;
+  let serviceToUse = offer.mobileWorkshopService;
+  let agreedPrice = Number(offer.price);
+
+  if (chosenServiceId) {
+    const svc = (workshop.services || []).find((s) => s.id === chosenServiceId);
+    if (!svc) throw new AppError('Service not found or not from this workshop', 400, 'VALIDATION_ERROR');
+    serviceToUse = svc;
+    agreedPrice = Number(svc.price);
+  } else if (isAcceptOnly) {
+    throw new AppError('يجب اختيار خدمة من قائمة خدمات الورشة (mobileWorkshopServiceId)', 400, 'VALIDATION_ERROR');
+  }
+
   const commissionPercent = await getPlatformCommissionPercent();
   const vendorCommission = (workshop.vendor.commissionPercent != null) ? Number(workshop.vendor.commissionPercent) : commissionPercent;
-  const agreedPrice = Number(offer.price);
   const bookingNumber = await generateBookingNumber();
 
   const result = await prisma.$transaction(async (tx) => {
@@ -427,6 +487,12 @@ async function selectOffer(requestId, offerId, customerId) {
       where: { requestId },
       data: { status: offerId === offer.id ? 'ACCEPTED' : 'REJECTED' },
     });
+    if (offerId === offer.id && chosenServiceId && isAcceptOnly) {
+      await tx.mobileWorkshopOffer.update({
+        where: { id: offer.id },
+        data: { mobileWorkshopServiceId: chosenServiceId, price: agreedPrice },
+      });
+    }
     await tx.mobileWorkshopRequest.update({
       where: { id: requestId },
       data: { status: 'ASSIGNED' },
@@ -447,7 +513,7 @@ async function selectOffer(requestId, offerId, customerId) {
         mobileWorkshopRequestId: request.id,
         mobileWorkshopOfferId: offer.id,
         technicianId: workshop.vendor.userId,
-        status: 'TECHNICIAN_ASSIGNED', // العميل اختار العرض = تم تعيين الورشة (بانتظار الدفع)
+        status: 'TECHNICIAN_ASSIGNED',
         subtotal: agreedPrice,
         laborFee: 0,
         deliveryFee: 0,
@@ -459,11 +525,11 @@ async function selectOffer(requestId, offerId, customerId) {
         metadata: { fromMobileWorkshopRequest: true, offerId: offer.id },
         services: {
           create: {
-            mobileWorkshopServiceId: offer.mobileWorkshopServiceId || undefined,
+            mobileWorkshopServiceId: serviceToUse?.id || undefined,
             quantity: 1,
             unitPrice: agreedPrice,
             totalPrice: agreedPrice,
-            estimatedMinutes: offer.estimatedMinutes ?? undefined,
+            estimatedMinutes: serviceToUse?.estimatedDuration ?? offer.estimatedMinutes ?? undefined,
           },
         },
       },
@@ -490,8 +556,8 @@ async function selectOffer(requestId, offerId, customerId) {
     await tx.invoiceLineItem.create({
       data: {
         invoiceId: invoice.id,
-        description: offer.mobileWorkshopService?.name || `Mobile workshop - ${request.serviceType}`,
-        descriptionAr: offer.mobileWorkshopService?.nameAr || `ورشة متنقلة - ${request.serviceType}`,
+        description: serviceToUse?.name || offer.mobileWorkshopService?.name || `Mobile workshop - ${request.serviceType}`,
+        descriptionAr: serviceToUse?.nameAr || offer.mobileWorkshopService?.nameAr || `ورشة متنقلة - ${request.serviceType}`,
         itemType: 'SERVICE',
         quantity: 1,
         unitPrice: agreedPrice,
@@ -549,5 +615,6 @@ module.exports = {
   getRequestById,
   getRequestsForMyWorkshop,
   submitOffer,
+  rejectRequest,
   selectOffer,
 };

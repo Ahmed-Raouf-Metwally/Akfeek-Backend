@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تفاصيل البث — أكفيك</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden; }
+    .header { background: #1976d2; color: #fff; padding: 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 1.35rem; }
+    .form { padding: 20px; border-bottom: 1px solid #eee; }
+    .form label { display: block; margin-bottom: 6px; font-weight: 600; color: #333; }
+    .form input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; font-size: 1rem; }
+    .form button { background: #1976d2; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; cursor: pointer; width: 100%; }
+    .form button:hover { background: #1565c0; }
+    .content { padding: 20px; }
+    .section { margin-bottom: 20px; }
+    .section h2 { margin: 0 0 10px; font-size: 1rem; color: #1976d2; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+    .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+    .row .label { color: #666; }
+    .row .value { font-weight: 500; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; }
+    .badge-broadcasting { background: #e3f2fd; color: #1565c0; }
+    .badge-selected { background: #e8f5e9; color: #2e7d32; }
+    .error { background: #ffebee; color: #c62828; padding: 12px; border-radius: 8px; margin: 12px 0; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>تفاصيل البث — طلب السحب</h1>
+    </div>
+    <div class="form">
+      <label for="apiBase">رابط الـ API (مثال: http://localhost:3000)</label>
+      <input type="text" id="apiBase" value="http://localhost:3000" placeholder="http://localhost:3000">
+      <label for="broadcastId">معرف البث (Broadcast ID)</label>
+      <input type="text" id="broadcastId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      <label for="token">رمز الدخول (Bearer Token)</label>
+      <input type="password" id="token" placeholder="JWT للعميل صاحب الطلب">
+      <button type="button" id="fetchBtn">عرض التفاصيل</button>
+    </div>
+    <div id="errorBox" class="error hidden"></div>
+    <div id="content" class="content hidden"></div>
+  </div>
+
+  <script>
+    const apiBaseInput = document.getElementById('apiBase');
+    const broadcastIdInput = document.getElementById('broadcastId');
+    const tokenInput = document.getElementById('token');
+    const fetchBtn = document.getElementById('fetchBtn');
+    const errorBox = document.getElementById('errorBox');
+    const contentDiv = document.getElementById('content');
+
+    // استخراج broadcastId من الرابط إن وُجد
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('broadcastId')) {
+      broadcastIdInput.value = params.get('broadcastId');
+    }
+
+    fetchBtn.addEventListener('click', async () => {
+      const base = (apiBaseInput.value || '').replace(/\/$/, '');
+      const broadcastId = (broadcastIdInput.value || '').trim();
+      const token = (tokenInput.value || '').trim();
+
+      errorBox.classList.add('hidden');
+      contentDiv.classList.add('hidden');
+
+      if (!broadcastId) {
+        showError('أدخل معرف البث (Broadcast ID).');
+        return;
+      }
+      if (!token) {
+        showError('أدخل رمز الدخول (JWT) للعميل صاحب الطلب.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${base}/api/bookings/towing/${encodeURIComponent(broadcastId)}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          showError(json.error || json.message || `خطأ ${res.status}`);
+          return;
+        }
+        if (!json.success || !json.data) {
+          showError(json.message || 'لا توجد بيانات.');
+          return;
+        }
+        renderDetails(json.data);
+        contentDiv.classList.remove('hidden');
+      } catch (e) {
+        showError('فشل الاتصال: ' + (e.message || 'تحقق من الرابط و CORS'));
+      }
+    });
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.classList.remove('hidden');
+    }
+
+    function renderDetails(d) {
+      const statusClass = d.status === 'BROADCASTING' ? 'badge-broadcasting' : 'badge-selected';
+      const vehicle = d.booking?.vehicle;
+      const vehicleText = vehicle
+        ? [vehicle.plateNumber, vehicle.brandAr || vehicle.brand, vehicle.modelAr || vehicle.model].filter(Boolean).join(' — ')
+        : '—';
+
+      contentDiv.innerHTML = `
+        <div class="section">
+          <h2>حالة البث</h2>
+          <div class="row"><span class="label">المعرف</span><span class="value">${escapeHtml(d.id)}</span></div>
+          <div class="row"><span class="label">الحالة</span><span class="value"><span class="badge ${statusClass}">${escapeHtml(d.status)}</span></span></div>
+          <div class="row"><span class="label">ينتهي البث في</span><span class="value">${d.broadcastUntil ? new Date(d.broadcastUntil).toLocaleString('ar-SA') : '—'}</span></div>
+          <div class="row"><span class="label">عدد العروض</span><span class="value">${d.offersCount ?? 0}</span></div>
+        </div>
+        <div class="section">
+          <h2>الحجز</h2>
+          <div class="row"><span class="label">رقم الحجز</span><span class="value">${escapeHtml(d.booking?.bookingNumber || '—')}</span></div>
+          <div class="row"><span class="label">حالة الحجز</span><span class="value">${escapeHtml(d.booking?.status || '—')}</span></div>
+          <div class="row"><span class="label">المركبة</span><span class="value">${escapeHtml(vehicleText)}</span></div>
+          ${d.booking?.totalPrice != null ? `<div class="row"><span class="label">السعر التقديري</span><span class="value">${d.booking.totalPrice} ر.س</span></div>` : ''}
+        </div>
+        <div class="section">
+          <h2>موقع الالتقاط (من)</h2>
+          <div class="row"><span class="label">العنوان</span><span class="value">${escapeHtml(d.pickupLocation?.address || '—')}</span></div>
+          <div class="row"><span class="label">الإحداثيات</span><span class="value">${d.pickupLocation?.latitude != null ? `${d.pickupLocation.latitude}, ${d.pickupLocation.longitude}` : '—'}</span></div>
+        </div>
+        <div class="section">
+          <h2>الوجهة (إلى)</h2>
+          <div class="row"><span class="label">العنوان</span><span class="value">${escapeHtml(d.destinationLocation?.address || '—')}</span></div>
+          <div class="row"><span class="label">الإحداثيات</span><span class="value">${d.destinationLocation?.latitude != null ? `${d.destinationLocation.latitude}, ${d.destinationLocation.longitude}` : '—'}</span></div>
+        </div>
+        <div class="section">
+          <h2>تفاصيل إضافية</h2>
+          ${d.estimatedDistanceKm != null ? `<div class="row"><span class="label">المسافة التقريبية</span><span class="value">${d.estimatedDistanceKm} كم</span></div>` : ''}
+          ${d.estimatedDurationMinutes != null ? `<div class="row"><span class="label">المدة التقريبية</span><span class="value">${d.estimatedDurationMinutes} دقيقة</span></div>` : ''}
+          ${d.vehicleCondition ? `<div class="row"><span class="label">حالة المركبة</span><span class="value">${escapeHtml(d.vehicleCondition)}</span></div>` : ''}
+          ${d.urgency ? `<div class="row"><span class="label">الأولوية</span><span class="value">${escapeHtml(d.urgency)}</span></div>` : ''}
+        </div>
+      `;
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '—';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

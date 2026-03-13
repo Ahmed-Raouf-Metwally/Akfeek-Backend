@@ -4,7 +4,7 @@ const options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'AutoService (أكفيك) API',
+            title: 'AutoService API',
             version: '1.0.0',
             description: `
 # AutoService API Documentation
@@ -15,64 +15,21 @@ Comprehensive car services platform supporting 4 service models:
 3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance
 4. **Ekfik Lifecycle** - Valet & Comprehensive Repair
 
----
+## Features
 
-منصة شاملة لخدمات السيارات تدعم 4 نماذج خدمة:
-1. **الحجز المباشر** (خدمات ثابتة) - غسيل السيارة، التلميع
-2. **التجارة الإلكترونية** (خدمات الكتالوج) - تغيير الزيت، استبدال الفلاتر
-3. **البث المباشر** (خدمات الطوارئ) - المساعدة على الطريق
-4. **دورة الفحص** - الفحص الشامل والإصلاح
+- Real-time updates via Socket.io
+- Multiple payment gateways
+- Supply chain integration
+- Geolocation-based services
 
----
+## Postman
 
-## Features / المميزات
+- Import spec: File -> Import -> \`http://localhost:3000/api-docs.json\` or \`openapi.json\` (after \`npm run openapi\`)
+- Auth: Authorization tab, Bearer Token, JWT from \`POST /api/auth/login\`
 
-- ✅ Bilingual support (Arabic/English) - دعم اللغتين
-- ✅ Real-time updates via Socket.io - تحديثات فورية
-- ✅ Multiple payment gateways - بوابات دفع متعددة
-- ✅ Supply chain integration - تكامل سلسلة التوريد
-- ✅ Geolocation-based services - خدمات الموقع الجغرافي
+## Authentication
 
-## Postman / اختبار الـ API
-
-- **استيراد المواصفات:** في Postman اختر File → Import ثم إما:
-  - الرابط (مع تشغيل السيرفر): \`http://localhost:3000/api-docs.json\`
-  - أو الملف: \`openapi.json\` (من جذر المشروع بعد تشغيل \`npm run openapi\`)
-- **المصادقة:** في تبويب Authorization اختر Type: Bearer Token وأدخل الـ JWT بعد تسجيل الدخول من \`POST /api/auth/login\`.
-
-## فلو الورش المتنقلة / Mobile Workshop Flow
-
-1. **العميل:** GET \`/api/mobile-workshop-types\` → اختيار نوع الورشة والخدمة  
-2. **العميل:** POST \`/api/mobile-workshop-requests\` (vehicleId, workshopTypeId, workshopTypeServiceId?, latitude, longitude, addressText, city) → يُبث الطلب للورش المتطابقة  
-3. **فيندور الورشة:** GET \`/api/mobile-workshops/my/requests\` → طلبات ورشتي، ثم POST \`/api/mobile-workshops/{workshopId}/requests/{requestId}/offer\` (price, message)  
-4. **العميل:** GET \`/api/mobile-workshop-requests/{id}\` (عروض الطلب)، ثم POST \`/api/mobile-workshop-requests/{requestId}/select-offer\` (offerId) → يُنشأ الحجز والفاتورة  
-5. **العميل:** GET \`/api/invoices/my/{id}\` ثم PATCH \`/api/invoices/my/{id}/pay\` (method: CARD أو WALLET) → بعد الدفع يُفعّل التتبع والشات (حدث invoice_paid)
-
----
-
-## فلو العناية الشاملة / Comprehensive Care Flow
-
-1. **العميل:** GET \`/api/services?category=COMPREHENSIVE_CARE\` → اختيار خدمة من ورشة عناية شاملة  
-2. **العميل:** POST \`/api/bookings\` (vehicleId, scheduledDate, scheduledTime, serviceIds) — بدون workshopId → يُنشأ الحجز والفاتورة تلقائياً  
-3. **العميل:** GET \`/api/invoices/my/{bookingId}\` ثم PATCH \`/api/invoices/my/{id}/pay\` (method: CARD أو WALLET) → دفع الفاتورة  
-4. **الفيندور:** بعد إتمام الخدمة في الورشة — PATCH \`/api/bookings/{id}/complete\` → تحديث الحجز إلى مكتمل (COMPLETED)
-
----
-
-## فلو ورش الغسيل / Car Wash Flow
-
-(مشابه للعناية الشاملة — بدون فني؛ العميل يحجز خدمة غسيل من الفيندور ثم يدفع.)
-
-1. **العميل:** GET \`/api/services?category=CLEANING\` أو اختيار ورشة غسيل من الفيندورز — ثم اختيار خدمة غسيل  
-2. **العميل:** POST \`/api/bookings\` (vehicleId, scheduledDate, scheduledTime, serviceIds) — بدون workshopId → يُنشأ الحجز والفاتورة تلقائياً  
-3. **العميل:** GET \`/api/invoices/my/{bookingId}\` ثم PATCH \`/api/invoices/my/{id}/pay\` (method: CARD أو WALLET) → دفع الفاتورة  
-4. **الفيندور:** بعد إتمام الخدمة — PATCH \`/api/bookings/{id}/complete\` → تحديث الحجز إلى مكتمل (COMPLETED)
-
----
-
-## Authentication / المصادقة
-
-All protected endpoints require Bearer token in Authorization header:
+All protected endpoints require Bearer token:
 
 \`\`\`
 Authorization: Bearer <your_jwt_token>
@@ -90,11 +47,11 @@ Authorization: Bearer <your_jwt_token>
         },
         servers: [{
             url: 'http://localhost:3000',
-            description: 'Development Server - بيئة التطوير'
+            description: 'Development Server'
         },
         {
             url: 'https://akfeek-backend.developteam.site',
-            description: 'Production Server - بيئة الإنتاج'
+            description: 'Production Server'
         }
         ],
         components: {
@@ -119,10 +76,6 @@ Authorization: Bearer <your_jwt_token>
                             type: 'string',
                             example: 'Error message'
                         },
-                        errorAr: {
-                            type: 'string',
-                            example: 'رسالة الخطأ'
-                        },
                         code: {
                             type: 'string',
                             example: 'VALIDATION_ERROR'
@@ -143,10 +96,6 @@ Authorization: Bearer <your_jwt_token>
                         message: {
                             type: 'string',
                             example: 'Operation successful'
-                        },
-                        messageAr: {
-                            type: 'string',
-                            example: 'تمت العملية بنجاح'
                         }
                     }
                 },
@@ -390,14 +339,13 @@ Authorization: Bearer <your_jwt_token>
                             example: {
                                 success: false,
                                 error: 'Authentication required',
-                                errorAr: 'مطلوب مصادقة',
                                 code: 'UNAUTHORIZED'
                             }
                         }
                     }
                 },
                 ForbiddenError: {
-                    description: 'Access denied - تم رفض الوصول',
+                    description: 'Access denied',
                     content: {
                         'application/json': {
                             schema: {
@@ -406,14 +354,13 @@ Authorization: Bearer <your_jwt_token>
                             example: {
                                 success: false,
                                 error: 'Access denied',
-                                errorAr: 'تم رفض الوصول',
                                 code: 'FORBIDDEN'
                             }
                         }
                     }
                 },
                 NotFoundError: {
-                    description: 'Resource not found - المورد غير موجود',
+                    description: 'Resource not found',
                     content: {
                         'application/json': {
                             schema: {
@@ -422,14 +369,13 @@ Authorization: Bearer <your_jwt_token>
                             example: {
                                 success: false,
                                 error: 'Resource not found',
-                                errorAr: 'المورد غير موجود',
                                 code: 'NOT_FOUND'
                             }
                         }
                     }
                 },
                 ValidationError: {
-                    description: 'Validation error - خطأ في التحقق',
+                    description: 'Validation error',
                     content: {
                         'application/json': {
                             schema: {
@@ -438,7 +384,6 @@ Authorization: Bearer <your_jwt_token>
                             example: {
                                 success: false,
                                 error: 'Validation failed',
-                                errorAr: 'فشل التحقق',
                                 code: 'VALIDATION_ERROR',
                                 details: {
                                     email: 'Invalid email format',
@@ -455,54 +400,28 @@ Authorization: Bearer <your_jwt_token>
         }],
         tags: [
         {
-            name: '1. الورش المعتمدة (Certified Workshops)',
-            description: 'CRUD الورش المعتمدة + حجز الورشة (POST /api/bookings مع workshopId). Certified workshops & their bookings.'
+            name: '1. Certified Workshops',
+            description: 'Certified workshops CRUD + booking (POST /api/bookings with workshopId).'
         },
         {
-            name: '2. ورش الغسيل (Car Wash)',
-            description: `فلو ورش الغسيل — يشبه العناية الشاملة (بدون فني غسيل). العميل يختار خدمة غسيل من الفيندور، يحجز، يدفع، والفيندور يحدد مكتمل.
-1) العميل: GET /api/services?category=CLEANING أو اختيار ورشة غسيل (فيندور) وخدماتها
-2) العميل: POST /api/bookings (vehicleId, scheduledDate, scheduledTime, serviceIds فقط — بدون workshopId) — يُنشأ الحجز والفاتورة
-3) العميل: GET /api/invoices/my/{bookingId} ثم PATCH /api/invoices/my/{id}/pay (method: CARD|WALLET)
-4) الفيندور: PATCH /api/bookings/{id}/complete (بعد إتمام الخدمة → الحالة COMPLETED)`
+            name: '2. Car Wash',
+            description: 'Car wash flow: customer books cleaning service, pays invoice, vendor marks complete. GET /api/services?category=CLEANING, POST /api/bookings, PATCH /api/invoices/my/{id}/pay, PATCH /api/bookings/{id}/complete.'
         },
         {
-            name: '3. العناية الشاملة (Comprehensive Care)',
-            description: `فلو العناية الشاملة — العميل يحجز خدمة من ورشة عناية شاملة، يدفع الفاتورة، والفيندور يحدد الحجز كمكتمل بعد إتمام الخدمة.
-1) العميل: GET /api/services?category=COMPREHENSIVE_CARE (اختيار خدمة)
-2) العميل: POST /api/bookings (vehicleId, scheduledDate, scheduledTime, serviceIds فقط — بدون workshopId) — يُنشأ الحجز والفاتورة
-3) العميل: GET /api/invoices/my/{bookingId} ثم PATCH /api/invoices/my/{id}/pay (method: CARD|WALLET)
-4) الفيندور: PATCH /api/bookings/{id}/complete (بعد إتمام الخدمة في الورشة → الحالة COMPLETED)
-خدمات الفيندور: GET /api/services?vendorId=me&category=COMPREHENSIVE_CARE`
+            name: '3. Comprehensive Care',
+            description: 'Comprehensive care flow: GET /api/services?category=COMPREHENSIVE_CARE, POST /api/bookings, PATCH /api/invoices/my/{id}/pay, PATCH /api/bookings/{id}/complete.'
         },
         {
-            name: '4. الوينشات (Winches/Towing)',
-            description: `فلو الوينش — فيندور الوينش هو المتحكم بالكامل (لا دور للفني):
-1) العميل: POST /api/bookings/towing/request (من أين إلى أين)
-2) فيندور الوينش: GET /api/winches/my/broadcasts (طلبات قريبة + push عبر Socket winch:new_request)
-3) فيندور الوينش: POST /api/winches/my/broadcasts/{broadcastId}/offer (السعر من pricePerKm)
-4) العميل: GET /api/bookings/towing/{broadcastId}/offers ثم POST .../offers/{offerId}/accept
-5) أدمن/العميل يدفع: PATCH /api/invoices/{id}/mark-paid — إيداع حصة الفيندور في محفظته وخصم عمولة المنصة (نسبة مسجلة وقت الحجز)، ثم يتفتح السوكت
-6) فيندور الوينش: GET /api/winches/my/jobs و PATCH /api/winches/my/jobs/{jobId}/status (TECHNICIAN_EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED)
-+ Socket: customer:join_booking / driver:join_booking (بعد الدفع)، driver:location، booking:message`
+            name: '4. Towing',
+            description: 'Towing flow: POST /api/bookings/towing/request, GET /api/winches/my/broadcasts, POST .../offer, GET/POST offers/accept, PATCH /api/invoices/{id}/mark-paid, GET/PATCH /api/winches/my/jobs. Socket: customer:join_booking, driver:join_booking, driver:location, booking:message.'
         },
         {
-            name: 'فيندور الوينش (مهام الوينش)',
-            description: 'فيندور الوينش (VENDOR) هو المتحكم: قائمة مهامه وتحديث الحالة عبر GET /api/winches/my/jobs و PATCH /api/winches/my/jobs/{jobId}/status'
-        },
-        {
-            name: '5. الورش المتنقلة (Mobile Workshop)',
-            description: `فلو الورش المتنقلة — العميل يطلب، الورش ترسل عروضاً، العميل يختار ثم يدفع فيُفعّل التتبع والشات.
-1) العميل: GET /api/mobile-workshop-types (نوع الورشة + الخدمة)
-2) العميل: POST /api/mobile-workshop-requests (vehicleId, workshopTypeId, workshopTypeServiceId?, latitude, longitude, addressText, city) — يُبث للورش المتطابقة
-3) فيندور الورشة: GET /api/mobile-workshops/my/requests ثم POST /api/mobile-workshops/{workshopId}/requests/{requestId}/offer (price, message)
-4) العميل: GET /api/mobile-workshop-requests/{id} (عروض الطلب) ثم POST .../select-offer (offerId) — يُنشأ الحجز والفاتورة
-5) العميل: GET /api/invoices/my/{id} ثم PATCH /api/invoices/my/{id}/pay (method: CARD|WALLET) — بعد الدفع يُرسل حدث invoice_paid فيفتح التتبع والشات
-CRUD الورش: GET/POST/PUT/DELETE /api/mobile-workshops، أنواع الورش: /api/mobile-workshop-types.`
+            name: '5. Mobile Workshop',
+            description: 'Mobile workshop flow: GET /api/mobile-workshop-types, POST /api/mobile-workshop-requests, GET/POST select-offer, PATCH /api/invoices/my/{id}/pay. CRUD: /api/mobile-workshops.'
         },
         {
             name: 'Authentication',
-            description: 'User authentication endpoints - نقاط المصادقة',
+            description: 'User authentication endpoints',
             externalDocs: {
                 description: 'Authentication Guide',
                 url: 'https://docs.autoservice.com/authentication'
@@ -510,99 +429,99 @@ CRUD الورش: GET/POST/PUT/DELETE /api/mobile-workshops، أنواع الور
         },
         {
             name: 'Vehicle Brands',
-            description: 'Vehicle brand management (Toyota, BMW, etc.) - إدارة ماركات المركبات'
+            description: 'Vehicle brand management (Toyota, BMW, etc.)'
         },
         {
             name: 'Vehicle Models',
-            description: 'Vehicle model management (Camry, X5, etc.) - إدارة موديلات المركبات'
+            description: 'Vehicle model management (Camry, X5, etc.)'
         },
         {
             name: 'Users',
-            description: 'User profile management - إدارة الملف الشخصي'
+            description: 'User profile management'
         },
         {
-            name: 'Vendors (الفيندور)',
-            description: 'CRUD للفيندور: قائمة (GET)، إضافة (POST)، عرض (GET :id)، تحديث (PUT :id)، حذف (DELETE :id)، تحديث الحالة (PUT :id/status). Vendor management.'
+            name: 'Vendors',
+            description: 'Vendor CRUD: list (GET), create (POST), get (GET :id), update (PUT :id), delete (DELETE :id), status (PUT :id/status).'
         },
         {
             name: 'Vehicles',
-            description: 'Vehicle management - إدارة المركبات'
+            description: 'Vehicle management'
         },
         {
             name: 'Services',
-            description: 'Service catalog - كتالوج الخدمات'
+            description: 'Service catalog'
         },
         {
             name: 'Bookings',
-            description: 'قائمة الحجوزات وتحديث الحالة (GET/PATCH). تفاصيل الحجز حسب النوع في الأقسام 1–5 أعلاه. Booking list & status.'
+            description: 'Booking list and status (GET/PATCH). See sections 1-5 for flow details.'
         },
         {
             name: 'Broadcasts',
-            description: 'بث الوظائف — بث السحب + طلبات الورش المتنقلة. GET /api/broadcasts?type=towing|mobile-workshop|all. Emergency job broadcasts + mobile workshop requests.'
+            description: 'Job broadcasts (towing + mobile workshop). GET /api/broadcasts?type=towing|mobile-workshop|all.'
         },
         {
             name: 'Mobile Workshop Requests',
-            description: 'فلو طلبات الورش المتنقلة: POST / (إنشاء طلب)، GET / (طلباتي)، GET /:id (تفاصيل + عروض)، POST /:requestId/select-offer (اختيار عرض → حجز + فاتورة). يكمّل الفلو: دفع الفاتورة PATCH /api/invoices/my/:id/pay ثم التتبع والشات.'
+            description: 'Mobile workshop requests: POST, GET, GET :id, POST :requestId/select-offer. Then PATCH /api/invoices/my/:id/pay.'
         },
         {
             name: 'Supply Requests',
-            description: 'Spare parts supply chain - سلسلة توريد قطع الغيار'
+            description: 'Spare parts supply chain'
         },
         {
             name: 'Invoices',
-            description: 'إدارة الفواتير — vendorSummary يعرض الفيندور صاحب الفاتورة. العناية الشاملة وورش الغسيل: إنشاء فاتورة تلقائي عند الحجز؛ الدفع: GET /api/invoices/my/{id} ثم PATCH /api/invoices/my/{id}/pay.'
+            description: 'Invoice management. vendorSummary for invoice owner. GET /api/invoices/my/{id}, PATCH .../pay.'
         },
         {
             name: 'Payments',
-            description: 'Payment processing - معالجة الدفع'
+            description: 'Payment processing'
         },
         {
             name: 'Wallets',
-            description: 'Wallet & transactions - المحفظة والمعاملات'
+            description: 'Wallet and transactions'
         },
         {
             name: 'Ratings',
-            description: 'Reviews & ratings - التقييمات والمراجعات'
+            description: 'Reviews and ratings'
         },
         {
             name: 'Notifications',
-            description: 'Push notifications - الإشعارات'
+            description: 'Push notifications'
         },
         {
             name: 'Addresses',
-            description: 'Address management - إدارة العناوين'
+            description: 'Address management'
         },
         {
             name: 'Towing Service',
-            description: 'Emergency towing service - خدمة السحب الطارئة'
+            description: 'Emergency towing service'
         },
         {
             name: 'Technician Towing',
-            description: 'Technician towing endpoints - نقاط خدمة السحب للفنيين'
+            description: 'Technician towing endpoints'
         },
         {
             name: 'Technician Car Wash',
-            description: '(اختياري/قديم) نقاط فني الغسيل بالبث — الفلو الحالي لورش الغسيل يشبه العناية الشاملة (حجز مباشر من الفيندور بدون فني).'
+            description: 'Technician car wash broadcast endpoints (legacy).'
         },
         {
             name: 'Admin Settings',
-            description: 'System settings management for administrators - إدارة إعدادات النظام للمسؤولين'
+            description: 'System settings for administrators'
         },
         {
             name: 'Auto Part Categories',
-            description: 'Auto part category management - إدارة فئات قطع الغيار'
+            description: 'Auto part category management'
         },
         {
             name: 'Auto Parts',
-            description: 'Auto parts catalog management - إدارة كتالوج قطع الغيار'
+            description: 'Auto parts catalog management'
         },
         {
             name: 'Cart',
-            description: 'Customer cart and checkout - سلة المشتريات وإتمام الطلب'
+            description: 'Customer cart and checkout'
         },
         {
             name: 'Marketplace Orders',
-            description: 'Orders from marketplace (customer, vendor, admin) - طلبات المتجر'
+            description: 'Orders from marketplace (customer, vendor, admin)'
         }
         ]
     },

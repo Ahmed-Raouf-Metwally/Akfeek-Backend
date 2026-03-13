@@ -205,12 +205,15 @@ async function getBroadcastById(req, res, next) {
               vehicle: {
                 select: {
                   id: true,
-                  plateNumber: true,
+                  plateDigits: true,
+                  plateLettersAr: true,
+                  plateLettersEn: true,
                   vehicleModel: {
                     select: {
                       name: true,
+                      nameAr: true,
                       year: true,
-                      brand: { select: { name: true } },
+                      brand: { select: { name: true, nameAr: true } },
                     },
                   },
                 },
@@ -277,6 +280,11 @@ async function getBroadcastById(req, res, next) {
       }),
     ]);
     if (jobBroadcast) {
+      // UserVehicle has no plateNumber in DB — build from plateDigits + plateLetters
+      if (jobBroadcast.booking?.vehicle) {
+        const v = jobBroadcast.booking.vehicle;
+        jobBroadcast.booking.vehicle.plateNumber = [v.plateLettersAr, v.plateDigits].filter(Boolean).join(' ') || v.plateDigits || '';
+      }
       return res.json({ success: true, message: '', data: { type: 'towing', ...jobBroadcast } });
     }
     if (mwRequest) {

@@ -214,6 +214,90 @@ class TowingService {
     }
 
     /**
+     * Get broadcast details (for customer who created the request) — تفاصيل البث
+     */
+    async getBroadcastDetails(broadcastId, customerId) {
+        const broadcast = await prisma.jobBroadcast.findUnique({
+            where: { id: broadcastId },
+            include: {
+                booking: {
+                    select: {
+                        id: true,
+                        bookingNumber: true,
+                        customerId: true,
+                        status: true,
+                        totalPrice: true,
+                        pickupLat: true,
+                        pickupLng: true,
+                        pickupAddress: true,
+                        destinationLat: true,
+                        destinationLng: true,
+                        destinationAddress: true,
+                        metadata: true,
+                        vehicleId: true,
+                        vehicle: {
+                            select: {
+                                id: true,
+                                plateDigits: true,
+                                plateLettersAr: true,
+                                plateLettersEn: true,
+                                vehicleModel: { select: { name: true, nameAr: true, brand: { select: { name: true, nameAr: true } } } }
+                            }
+                            // plateNumber غالباً محسوب من plateDigits + plateLetters في الـ API
+                        }
+                    }
+                },
+                _count: { select: { offers: true } }
+            }
+            // offers: { select: { id: true, bidAmount: true, status: true } } — للعرض المختصر إن رغبت
+        });
+
+        if (!broadcast) {
+            throw new AppError('Broadcast not found', 404, 'BROADCAST_NOT_FOUND');
+        }
+        if (broadcast.booking.customerId !== customerId) {
+            throw new AppError('Unauthorized access', 403, 'FORBIDDEN');
+        }
+
+        const meta = broadcast.booking.metadata && typeof broadcast.booking.metadata === 'object' ? broadcast.booking.metadata : {};
+        const vehicle = broadcast.booking.vehicle;
+        const plateNumber = vehicle ? [vehicle.plateLettersAr, vehicle.plateDigits].filter(Boolean).join(' ') || vehicle.plateDigits : null;
+        const vehicleDisplay = vehicle?.vehicleModel
+            ? { plateNumber: plateNumber || vehicle.plateDigits, model: vehicle.vehicleModel.name, modelAr: vehicle.vehicleModel.nameAr, brand: vehicle.vehicleModel.brand?.name, brandAr: vehicle.vehicleModel.brand?.nameAr }
+            : (vehicle ? { plateNumber } : null);
+
+        return {
+            id: broadcast.id,
+            status: broadcast.status,
+            broadcastUntil: broadcast.broadcastUntil,
+            createdAt: broadcast.createdAt,
+            urgency: broadcast.urgency,
+            description: broadcast.description,
+            booking: {
+                id: broadcast.booking.id,
+                bookingNumber: broadcast.booking.bookingNumber,
+                status: broadcast.booking.status,
+                totalPrice: broadcast.booking.totalPrice ? Number(broadcast.booking.totalPrice) : null,
+                vehicle: vehicleDisplay
+            },
+            pickupLocation: {
+                latitude: broadcast.latitude,
+                longitude: broadcast.longitude,
+                address: broadcast.locationAddress
+            },
+            destinationLocation: {
+                latitude: broadcast.booking.destinationLat,
+                longitude: broadcast.booking.destinationLng,
+                address: broadcast.booking.destinationAddress
+            },
+            estimatedDistanceKm: meta.distance ?? null,
+            estimatedDurationMinutes: meta.estimatedDuration ?? null,
+            vehicleCondition: meta.vehicleCondition ?? null,
+            offersCount: broadcast._count?.offers ?? 0
+        };
+    }
+
+    /**
      * Get offers for a broadcast — عروض الوينشات/الفنيين مع السعر للعميل
      */
     async getOffers(broadcastId, customerId) {
@@ -508,8 +592,7 @@ class TowingService {
                 invoiceNumber: invoice.invoiceNumber,
                 totalAmount: Number(invoice.totalAmount),
                 status: invoice.status,
-                message: 'Pay this invoice to open tracking and chat with the winch driver.',
-                messageAr: 'ادفع الفاتورة لفتح التتبع والمحادثة مع السائق.'
+                message: 'Pay this invoice to open tracking and chat with the winch driver.'
             } : null
         };
     }

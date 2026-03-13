@@ -68,6 +68,32 @@ router.get('/vendor-orders', requireRole('VENDOR'), orderController.getVendorOrd
 
 /**
  * @swagger
+ * /api/marketplace-orders/status-options:
+ *   get:
+ *     summary: Get possible order/payment status values
+ *     description: All allowed values for status, paymentStatus, and paymentMethod used in marketplace orders.
+ *     tags: [Marketplace Orders]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: orderStatus, paymentStatus, paymentMethod arrays
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orderStatus: { type: array, items: { type: string }, example: ["PENDING","CONFIRMED","PROCESSING","SHIPPED","DELIVERED","CANCELLED","REFUNDED"] }
+ *                     paymentStatus: { type: array, items: { type: string }, example: ["PENDING","PAID","FAILED"] }
+ *                     paymentMethod: { type: array, items: { type: string }, example: ["CARD","CASH","WALLET"] }
+ */
+router.get('/status-options', orderController.getStatusOptions);
+
+/**
+ * @swagger
  * /api/marketplace-orders:
  *   get:
  *     summary: Get all orders (Admin)

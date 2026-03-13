@@ -1,13 +1,11 @@
 /**
- * تبسيط حالات الحجز للعرض والفلترة — 5 حالات فقط بدلاً من كل القيم التفصيلية.
  * Simplified booking status groups for UI filter and display.
  */
 
-/** الحالات المبسطة المعروضة في الفلتر والعرض */
 const SIMPLIFIED_STATUSES = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
 /**
- * كل حالة مبسطة → قائمة الحالات التفصيلية في النظام
+ * Each simplified status maps to raw status values.
  */
 const STATUS_GROUP_TO_RAW = {
   PENDING: ['PENDING'],
@@ -38,7 +36,6 @@ const STATUS_GROUP_TO_RAW = {
   CANCELLED: ['CANCELLED', 'REJECTED', 'NO_SHOW', 'QUOTE_REJECTED'],
 };
 
-/** الحالة التفصيلية → الحالة المبسطة للعرض */
 const RAW_TO_DISPLAY = {};
 for (const [group, rawList] of Object.entries(STATUS_GROUP_TO_RAW)) {
   for (const raw of rawList) {
@@ -47,8 +44,8 @@ for (const [group, rawList] of Object.entries(STATUS_GROUP_TO_RAW)) {
 }
 
 /**
- * إذا كان الفلتر أحد الحالات المبسطة نعيد قائمة الحالات للاستعلام
- * @param {string} status - من query
+ * Build status filter for query from simplified status.
+ * @param {string} status - from query
  * @returns {{ status: string } | { status: { in: string[] } }}
  */
 function buildStatusWhere(status) {

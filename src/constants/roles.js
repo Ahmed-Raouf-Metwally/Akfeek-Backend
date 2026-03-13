@@ -1,20 +1,20 @@
 /**
- * تسميات أدوار المستخدمين للعرض في الواجهة (بدون مفاتيح تقنية مثل users.roles.EMPLOYEE)
+ * Role labels for UI (no technical keys).
  */
 
 const ROLE_LABELS = {
-  CUSTOMER:   { ar: 'عميل',       en: 'Customer' },
-  ADMIN:      { ar: 'مسؤول',      en: 'Admin' },
-  EMPLOYEE:   { ar: 'موظف اكفيك', en: 'Akfeek Employee' },
-  VENDOR:     { ar: 'مورد',       en: 'Vendor' },
-  TECHNICIAN: { ar: 'فني',        en: 'Technician' },
-  SUPPLIER:   { ar: 'مورد',       en: 'Vendor' }, // legacy — display as vendor
+  CUSTOMER:   { en: 'Customer' },
+  ADMIN:      { en: 'Admin' },
+  EMPLOYEE:   { en: 'Akfeek Employee' },
+  VENDOR:     { en: 'Vendor' },
+  TECHNICIAN: { en: 'Technician' },
+  SUPPLIER:   { en: 'Vendor' },
 };
 
 function getRoleLabels(role) {
-  if (!role) return { roleLabelAr: '', roleLabelEn: '' };
-  const labels = ROLE_LABELS[role] || { ar: role, en: role };
-  return { roleLabelAr: labels.ar, roleLabelEn: labels.en };
+  if (!role) return { roleLabelEn: '' };
+  const labels = ROLE_LABELS[role] || { en: role };
+  return { roleLabelEn: labels.en };
 }
 
 function withRoleLabels(obj) {

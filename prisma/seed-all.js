@@ -43,7 +43,8 @@ const seedGroups = [
     scripts: [
       'seed-workshop-services-with-prices.js',
       'seed-5-services-per-comprehensive-care.js',
-      'seed-5-services-per-mobile-workshop.js'
+      'seed-5-services-per-mobile-workshop.js',
+      'seed-mobile-workshop-flow-data.js'
     ]
   },
   {

@@ -84,6 +84,110 @@ async function getAllInvoices(req, res, next) {
   }
 }
 
+/**
+ * Get invoices for current vendor (فواتير الفيندور فقط).
+ * GET /api/invoices/vendor/mine — أو استدعاء من الفرونت عند كون المستخدم فيندور.
+ * Returns only invoices where the booking belongs to this vendor (workshop, mobile workshop, service, or winch).
+ */
+async function getMyInvoicesAsVendor(req, res, next) {
+  try {
+    const vendorProfile = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!vendorProfile) {
+      throw new AppError('Vendor profile not found', 403, 'FORBIDDEN');
+    }
+    const vendorId = vendorProfile.id;
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const status = req.query.status || null;
+    const skip = (page - 1) * limit;
+
+    const bookingWhere = {
+      OR: [
+        { workshop: { vendorId } },
+        { mobileWorkshop: { vendorId } },
+        { jobBroadcast: { offers: { some: { winch: { vendorId } } } } },
+        {
+          services: {
+            some: {
+              OR: [
+                { service: { vendorId } },
+                { workshopService: { workshop: { vendorId } } },
+              ],
+            },
+          },
+        },
+      ],
+    };
+    const where = {
+      ...(status ? { status } : {}),
+      booking: bookingWhere,
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ issuedAt: 'desc' }],
+        select: {
+          id: true,
+          invoiceNumber: true,
+          customerId: true,
+          bookingId: true,
+          totalAmount: true,
+          paidAmount: true,
+          status: true,
+          issuedAt: true,
+          dueDate: true,
+          paidAt: true,
+          createdAt: true,
+          customer: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              profile: { select: { firstName: true, lastName: true } },
+            },
+          },
+          booking: {
+            select: {
+              id: true,
+              bookingNumber: true,
+              status: true,
+            },
+          },
+          lineItems: { select: { totalPrice: true } },
+        },
+      }),
+      prisma.invoice.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    const toNum = (v) => (v == null ? v : Number(v));
+    const data = items.map((inv) => {
+      const lineItemsTotal = (inv.lineItems || []).reduce((s, li) => s + toNum(li.totalPrice), 0);
+      return {
+        ...inv,
+        totalAmount: toNum(inv.totalAmount),
+        paidAmount: toNum(inv.paidAmount),
+        lineItems: (inv.lineItems || []).map((li) => ({ totalPrice: toNum(li.totalPrice) })),
+        effectiveTotal: inv.lineItems?.length ? lineItemsTotal : toNum(inv.totalAmount),
+      };
+    });
+
+    res.json({
+      success: true,
+      data,
+      pagination: { page, limit, total, totalPages },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 const invoiceInclude = {
   customer: {
     select: {
@@ -354,6 +458,53 @@ async function getInvoiceById(req, res, next) {
       throw new AppError('Invoice not found', 404, 'NOT_FOUND');
     }
     res.json({ success: true, message: '', data: serializeInvoice(invoice) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get single invoice by id for current vendor (must own the booking).
+ * GET /api/invoices/vendor/mine/:id
+ */
+async function getInvoiceByIdForVendor(req, res, next) {
+  try {
+    const vendorProfile = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!vendorProfile) {
+      throw new AppError('Vendor profile not found', 403, 'FORBIDDEN');
+    }
+    const vendorId = vendorProfile.id;
+    const { id } = req.params;
+
+    let invoice = await prisma.invoice.findUnique({
+      where: { id },
+      include: invoiceInclude,
+    });
+    if (!invoice) {
+      invoice = await prisma.invoice.findFirst({
+        where: { bookingId: id },
+        include: invoiceInclude,
+      });
+    }
+    if (!invoice) {
+      throw new AppError('Invoice not found', 404, 'NOT_FOUND');
+    }
+
+    const booking = invoice.booking;
+    if (!booking) {
+      throw new AppError('Invoice or booking not found', 404, 'NOT_FOUND');
+    }
+    const belongsToVendor =
+      (booking.workshop && booking.workshop.vendorId === vendorId) ||
+      (booking.mobileWorkshop && booking.mobileWorkshop.vendorId === vendorId) ||
+      (booking.jobBroadcast && (booking.jobBroadcast.offers || []).some((o) => o.winch && o.winch.vendorId === vendorId)) ||
+      (booking.services && booking.services.some((s) => s.service && s.service.vendorId === vendorId));
+    if (!belongsToVendor) {
+      throw new AppError('Not authorized to view this invoice', 403, 'FORBIDDEN');
+    }
+    res.json({ success: true, data: serializeInvoice(invoice) });
   } catch (error) {
     next(error);
   }
@@ -736,4 +887,4 @@ async function customerPayInvoice(req, res, next) {
   }
 }
 
-module.exports = { getAllInvoices, getInvoiceById, getMyInvoice, markInvoicePaid, customerPayInvoice };
+module.exports = { getAllInvoices, getMyInvoicesAsVendor, getInvoiceById, getInvoiceByIdForVendor, getMyInvoice, markInvoicePaid, customerPayInvoice };

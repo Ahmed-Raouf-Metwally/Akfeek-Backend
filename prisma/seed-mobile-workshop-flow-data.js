@@ -1,83 +1,111 @@
 /**
- * بيانات لاختبار فلو الورش المتنقلة: نوع ورشة + خدمة نوع + ربط ورشة الفيندور الأول بها
+ * بيانات فلو الورش المتنقلة: أنواع الورش + خدمات النوع + ربط الورش والخدمات الموجودة
+ * يضمن أن GET /api/mobile-workshop-types يعيد نوعاً وخدمة، والورش المتنقلة تظهر عند إنشاء الطلب.
+ *
  * التشغيل: node prisma/seed-mobile-workshop-flow-data.js
- * المتطلبات: تشغيل seed-24-vendors, seed-mobile-workshops-for-vendors, seed-5-services-per-mobile-workshop
+ * أو: npm run prisma:seed:mobile-workshop-flow
+ *
+ * يُفضّل تشغيله بعد: seed-mobile-workshops-for-vendors و seed-5-services-per-mobile-workshop
  */
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🔧 إعداد بيانات فلو الورش المتنقلة (نوع + خدمة نوع + ربط ورشة)...\n');
+  console.log('🔧 إعداد بيانات فلو الورش المتنقلة (أنواع + ربط ورش)...\n');
 
-  // نفس ترتيب الـ API (sortOrder, createdAt) ليكون النوع المستخدم هو أول نوع يرجعه الـ API
+  // 1) إنشاء أو استخدام نوع ورشة مع خدمة (نفس ترتيب الـ API: sortOrder ثم createdAt)
   let type = await prisma.mobileWorkshopType.findFirst({
     where: { isActive: true },
     orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-    include: { typeServices: { where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }], take: 1 } },
+    include: {
+      typeServices: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      },
+    },
   });
 
   if (!type) {
     type = await prisma.mobileWorkshopType.create({
       data: {
-        name: 'Oil Change',
-        nameAr: 'تغيير زيت',
-        description: 'خدمات تغيير الزيت',
-        serviceType: 'OIL_CHANGE',
+        name: 'General Maintenance',
+        nameAr: 'صيانة عامة',
+        description: 'صيانة وفحص عام للمركبة',
+        serviceType: 'GENERAL',
         sortOrder: 0,
         isActive: true,
       },
-      include: { typeServices: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] } },
     });
     console.log('   ✅ تم إنشاء نوع الورشة:', type.nameAr || type.name);
+  } else {
+    console.log('   ✓ نوع الورشة موجود:', type.nameAr || type.name);
   }
 
-  let typeService = (type.typeServices && type.typeServices[0]) || null;
+  let typeService = type.typeServices?.[0];
   if (!typeService) {
     typeService = await prisma.mobileWorkshopTypeService.create({
       data: {
         workshopTypeId: type.id,
-        name: 'Standard Oil Change',
-        nameAr: 'تغيير زيت عادي',
-        description: 'تغيير زيت المحرك والفلتر',
+        name: 'General check and maintenance',
+        nameAr: 'صيانة عامة وفحص',
+        description: 'فحص عام للمركبة وتشخيص الأعطال',
         sortOrder: 0,
         isActive: true,
       },
     });
     console.log('   ✅ تم إنشاء خدمة النوع:', typeService.nameAr || typeService.name);
+  } else {
+    console.log('   ✓ خدمة النوع موجودة:', typeService.nameAr || typeService.name);
   }
 
-  // ورشة الفيندور الأول (نفس المستخدم في الاختبار vendor-mobile-workshop-1@akfeek.com)
-  const firstVendor = await prisma.vendorProfile.findFirst({
-    where: { vendorType: 'MOBILE_WORKSHOP' },
-    orderBy: { createdAt: 'asc' },
-    include: { mobileWorkshop: { include: { services: { where: { isActive: true } } } } },
+  // 2) ورش متنقلة بدون workshopTypeId أو بدون خدمة مرتبطة بالنوع
+  const workshops = await prisma.mobileWorkshop.findMany({
+    where: { isActive: true },
+    include: {
+      services: {
+        where: { isActive: true },
+        take: 10,
+      },
+    },
   });
 
-  if (!firstVendor?.mobileWorkshop) {
-    console.log('   ⚠️ لا توجد ورشة متنقلة لفيندور. شغّل: npm run prisma:seed:mobileworkshops');
+  if (workshops.length === 0) {
+    console.log('\n   ⚠️ لا توجد ورش متنقلة. شغّل: npm run prisma:seed:mobileworkshops');
     return;
   }
 
-  const workshop = firstVendor.mobileWorkshop;
+  let linked = 0;
+  for (const workshop of workshops) {
+    const updates = [];
 
-  await prisma.mobileWorkshop.update({
-    where: { id: workshop.id },
-    data: { workshopTypeId: type.id },
-  });
-  console.log('   ✅ رُبطت ورشة الفيندور الأول بنوع الورشة:', workshop.nameAr || workshop.name);
+    if (workshop.workshopTypeId !== type.id) {
+      updates.push(
+        prisma.mobileWorkshop.update({
+          where: { id: workshop.id },
+          data: { workshopTypeId: type.id },
+        })
+      );
+    }
 
-  const serviceToLink = workshop.services.find(
-    (s) => s.serviceType === 'OIL_CHANGE' || s.workshopTypeServiceId === null
-  ) || workshop.services[0];
-  if (serviceToLink) {
-    await prisma.mobileWorkshopService.update({
-      where: { id: serviceToLink.id },
-      data: { workshopTypeServiceId: typeService.id },
-    });
-    console.log('   ✅ رُبطت خدمة الورشة بخدمة النوع:', serviceToLink.nameAr || serviceToLink.name);
+    const hasLinkedService = workshop.services.some((s) => s.workshopTypeServiceId === typeService.id);
+    if (!hasLinkedService && workshop.services.length > 0) {
+      const generalOrFirst = workshop.services.find((s) => s.serviceType === 'GENERAL') || workshop.services[0];
+      updates.push(
+        prisma.mobileWorkshopService.update({
+          where: { id: generalOrFirst.id },
+          data: { workshopTypeServiceId: typeService.id },
+        })
+      );
+    }
+
+    if (updates.length > 0) {
+      await Promise.all(updates);
+      linked++;
+    }
   }
 
-  console.log('\n✅ انتهى. يمكن تشغيل: npm run test:mobile-workshop-flow\n');
+  console.log(`\n   ✅ تم ربط ${linked} ورشة متنقلة بنوع "صيانة عامة" وخدمة النوع.`);
+  console.log('\n✅ جاهز لاختبار الفلو: npm run test:mobile-workshop-flow\n');
 }
 
 main()

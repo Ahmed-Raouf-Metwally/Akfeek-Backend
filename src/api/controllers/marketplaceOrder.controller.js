@@ -1,4 +1,16 @@
 const orderService = require('../../services/marketplaceOrder.service');
+const { ORDER_STATUS, PAYMENT_STATUS, PAYMENT_METHOD } = require('../../constants/marketplaceOrderStatus');
+
+exports.getStatusOptions = (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      orderStatus: ORDER_STATUS,
+      paymentStatus: PAYMENT_STATUS,
+      paymentMethod: PAYMENT_METHOD,
+    },
+  });
+};
 
 exports.createOrder = async (req, res, next) => {
   try {

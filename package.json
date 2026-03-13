@@ -31,6 +31,7 @@
         "prisma:seed:winches-location": "node prisma/seed-winches-set-riyadh-location.js",
         "prisma:seed:mobileworkshops": "node prisma/seed-mobile-workshops-for-vendors.js",
         "prisma:seed:mobileworkshop-services": "node prisma/seed-5-services-per-mobile-workshop.js",
+        "prisma:seed:mobile-workshop-flow": "node prisma/seed-mobile-workshop-flow-data.js",
         "prisma:seed:backfill-vendor-wallet": "node prisma/seed-backfill-vendor-wallet-paid-invoices.js",
         "prisma:seed:root-categories": "node prisma/seed-auto-part-root-categories.js",
         "prisma:seed:carwash-service": "node prisma/seed-carwash-service.js",

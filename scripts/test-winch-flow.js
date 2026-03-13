@@ -1,27 +1,34 @@
 /**
  * Test script: Winch/Towing flow from request to completion
  *
- * الفيندور صاحب الوينش هو المتحكم بالكامل (مش الفني):
- * 1) العميل: تسجيل دخول → إنشاء طلب سحب (من أين إلى أين)
- * 2) فيندور الوينش: تسجيل دخول → عرض الطلبات القريبة → إرسال عرض
- * 3) العميل: عرض العروض → قبول عرض
- * 4) أدمن: تحديد الفاتورة كمدفوعة (إيداع حصة الفيندور وخصم عمولة المنصة)
- * 5) فيندور الوينش: قائمة مهامه → تحديث الحالة حتى COMPLETED
+ * 1) Customer: login -> create towing request (pickup + destination -> price from distance)
+ * 2) Winch vendor: login -> get nearby broadcasts -> submit offer (price from pricePerKm)
+ * 3) Customer: get offers -> accept one
+ * 4) Admin: mark invoice paid (vendor share + platform commission)
+ * 5) Winch vendor: get jobs -> update status to COMPLETED
  *
  * Prerequisites:
  * - Server running: npm run dev
- * - DB seeded with customer + vehicle: npm run prisma:seed (أو على الأقل عميل ومركبة)
- * - Towing vendor + winch with location: node prisma/seed-towing-vendor-for-test.js
+ * - DB seeded with customer + vehicle + towing vendor + winch (Riyadh location)
  *
- * Usage:
- *   npm run test:winch-flow
- *   API_BASE_URL=http://localhost:3000 (default customer: user1@akfeek.com / Customer123!, vendor: vendor-towing-service-1@akfeek.com / Vendor123!)
+ * Usage: npm run test:winch-flow
+ *   API_BASE_URL=http://localhost:3000
  */
 require('dotenv').config();
 const axios = require('axios');
 
 const BASE_URL = process.env.API_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3000';
-// بيانات من الـ seed: user1@akfeek.com (seed-10-users)، vendor-towing-service-1 (seed-24-vendors)، admin (seed.js)
+
+const PICKUP_LOCATION = {
+  latitude: 24.7136,
+  longitude: 46.6753,
+  address: 'King Fahd Road, Riyadh, pickup point',
+};
+const DESTINATION_LOCATION = {
+  latitude: 24.7500,
+  longitude: 46.7000,
+  address: 'Workshop, Al Olaya, Riyadh',
+};
 const CUSTOMER_EMAIL = process.env.TEST_CUSTOMER_EMAIL || 'user1@akfeek.com';
 const CUSTOMER_PASSWORD = process.env.TEST_CUSTOMER_PASSWORD || 'Customer123!';
 const VENDOR_EMAIL = process.env.TEST_WINCH_VENDOR_EMAIL || 'vendor-towing-service-1@akfeek.com';
@@ -56,7 +63,7 @@ async function loginAsCustomer() {
   }
   customerToken = res.data.data.token;
   setAuth(customerToken);
-  log('✅ Customer login OK', { email: CUSTOMER_EMAIL });
+  log('Customer login OK', { email: CUSTOMER_EMAIL });
 }
 
 async function loginAsVendor() {
@@ -66,7 +73,7 @@ async function loginAsVendor() {
   }
   vendorToken = res.data.data.token;
   setAuth(vendorToken);
-  log('✅ Winch vendor login OK', { email: VENDOR_EMAIL });
+  log('Winch vendor login OK', { email: VENDOR_EMAIL });
 }
 
 async function loginAsAdmin() {
@@ -88,39 +95,37 @@ async function getMyVehicles() {
   if (vehicles.length === 0) {
     throw new Error('No vehicles. Add a vehicle for the customer (e.g. via seed).');
   }
-  log('✅ Customer vehicles', vehicles.map((v) => ({ id: v.id, plateNumber: v.plateNumber })));
+  log('Customer vehicles', vehicles.map((v) => ({ id: v.id, plateNumber: v.plateNumber })));
   return vehicles;
 }
 
 async function createTowingRequest(vehicleId) {
   const payload = {
     vehicleId,
-    pickupLocation: {
-      latitude: 24.7136,
-      longitude: 46.6753,
-      address: 'King Fahd Road, Riyadh',
-    },
-    destinationLocation: {
-      latitude: 24.75,
-      longitude: 46.7,
-      address: 'Workshop, Riyadh',
-    },
+    pickupLocation: PICKUP_LOCATION,
+    destinationLocation: DESTINATION_LOCATION,
     vehicleCondition: 'NOT_STARTING',
     urgency: 'NORMAL',
     notes: 'Test winch flow',
   };
+  console.log('\nPickup:', PICKUP_LOCATION.address, `[${PICKUP_LOCATION.latitude}, ${PICKUP_LOCATION.longitude}]`);
+  console.log('Destination:', DESTINATION_LOCATION.address, `[${DESTINATION_LOCATION.latitude}, ${DESTINATION_LOCATION.longitude}]`);
+
   const res = await api.post('/bookings/towing/request', payload);
   if (res.status !== 201 || !res.data.success || !res.data.data?.broadcastId) {
     throw new Error('Create towing request failed: ' + JSON.stringify(res.data?.message || res.data));
   }
   const data = res.data.data;
-  log('✅ Towing request created', {
+  log('Towing request created', {
     bookingId: data.bookingId,
     broadcastId: data.broadcastId,
+    estimatedDistanceKm: data.estimatedDistanceKm,
+    estimatedDurationMinutes: data.estimatedDurationMinutes,
+    estimatedPrice: data.estimatedPrice,
     nearbyWinchesCount: data.nearbyWinchesCount,
   });
   if (data.nearbyWinchesCount === 0) {
-    throw new Error('No winches nearby. Run: node prisma/seed-towing-vendor-for-test.js (winch with Riyadh lat/lng)');
+    throw new Error('No winches nearby. Run: npm run prisma:seed:winches and prisma:seed:winches-location (winch with Riyadh lat/lng)');
   }
   return data;
 }
@@ -134,7 +139,10 @@ async function getWinchBroadcasts() {
   if (list.length === 0) {
     throw new Error('No broadcasts for winch. Ensure winch has latitude/longitude and is within TOWING_SEARCH_RADIUS of pickup.');
   }
-  log('✅ Winch broadcasts', list.map((b) => ({ id: b.id, yourPrice: b.yourPrice })));
+  list.forEach((b) => {
+    console.log(`   broadcast ${b.id.slice(0, 8)}... | trip km: ${b.tripDistanceKm ?? '-'} | yourPrice: ${b.yourPrice ?? '-'} SAR`);
+  });
+  log('Winch broadcasts', list.map((b) => ({ id: b.id, tripDistanceKm: b.tripDistanceKm, yourPrice: b.yourPrice })));
   return list;
 }
 
@@ -156,7 +164,7 @@ async function getOffers(broadcastId) {
   if (offers.length === 0) {
     throw new Error('No offers yet. Winch must submit offer first.');
   }
-  log('✅ Offers for customer', offers.map((o) => ({ id: o.id, bidAmount: o.bidAmount })));
+  log('Offers for customer', offers.map((o) => ({ id: o.id, bidAmount: o.bidAmount })));
   return offers;
 }
 
@@ -166,7 +174,7 @@ async function acceptOffer(broadcastId, offerId) {
     throw new Error('Accept offer failed: ' + JSON.stringify(res.data));
   }
   const inv = res.data.data?.invoice;
-  log('✅ Offer accepted', {
+  log('Offer accepted', {
     bookingId: res.data.data?.booking?.id,
     invoiceId: inv?.id,
     totalAmount: inv?.totalAmount,
@@ -180,7 +188,7 @@ async function markInvoicePaid(invoiceId) {
   if (!res.data.success) {
     throw new Error('Mark invoice paid failed (need admin). ' + JSON.stringify(res.data));
   }
-  log('✅ Invoice marked paid');
+  log('Invoice marked paid');
   return res.data;
 }
 
@@ -191,7 +199,7 @@ async function getWinchVendorJobs() {
     throw new Error('Get winch vendor jobs failed: ' + JSON.stringify(res.data));
   }
   const jobs = res.data.data?.jobs || [];
-  log('✅ مهام فيندور الوينش', jobs.map((j) => ({ id: j.id, status: j.status })));
+  log('Winch vendor jobs', jobs.map((j) => ({ id: j.id, status: j.status })));
   return jobs;
 }
 
@@ -201,12 +209,12 @@ async function updateWinchJobStatus(jobId, status) {
   if (!res.data.success) {
     throw new Error('Update job status failed: ' + JSON.stringify(res.data));
   }
-  log(`✅ حالة المهمة → ${status}`);
+  log(`Job status -> ${status}`);
   return res.data;
 }
 
 async function run() {
-  console.log('\n--- Test: Winch Flow (من الطلب حتى إتمام النقل) ---');
+  console.log('\n--- Test: Winch Flow ---');
   console.log(`API: ${BASE_URL}`);
   console.log(`Customer: ${CUSTOMER_EMAIL} | Winch vendor: ${VENDOR_EMAIL}\n`);
 
@@ -227,8 +235,10 @@ async function run() {
     await loginAsCustomer();
     const offers = await getOffers(broadcastId);
     const offerId = offers[0].id;
+    const acceptedBidAmount = offers[0].bidAmount;
     const acceptData = await acceptOffer(broadcastId, offerId);
     const invoiceId = acceptData?.invoice?.id;
+    console.log('\nAgreed price (from pickup + destination):', acceptedBidAmount, 'SAR');
     if (!invoiceId) {
       console.log('\n⚠️ No invoice in response (optional: mark-paid step skipped)');
     } else {
@@ -237,7 +247,7 @@ async function run() {
       await markInvoicePaid(invoiceId);
     }
 
-    // 5) فيندور الوينش: جلب مهامه وتحديث الحالة حتى COMPLETED (هو المتحكم)
+    // 5) Winch vendor: get jobs, update status to COMPLETED
     await loginAsVendor();
     const jobs = await getWinchVendorJobs();
     const job = jobs.find((j) => j.status === 'TECHNICIAN_ASSIGNED') || jobs[0];
@@ -250,10 +260,14 @@ async function run() {
       await updateWinchJobStatus(job.id, 'COMPLETED');
     }
 
-    console.log('\n✅ اختبار فلو الوينش (فيندور الوينش هو المتحكم) اكتمل بنجاح.\n');
+    console.log('\n--- Summary: price from pickup + destination ---');
+    console.log('  Pickup:', PICKUP_LOCATION.address);
+    console.log('  Destination:', DESTINATION_LOCATION.address);
+    console.log('  Price = OSRM distance * pricePerKm + basePrice.');
+    console.log('\nWinch flow test passed.\n');
   } catch (err) {
     const msg = err.response?.data || err.message;
-    console.error('\n❌ Test failed:', typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg);
+    console.error('\nTest failed:', typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg);
     if (err.response?.status) {
       console.error('HTTP Status:', err.response.status);
     }

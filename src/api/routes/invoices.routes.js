@@ -144,6 +144,36 @@ router.get('/my/:id', invoiceController.getMyInvoice);
  */
 router.patch('/my/:id/pay', invoiceController.customerPayInvoice);
 
+/**
+ * @swagger
+ * /api/invoices/vendor/mine:
+ *   get:
+ *     summary: List my invoices (Vendor) — فواتير الفيندور
+ *     description: |
+ *       الفيندور يجلب قائمة الفواتير المرتبطة بحجوزاته فقط (ورشة معتمدة، ورشة متنقلة، خدمات عناية/غسيل، ونش).
+ *       Vendor gets paginated list of invoices for bookings that belong to them.
+ *     tags: [Invoices]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 10 }
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [DRAFT, PENDING, PAID, PARTIALLY_PAID, CANCELLED] }
+ *     responses:
+ *       200:
+ *         description: List of vendor invoices with customer, booking, pagination
+ *       403:
+ *         description: Vendor profile not found
+ */
+router.get('/vendor/mine', requireRole('VENDOR'), invoiceController.getMyInvoicesAsVendor);
+router.get('/vendor/mine/:id', requireRole('VENDOR'), invoiceController.getInvoiceByIdForVendor);
+
 router.get('/:id', requireAdminOrPermission('invoices'), invoiceController.getInvoiceById);
 
 /**
@@ -154,7 +184,7 @@ router.get('/:id', requireAdminOrPermission('invoices'), invoiceController.getIn
  *     description: |
  *       تحديد الفاتورة كمدفوعة. يسجل الدفع، يودع حصة الفيندور في محفظته ويخصم عمولة المنصة (نسبة مسجلة وقت الحجز — لا تتأثر الحجوزات القديمة بتغيير النسبة)، ويمنح النقاط للعميل.
  *       لحجز السحب/الوينش: بعد الدفع يُرسل حدث booking:ready للعميل وفيندور الوينش فيفتح السوكت للتتبع والمحادثة.
- *     tags: [Invoices, 4. الوينشات (Winches/Towing)]
+ *     tags: [Invoices, 4. Towing]
  *     security:
  *       - bearerAuth: []
  *     parameters:

@@ -210,7 +210,9 @@ class WorkshopService {
                     vehicle: {
                         select: {
                             id: true,
-                            plateNumber: true,
+                            plateDigits: true,
+                            plateLettersEn: true,
+                            plateLettersAr: true,
                             vehicleModel: {
                                 select: { name: true, year: true, brand: { select: { name: true } } }
                             }

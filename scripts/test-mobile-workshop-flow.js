@@ -9,7 +9,7 @@
  * Prerequisites:
  * - Server running: npm run dev
  * - DB: npm run prisma:seed:all (أو على الأقل seed-24-vendors, seed-mobile-workshops, seed-5-services-per-mobile-workshop, seed-10-users-vehicles)
- * - بيانات الفلو: node prisma/seed-mobile-workshop-flow-data.js
+ * - بيانات الفلو: npm run prisma:seed:mobile-workshop-flow (أو node prisma/seed-mobile-workshop-flow-data.js)
  *
  * Usage:
  *   npm run test:mobile-workshop-flow
@@ -130,22 +130,26 @@ async function getMyRequests() {
     throw new Error('Get my requests failed: ' + JSON.stringify(res.data));
   }
   const list = res.data.data || [];
+  const myWorkshopId = res.data.myWorkshopId;
   if (list.length === 0) {
     throw new Error('No requests for my workshop. Ensure request was created and workshop has same type+service.');
   }
-  log('✅ My workshop requests', list.map((r) => ({ id: r.id })));
-  return list;
+  if (!myWorkshopId) {
+    throw new Error('Backend did not return myWorkshopId for vendor.');
+  }
+  log('✅ My workshop requests', { requests: list.map((r) => ({ id: r.id })), myWorkshopId });
+  return { list, myWorkshopId };
 }
 
+// الفيندور يوافق على الطلب فقط (بدون سعر) — العميل لاحقاً يختار خدمة من قائمة الخدمات
 async function submitOffer(workshopId, requestId) {
   const res = await api.post(`/mobile-workshops/${workshopId}/requests/${requestId}/offer`, {
-    price: 150,
-    message: 'عرض اختبار',
+    message: 'موافق على الطلب',
   });
   if (res.status !== 201 && res.status !== 200) {
     throw new Error('Submit offer failed: ' + JSON.stringify(res.data));
   }
-  log('✅ Offer submitted', res.data.offer?.id);
+  log('✅ Vendor accepted request (موافق)', { offerId: res.data.offer?.id, acceptOnly: res.data.offer?.acceptOnly });
   return res.data.offer;
 }
 
@@ -158,18 +162,27 @@ async function getRequestById(requestId) {
   if (!request.offers?.length) {
     throw new Error('No offers yet. Vendor must submit offer first.');
   }
-  log('✅ Request with offers', request.offers.map((o) => ({ id: o.id, price: o.price })));
+  const summary = request.offers.map((o) => ({
+    id: o.id,
+    workshop: o.mobileWorkshop?.nameAr,
+    acceptOnly: o.acceptOnly,
+    workshopServicesCount: o.workshopServices?.length ?? 0,
+  }));
+  log('✅ Request with offers (ورش وافقت + خدماتها)', summary);
   return request;
 }
 
-async function selectOffer(requestId, offerId) {
-  const res = await api.post(`/mobile-workshop-requests/${requestId}/select-offer`, { offerId });
+// العميل يختار عرض (ورشة) + خدمة من قائمة خدماتها — نرسل offerId و mobileWorkshopServiceId
+async function selectOffer(requestId, offerId, mobileWorkshopServiceId) {
+  const body = { offerId };
+  if (mobileWorkshopServiceId) body.mobileWorkshopServiceId = mobileWorkshopServiceId;
+  const res = await api.post(`/mobile-workshop-requests/${requestId}/select-offer`, body);
   if (!res.data.success) {
     throw new Error('Select offer failed: ' + JSON.stringify(res.data));
   }
   const booking = res.data.booking;
   const invoice = res.data.invoice;
-  log('✅ Offer selected', {
+  log('✅ Offer selected (خدمة محددة)', {
     bookingId: booking?.id,
     invoiceId: invoice?.id,
     totalAmount: invoice?.totalAmount,
@@ -226,18 +239,23 @@ async function run() {
     const { type, typeService } = await getWorkshopTypes();
     const request = await createRequest(vehicleId, type.id, typeService?.id);
 
-    // 2) Vendor: login, get workshop id, get my requests, submit offer
+    // 2) Vendor: login, get my requests (contains myWorkshopId), submit offer
     await loginAsVendor();
-    const workshopId = await getVendorWorkshopId(type.id);
-    const requestsList = await getMyRequests();
+    const { list: requestsList, myWorkshopId: workshopId } = await getMyRequests();
     const reqItem = requestsList.find((r) => r.id === request.id) || requestsList[0];
     await submitOffer(workshopId, reqItem.id);
 
-    // 3) Customer: get request with offers, select offer
+    // 3) Customer: get request with offers (ورش وافقت + خدماتها)، يختار خدمة واحدة من أول ورشة
     setAuth(customerToken);
     const requestWithOffers = await getRequestById(request.id);
-    const offerId = requestWithOffers.offers[0].id;
-    const { invoice } = await selectOffer(request.id, offerId);
+    const firstOffer = requestWithOffers.offers[0];
+    const offerId = firstOffer.id;
+    const services = firstOffer.workshopServices || [];
+    if (!services.length) {
+      throw new Error('No workshop services returned; vendor must have at least one service.');
+    }
+    const chosenServiceId = services[0].id;
+    const { invoice } = await selectOffer(request.id, offerId, chosenServiceId);
     const invoiceId = invoice?.id;
     if (!invoiceId) {
       throw new Error('No invoice in select-offer response');

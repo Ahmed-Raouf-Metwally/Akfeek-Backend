@@ -33,9 +33,10 @@ class FeedbackService {
             }
         }
 
+        // Always store userId so "my feedback" list works; isAnonymous only hides identity in display/admin
         const feedback = await prisma.feedback.create({
             data: {
-                userId: isAnonymous ? null : userId,
+                userId,
                 orderId,
                 type,
                 category,

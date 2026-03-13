@@ -167,6 +167,15 @@ async function deleteWinch(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// GET /api/winches/my — فيندور الوينش: بيانات ونشي المرتبط بحسابي
+async function getMyWinch(req, res, next) {
+  try {
+    const winch = await winchTowingService.getWinchByVendorUserId(req.user.id);
+    if (!winch) throw new AppError('No winch linked to your vendor account', 404, 'NO_WINCH');
+    res.json({ success: true, data: winch });
+  } catch (err) { next(err); }
+}
+
 // GET /api/winches/my/broadcasts — فيندور الوينش: طلبات السحب القريبة من ونشي
 async function getMyBroadcasts(req, res, next) {
   try {
@@ -216,6 +225,7 @@ module.exports = {
   createWinch,
   updateWinch,
   deleteWinch,
+  getMyWinch,
   getMyBroadcasts,
   submitMyOffer,
   getMyJobs,

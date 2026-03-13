@@ -13,7 +13,24 @@ class TowingController {
             res.status(201).json({
                 success: true,
                 message: 'Towing request created successfully',
-                messageAr: 'تم إنشاء طلب السحب بنجاح',
+                data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Get broadcast details (for customer who created the request)
+     * GET /api/bookings/towing/:broadcastId
+     */
+    async getBroadcastDetails(req, res, next) {
+        try {
+            const { broadcastId } = req.params;
+            const customerId = req.user.id;
+            const result = await towingService.getBroadcastDetails(broadcastId, customerId);
+            res.json({
+                success: true,
                 data: result
             });
         } catch (error) {
@@ -60,7 +77,6 @@ class TowingController {
             res.json({
                 success: true,
                 message: 'Offer accepted successfully',
-                messageAr: 'تم قبول العرض بنجاح',
                 data: result
             });
         } catch (error) {

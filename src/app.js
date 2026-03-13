@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -60,6 +61,10 @@ app.use('/uploads', (req, res, next) => {
   next();
 });
 app.use('/uploads', express.static('uploads'));
+
+// صفحة تفاصيل البث (طلبات السحب)
+const publicDir = path.join(__dirname, '..', 'public');
+app.use(express.static(publicDir));
 
 // ================================================================================================
 // SWAGGER DOCUMENTATION

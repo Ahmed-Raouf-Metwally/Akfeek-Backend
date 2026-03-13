@@ -81,6 +81,7 @@ router.get('/', role('CUSTOMER'), ctrl.getMyRequests);
  *             required: [offerId]
  *             properties:
  *               offerId: { type: string, format: uuid }
+ *               mobileWorkshopServiceId: { type: string, format: uuid, description: مطلوب إن كان العرض "موافقة فقط" — العميل يختار خدمة من قائمة خدمات الورشة }
  *     responses:
  *       200:
  *         description: Offer selected; booking and invoice created

@@ -75,6 +75,20 @@ async function getAll(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// GET /api/mobile-workshops/my — ورشة المورد الحالي (VENDOR + MOBILE_WORKSHOP فقط)
+async function getMy(req, res, next) {
+  try {
+    const vendor = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id, vendorType: 'MOBILE_WORKSHOP' },
+      include: { mobileWorkshop: { select: SELECT } },
+    });
+    if (!vendor?.mobileWorkshop) {
+      throw new AppError('No mobile workshop linked to your vendor account', 404, 'NOT_FOUND');
+    }
+    res.json({ success: true, data: vendor.mobileWorkshop });
+  } catch (err) { next(err); }
+}
+
 // GET /api/mobile-workshops/:id
 async function getById(req, res, next) {
   try {
@@ -274,4 +288,4 @@ async function removeService(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getAll, getById, create, update, remove, addService, updateService, removeService };
+module.exports = { getAll, getMy, getById, create, update, remove, addService, updateService, removeService };

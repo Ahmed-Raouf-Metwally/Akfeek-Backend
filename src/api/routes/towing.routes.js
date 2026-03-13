@@ -6,8 +6,8 @@ const authMiddleware = require('../middlewares/auth.middleware');
 /**
  * @swagger
  * tags:
- *   name: 4. الوينشات (Towing/Winch)
- *   description: "فلو الوينش — فيندور الوينش هو المتحكم. العميل يطلب من أين إلى أين، فيندور الوينش يرسل عرضاً، العميل يوافق ويدفع (إيداع حصة الفيندور وخصم عمولة المنصة) ثم يتفتح السوكت للتتبع."
+ *   name: 4. Towing
+ *   description: "فلو السحب — فيندور الوينش هو المتحكم. العميل يطلب من أين إلى أين، الفيندور يرسل عرضاً، العميل يوافق ويدفع (إيداع حصة الفيندور وخصم عمولة المنصة) ثم يتفتح السوكت للتتبع."
  */
 
 /**
@@ -19,7 +19,7 @@ const authMiddleware = require('../middlewares/auth.middleware');
  *       العميل يحدد موقع الالتقاط (من أين) والجهة/الوجهة (إلى أين) مع إحداثيات كل منهما (latitude, longitude, address).
  *       المسافة تُحسب من الإحداثيات، وعندما فيندور الوينش يوافق يُرد عليه السعر المحسوب من (basePrice + مسافة الرحلة × pricePerKm).
  *       يُنشأ الحجز والبث ويُرسل push للوينشات القريبة عبر Socket (winch:new_request). ثم GET offers ثم POST accept.
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -73,7 +73,6 @@ const authMiddleware = require('../middlewares/auth.middleware');
  *               properties:
  *                 success: { type: boolean, example: true }
  *                 message: { type: string }
- *                 messageAr: { type: string }
  *                 data:
  *                   type: object
  *                   properties:
@@ -84,7 +83,7 @@ const authMiddleware = require('../middlewares/auth.middleware');
  *                     estimatedDurationMinutes: { type: number }
  *                     estimatedPrice: { type: number }
  *                     broadcastUntil: { type: string, format: date-time }
- *                     nearbyWinchesCount: { type: number, description: "عدد الوينشات القريبة التي استلمت الطلب" }
+ *                     nearbyWinchesCount: { type: number, description: "عدد مقدمي السحب القريبين الذين استلموا الطلب" }
  *       404:
  *         description: Vehicle not found or no winches available in area
  */
@@ -92,13 +91,62 @@ router.post('/request', authMiddleware, towingController.createRequest);
 
 /**
  * @swagger
+ * /api/bookings/towing/{broadcastId}:
+ *   get:
+ *     summary: "تفاصيل البث — Get broadcast details"
+ *     description: |
+ *       العميل يجلب تفاصيل طلب السحب (البث): موقع الالتقاط والوجهة، المركبة، الحالة، عدد العروض، وقت انتهاء البث.
+ *       للعميل صاحب الطلب فقط.
+ *     tags: [4. Towing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: broadcastId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *         description: Broadcast ID من استجابة create request
+ *     responses:
+ *       200:
+ *         description: تفاصيل البث مع الموقع والمركبة والحالة وعدد العروض
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string, description: "معرف البث" }
+ *                     status: { type: string, description: "BROADCASTING | TECHNICIAN_SELECTED" }
+ *                     broadcastUntil: { type: string, format: date-time }
+ *                     createdAt: { type: string, format: date-time }
+ *                     urgency: { type: string }
+ *                     description: { type: string }
+ *                     booking: { type: object, properties: { id, bookingNumber, status, totalPrice, vehicle } }
+ *                     pickupLocation: { type: object, properties: { latitude, longitude, address } }
+ *                     destinationLocation: { type: object, properties: { latitude, longitude, address } }
+ *                     estimatedDistanceKm: { type: number }
+ *                     estimatedDurationMinutes: { type: number }
+ *                     vehicleCondition: { type: string }
+ *                     offersCount: { type: integer }
+ *       403:
+ *         description: غير مصرح — الطلب ليس لصاحب الجلسة
+ *       404:
+ *         description: Broadcast not found
+ */
+router.get('/:broadcastId', authMiddleware, towingController.getBroadcastDetails);
+
+/**
+ * @swagger
  * /api/bookings/towing/{broadcastId}/offers:
  *   get:
- *     summary: "4. عرض عروض الوينشات (أسعارها) — Get offers for towing request"
+ *     summary: "4. عرض عروض السحب (أسعارها) — Get offers for towing request"
  *     description: |
- *       قائمة العروض من الوينشات/الفنيين مع السعر (bidAmount) لكل عرض. العميل يختار الأنسب ثم يستدعي POST accept.
+ *       قائمة العروض من مقدمي السحب/الفنيين مع السعر (bidAmount) لكل عرض. العميل يختار الأنسب ثم يستدعي POST accept.
  *       كل عرض قد يكون من ونش (winch + vendorName) أو من فني (technician).
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -150,7 +198,7 @@ router.get('/:broadcastId/offers', authMiddleware, towingController.getOffers);
  *     description: |
  *       العميل يوافق على عرض فيندور الوينش. يُربط الحجز بفيندور الوينش ويُسجّل نسبة عمولة المنصة وقت الحجز، ويُنشأ فاتورة (PENDING).
  *       الدفع: PATCH /api/invoices/{id}/mark-paid — إيداع حصة الفيندور في محفظته وخصم عمولة المنصة (النسبة المسجلة وقت الحجز)، ثم يتفتح السوكت للتتبع. استخدم data.invoice.id.
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -192,7 +240,6 @@ router.get('/:broadcastId/offers', authMiddleware, towingController.getOffers);
  *                         totalAmount: { type: number }
  *                         status: { type: string, example: "PENDING" }
  *                         message: { type: string }
- *                         messageAr: { type: string }
  */
 router.post('/:broadcastId/offers/:offerId/accept', authMiddleware, towingController.acceptOffer);
 

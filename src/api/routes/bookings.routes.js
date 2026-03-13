@@ -78,11 +78,11 @@ router.get('/', requireAdminOrPermission('bookings'), bookingController.getAllBo
  * @swagger
  * /api/bookings/my:
  *   get:
- *     summary: My bookings (current user)
+ *     summary: My bookings (Customer) — حجوزاتي / حالة الحجز
  *     description: |
- *       Get current user's bookings (customer appointments). Includes workshop/vendor info and display fields.
- *       حجوزاتي - حجوزات المستخدم الحالي مع مقدم الخدمة/الفيندور والتاريخ والوقت.
- *     tags: [Bookings]
+ *       العميل يشوف قائمة حجوزاته وحالة كل حجز (قيد الانتظار، مؤكد، قيد التنفيذ، مكتمل، ملغي).
+ *       Customer gets their bookings with status. Includes workshop/vendor info, date, time. Use for certified workshop, comprehensive care, car wash.
+ *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -90,12 +90,13 @@ router.get('/', requireAdminOrPermission('bookings'), bookingController.getAllBo
  *       - $ref: '#/components/parameters/LimitParam'
  *       - name: status
  *         in: query
+ *         description: تصفية حسب الحالة — Filter by booking status
  *         schema:
  *           type: string
- *           enum: [PENDING, CONFIRMED, TECHNICIAN_ASSIGNED, COMPLETED, CANCELLED]
+ *           enum: [PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED]
  *     responses:
  *       200:
- *         description: Current user bookings with providerDisplay, dateDisplay, timeDisplay
+ *         description: قائمة حجوزات العميل مع الحالة — Current user bookings with status, providerDisplay, dateDisplay, timeDisplay
  *         content:
  *           application/json:
  *             schema:
@@ -109,7 +110,7 @@ router.get('/', requireAdminOrPermission('bookings'), bookingController.getAllBo
  *                     properties:
  *                       id: { type: string, format: uuid }
  *                       bookingNumber: { type: string }
- *                       status: { type: string }
+ *                       status: { type: string, description: PENDING | CONFIRMED | IN_PROGRESS | COMPLETED | CANCELLED }
  *                       providerDisplay: { type: string }
  *                       providerDisplayEn: { type: string }
  *                       dateDisplay: { type: string, nullable: true }
@@ -117,6 +118,7 @@ router.get('/', requireAdminOrPermission('bookings'), bookingController.getAllBo
  *                       scheduledDate: { type: string, format: date-time, nullable: true }
  *                       scheduledTime: { type: string, nullable: true }
  *                       totalPrice: { type: number }
+ *                       workshop: { type: object, nullable: true }
  *                 pagination: { $ref: '#/components/schemas/Pagination' }
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
@@ -127,11 +129,11 @@ router.get('/my', bookingController.getMyBookings);
  * @swagger
  * /api/bookings/{id}:
  *   get:
- *     summary: Get booking by ID
+ *     summary: Get booking by ID (Admin or Customer — تفاصيل حجزي)
  *     description: |
- *       Get single booking details. Admin or booking owner.
- *       يتضمن providerDisplay, dateDisplay, timeDisplay (مقدم الخدمة، التاريخ، الوقت).
- *     tags: [Bookings]
+ *       العميل يشوف تفاصيل حجزه وحالته (رقم الحجز، الحالة، الورشة، التاريخ، الفاتورة).
+ *       Customer views their booking details and status. Admin can view any booking.
+ *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -139,9 +141,10 @@ router.get('/my', bookingController.getMyBookings);
  *         in: path
  *         required: true
  *         schema: { type: string, format: uuid }
+ *         description: Booking ID
  *     responses:
  *       200:
- *         description: Booking details with provider, date, time
+ *         description: Booking details with status, provider, date, time, invoice
  *         content:
  *           application/json:
  *             schema:
@@ -153,7 +156,7 @@ router.get('/my', bookingController.getMyBookings);
  *                   properties:
  *                     id: { type: string, format: uuid }
  *                     bookingNumber: { type: string }
- *                     status: { type: string }
+ *                     status: { type: string, description: PENDING | CONFIRMED | IN_PROGRESS | COMPLETED | CANCELLED }
  *                     providerDisplay: { type: string }
  *                     providerDisplayEn: { type: string }
  *                     dateDisplay: { type: string, nullable: true }
@@ -345,13 +348,13 @@ router.patch('/:id/status', requireAdminOrPermission('bookings'), bookingControl
 
 /**
  * @swagger
- * /api/bookings/{id}/complete:
+ * /api/bookings/{id}/confirm:
  *   patch:
- *     summary: Mark booking as completed (Vendor)
+ *     summary: Confirm booking (Vendor – Certified Workshop)
  *     description: |
- *       الفيندور صاحب الخدمة يحدد الحجز كمكتمل بعد إتمام الخدمة في الورشة (عناية شاملة أو ورش غسيل).
- *       Vendor marks booking as COMPLETED when service is done at venue.
- *     tags: [Bookings, 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
+ *       فيندور الورشة المعتمدة يؤكد الحجز (PENDING → CONFIRMED).
+ *       Certified workshop vendor confirms a pending booking for their workshop.
+ *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -359,6 +362,83 @@ router.patch('/:id/status', requireAdminOrPermission('bookings'), bookingControl
  *         in: path
  *         required: true
  *         schema: { type: string, format: uuid }
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: Booking confirmed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: 'Booking confirmed' }
+ *                 messageAr: { type: string, example: 'تم تأكيد الحجز' }
+ *                 data: { type: object, description: Updated booking }
+ *       400:
+ *         description: Only pending bookings can be confirmed
+ *       403:
+ *         description: Not the vendor of this booking
+ *       404:
+ *         description: Booking not found
+ */
+router.patch('/:id/confirm', requireRole('VENDOR'), bookingController.confirmBookingAsVendor);
+
+/**
+ * @swagger
+ * /api/bookings/{id}/start:
+ *   patch:
+ *     summary: Start booking (Vendor – Certified Workshop) — بدء تنفيذ الحجز
+ *     description: |
+ *       فيندور الورشة يغيّر حالة الحجز من مؤكد إلى قيد التنفيذ (CONFIRMED → IN_PROGRESS).
+ *       Vendor starts work on a confirmed booking.
+ *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: Booking status set to IN_PROGRESS
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: 'Booking started' }
+ *                 messageAr: { type: string, example: 'تم بدء تنفيذ الحجز' }
+ *                 data: { type: object, description: Updated booking }
+ *       400:
+ *         description: Only confirmed bookings can be started
+ *       403:
+ *         description: Not the vendor of this booking
+ *       404:
+ *         description: Booking not found
+ */
+router.patch('/:id/start', requireRole('VENDOR'), bookingController.startBookingAsVendor);
+
+/**
+ * @swagger
+ * /api/bookings/{id}/complete:
+ *   patch:
+ *     summary: Mark booking as completed (Vendor)
+ *     description: |
+ *       الفيندور صاحب الخدمة/الورشة يحدد الحجز كمكتمل بعد إتمام الخدمة (ورشة معتمدة، عناية شاملة، ورش غسيل).
+ *       Vendor marks booking as COMPLETED when service is done at venue.
+ *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops), 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *         description: Booking ID
  *     responses:
  *       200:
  *         description: Booking marked as completed

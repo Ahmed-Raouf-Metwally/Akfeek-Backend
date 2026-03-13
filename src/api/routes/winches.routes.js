@@ -35,13 +35,27 @@ router.use(auth);
 
 /**
  * @swagger
+ * /api/winches/my:
+ *   get:
+ *     summary: "ونشي — Get my winch (Winch vendor)"
+ *     description: فيندور الوينش (TOWING_SERVICE) يجلب بيانات الوينش المرتبط بحسابه.
+ *     tags: [4. Towing]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Winch profile }
+ *       404: { description: No winch linked to your vendor account }
+ */
+router.get('/my', role('VENDOR'), ctrl.getMyWinch);
+
+/**
+ * @swagger
  * /api/winches/my/broadcasts:
  *   get:
  *     summary: "2. طلبات السحب القريبة — Get nearby towing requests (Winch vendor)"
  *     description: |
  *       فيندور الوينش (المتحكم بفلو الوينش) يستدعي هذا لرؤية الطلبات القريبة من موقع ونشه. يُرسل أيضاً push عبر Socket (حدث winch:new_request) عند إنشاء أي طلب جديد قريب.
  *       يتطلب تسجيل دخول كـ VENDOR ووجود ونش مرتبط بحسابك. يرجع قائمة مع المسافة وسعرك المقترح (yourPrice من pricePerKm).
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -88,7 +102,7 @@ router.get('/my/broadcasts', role('VENDOR'), ctrl.getMyBroadcasts);
  *     description: |
  *       فيندور الوينش يرسل عرضاً للطلب. السعر يُحسب تلقائياً من basePrice + (مسافة الرحلة × pricePerKm) مع احترام minPrice.
  *       Body اختياري (مثلاً message فقط). لا حاجة لإرسال السعر — يُحسب من إعدادات الوينش.
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -113,7 +127,6 @@ router.get('/my/broadcasts', role('VENDOR'), ctrl.getMyBroadcasts);
  *               properties:
  *                 success: { type: boolean }
  *                 message: { type: string }
- *                 messageAr: { type: string }
  *                 data:
  *                   type: object
  *                   properties:
@@ -133,7 +146,7 @@ router.post('/my/broadcasts/:broadcastId/offer', role('VENDOR'), ctrl.submitMyOf
  *     description: |
  *       فيندور الوينش (VENDOR) هو المتحكم — قائمة الحجوزات التي قبل العميل عرض هذا الوينش لها.
  *       يعرض الحجوزات بحالة TECHNICIAN_ASSIGNED أو TECHNICIAN_EN_ROUTE أو ARRIVED أو IN_PROGRESS. بعد الدفع يتفتح السوكت للتتبع والمحادثة.
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -172,7 +185,7 @@ router.get('/my/jobs', role('VENDOR'), ctrl.getMyJobs);
  *     summary: "5. تحديث حالة المهمة — Update job status (Winch vendor)"
  *     description: |
  *       فيندور الوينش يحدّث الحالة أثناء تنفيذ النقل. التسلسل: TECHNICIAN_ASSIGNED → TECHNICIAN_EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED.
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -207,8 +220,8 @@ router.patch('/my/jobs/:jobId/status', role('VENDOR'), ctrl.updateMyJobStatus);
  * @swagger
  * /api/winches:
  *   get:
- *     summary: قائمة الوينشات — List all winches [CRUD - Read List]
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     summary: قائمة مقدمي السحب — List all winches [CRUD - Read List]
+ *     tags: [4. Towing]
  *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200:
@@ -221,7 +234,7 @@ router.get('/',     ctrl.getAllWinches);
  * /api/winches/{id}:
  *   get:
  *     summary: عرض ونش بالمعرف — Get winch by ID [CRUD - Read One]
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -241,7 +254,7 @@ router.get('/:id',  ctrl.getWinchById);
  * /api/winches:
  *   post:
  *     summary: إضافة ونش (أدمن) — Create winch [CRUD - Create]
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
  *       required: true
@@ -265,7 +278,7 @@ router.post('/',    role('ADMIN'), ctrl.createWinch);
  * /api/winches/{id}:
  *   put:
  *     summary: تحديث ونش (أدمن) — Update winch [CRUD - Update]
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -293,7 +306,7 @@ router.put('/:id',  role('ADMIN'), ctrl.updateWinch);
  * /api/winches/{id}:
  *   delete:
  *     summary: حذف ونش (أدمن) — Delete winch [CRUD - Delete]
- *     tags: [4. الوينشات (Winches/Towing)]
+ *     tags: [4. Towing]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path

@@ -48,9 +48,103 @@ router.use(auth);
  */
 router.get('/',     ctrl.getAll);
 
-// Vendor: طلبات ورشتي + إرسال عرض (يجب أن تأتي قبل /:id وإلا "my" يُفسَّر كمعرف)
+/**
+ * @swagger
+ * /api/mobile-workshops/my:
+ *   get:
+ *     summary: ورشتي المتنقلة (بائع) — Get my mobile workshop
+ *     description: يعيد ورشة الورش المتنقلة المرتبطة بحساب البائع الحالي.
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Mobile workshop of current vendor
+ *       404:
+ *         description: No mobile workshop linked
+ */
+router.get('/my',   role('VENDOR'), ctrl.getMy);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/my/requests:
+ *   get:
+ *     summary: طلبات ورشتي (بائع) — Get requests for my mobile workshop
+ *     description: يعيد قائمة طلبات الورش المتنقلة المرسلة لورشة البائع الحالي (للرد بعروض).
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema: { type: string }
+ *         description: فلترة حسب حالة الطلب
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: List of requests for my workshop
+ */
 router.get('/my/requests', role('VENDOR'), reqCtrl.getRequestsForMyWorkshop);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/{workshopId}/requests/{requestId}/offer:
+ *   post:
+ *     summary: موافقة على الطلب أو إرسال عرض (بائع)
+ *     description: |
+ *       الفيندور إما يرسل "موافق على الطلب" فقط (بدون price) — ثم العميل يرى خدمات الورشة بأسعارها ويختار واحدة.
+ *       أو يرسل price و message لعرض بسعر مخصص (سلوك قديم).
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: workshopId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message: { type: string, description: رسالة (مثلاً موافق على الطلب) }
+ *               price: { type: number, description: اختياري — إن وُجد يصبح عرض بسعر مخصص }
+ *               mobileWorkshopServiceId: { type: string, format: uuid, description: اختياري مع price }
+ *     responses:
+ *       201:
+ *         description: Offer submitted or acceptance recorded
+ */
 router.post('/:workshopId/requests/:requestId/offer', role('VENDOR'), reqCtrl.submitOffer);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/{workshopId}/requests/{requestId}/reject:
+ *   post:
+ *     summary: رفض الطلب (بائع) — Reject request so it no longer appears in vendor list
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: workshopId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Request rejected
+ */
+router.post('/:workshopId/requests/:requestId/reject', role('VENDOR'), reqCtrl.rejectRequest);
 
 /**
  * @swagger

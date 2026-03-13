@@ -1040,9 +1040,10 @@ model MobileWorkshop {
   vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
 
   // خدمات مفصّلة مع أسعار
-  services  MobileWorkshopService[]
-  offers    MobileWorkshopOffer[]
-  bookings  Booking[]
+  services         MobileWorkshopService[]
+  offers           MobileWorkshopOffer[]
+  requestRejections MobileWorkshopRequestRejection[]
+  bookings        Booking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1120,14 +1121,29 @@ model MobileWorkshopRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  offers   MobileWorkshopOffer[]
-  booking  Booking?
+  offers     MobileWorkshopOffer[]
+  rejections MobileWorkshopRequestRejection[] // فيندورز رفضوا الطلب
+  booking    Booking?
 
   @@index([customerId])
   @@index([workshopTypeId])
   @@index([workshopTypeServiceId])
   @@index([status])
   @@index([createdAt])
+}
+
+// رفض المورد للطلب — حتى لا يظهر الطلب again في قائمة طلباته
+model MobileWorkshopRequestRejection {
+  id               String   @id @default(uuid())
+  requestId        String
+  request          MobileWorkshopRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  mobileWorkshopId String
+  mobileWorkshop   MobileWorkshop @relation(fields: [mobileWorkshopId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+
+  @@unique([requestId, mobileWorkshopId])
+  @@index([requestId])
+  @@index([mobileWorkshopId])
 }
 
 enum MobileWorkshopOfferStatus {

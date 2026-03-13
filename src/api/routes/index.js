@@ -22,6 +22,7 @@ const towingRoutes = require('./towing.routes');
 const technicianTowingRoutes = require('./technicianTowing.routes');
 const feedbackRoutes = require('./feedback.routes');
 const feedbackAdminRoutes = require('./admin/feedback.admin.routes');
+const technicalSupportRoutes = require('./technicalSupport.routes');
 
 // Winch routes
 const winchRoutes = require('./winches.routes');
@@ -100,6 +101,7 @@ router.use('/ratings', ratingRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/addresses', addressRoutes);
 router.use('/feedback', feedbackRoutes);
+router.use('/technical-support-requests', technicalSupportRoutes);
 router.use('/activity', require('./activity.routes'));
 
 // Tracking routes (real-time location)

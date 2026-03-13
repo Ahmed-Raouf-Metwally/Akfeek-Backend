@@ -75,16 +75,32 @@ async function submitOffer(req, res, next) {
 }
 
 /**
- * Customer: select an offer → creates Booking, Invoice, ChatRoom
+ * Vendor: reject request (رفض الطلب)
+ * POST /api/mobile-workshops/:workshopId/requests/:requestId/reject
+ */
+async function rejectRequest(req, res, next) {
+  try {
+    const { workshopId, requestId } = req.params;
+    const result = await mobileWorkshopRequestService.rejectRequest(workshopId, requestId, req.user.id);
+    res.json({
+      success: true,
+      message: result.message,
+      messageAr: result.messageAr,
+    });
+  } catch (err) { next(err); }
+}
+
+/**
+ * Customer: select an offer (وعند "موافقة فقط" يلزم إرسال mobileWorkshopServiceId)
  * POST /api/mobile-workshop-requests/:requestId/select-offer
- * Body: { offerId }
+ * Body: { offerId, mobileWorkshopServiceId? } — إذا الفيندور وافق فقط بدون سعر، العميل يختار خدمة من قائمة الخدمات
  */
 async function selectOffer(req, res, next) {
   try {
     const { requestId } = req.params;
-    const { offerId } = req.body;
+    const { offerId, mobileWorkshopServiceId } = req.body;
     if (!offerId) throw new AppError('offerId is required', 400, 'VALIDATION_ERROR');
-    const result = await mobileWorkshopRequestService.selectOffer(requestId, offerId, req.user.id);
+    const result = await mobileWorkshopRequestService.selectOffer(requestId, offerId, req.user.id, { mobileWorkshopServiceId });
     res.json({
       success: true,
       message: 'Offer selected; booking and invoice created',
@@ -100,5 +116,6 @@ module.exports = {
   getRequestById,
   getRequestsForMyWorkshop,
   submitOffer,
+  rejectRequest,
   selectOffer,
 };

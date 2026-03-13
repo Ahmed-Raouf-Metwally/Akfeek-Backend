@@ -74,11 +74,20 @@ async function getAllBookings(req, res, next) {
               id: true,
               name: true,
               nameAr: true,
+              city: true,
+              phone: true,
+              email: true,
+              address: true,
               vendor: {
                 select: {
                   id: true,
                   businessName: true,
                   businessNameAr: true,
+                  contactPhone: true,
+                  contactEmail: true,
+                  address: true,
+                  city: true,
+                  logo: true,
                 },
               },
             },
@@ -258,11 +267,20 @@ async function getBookingById(req, res, next) {
             id: true,
             name: true,
             nameAr: true,
+            city: true,
+            phone: true,
+            email: true,
+            address: true,
             vendor: {
               select: {
                 id: true,
                 businessName: true,
                 businessNameAr: true,
+                contactPhone: true,
+                contactEmail: true,
+                address: true,
+                city: true,
+                logo: true,
               },
             },
           },
@@ -277,6 +295,11 @@ async function getBookingById(req, res, next) {
                 id: true,
                 businessName: true,
                 businessNameAr: true,
+                contactPhone: true,
+                contactEmail: true,
+                address: true,
+                city: true,
+                logo: true,
               },
             },
           },
@@ -325,6 +348,7 @@ async function getBookingById(req, res, next) {
                 id: true,
                 name: true,
                 nameAr: true,
+                vendorId: true,
               },
             },
           },
@@ -358,8 +382,21 @@ async function getBookingById(req, res, next) {
     if (!booking) {
       throw new AppError('Booking not found', 404, 'NOT_FOUND');
     }
-    if (req.user.role !== 'ADMIN' && booking.customerId !== req.user.id) {
-      throw new AppError('Not allowed to view this booking', 403, 'FORBIDDEN');
+    const isAdmin = req.user.role === 'ADMIN';
+    const isCustomer = booking.customerId === req.user.id;
+    if (!isAdmin && !isCustomer) {
+      const vendorProfile = await prisma.vendorProfile.findFirst({
+        where: { userId: req.user.id },
+      });
+      const isVendorOwner =
+        vendorProfile &&
+        ((booking.workshop?.vendor?.id === vendorProfile.id) ||
+          (booking.mobileWorkshop?.vendor?.id === vendorProfile.id) ||
+          (booking.services?.some((s) => s.service?.vendorId === vendorProfile.id)) ||
+          (booking.jobBroadcast?.offers?.some((o) => o.winch?.vendor?.id === vendorProfile.id)));
+      if (!isVendorOwner) {
+        throw new AppError('Not allowed to view this booking', 403, 'FORBIDDEN');
+      }
     }
     const b = booking;
     const vendor =
@@ -396,7 +433,7 @@ async function getBookingById(req, res, next) {
 /**
  * Create new booking (customer books appointment; admin can create for any customer)
  * POST /api/bookings
- * Body: vehicleId, scheduledDate, scheduledTime, serviceIds (array), addressId?, workshopId?, deliveryMethod?, notes?
+ * Body: vehicleId, scheduledDate, scheduledTime, serviceIds (array) OR workshopServiceIds (array when workshopId), addressId?, workshopId?, deliveryMethod?, notes?
  */
 async function createBooking(req, res, next) {
   try {
@@ -409,6 +446,7 @@ async function createBooking(req, res, next) {
       workshopId,
       deliveryMethod,
       serviceIds,
+      workshopServiceIds,
       services: servicesLegacy,
       addressId,
       notes
@@ -423,9 +461,10 @@ async function createBooking(req, res, next) {
       throw new AppError('vehicleId and scheduledDate are required', 400, 'VALIDATION_ERROR');
     }
 
+    const useWorkshopServices = workshopId && Array.isArray(workshopServiceIds) && workshopServiceIds.length > 0;
     const ids = serviceIds || (Array.isArray(servicesLegacy) ? servicesLegacy : []);
-    if (!ids.length) {
-      throw new AppError('At least one service is required (serviceIds)', 400, 'VALIDATION_ERROR');
+    if (!useWorkshopServices && !ids.length) {
+      throw new AppError('At least one service is required (serviceIds or workshopServiceIds when workshopId is set)', 400, 'VALIDATION_ERROR');
     }
 
     const scheduledDateObj = new Date(scheduledDate);
@@ -433,7 +472,7 @@ async function createBooking(req, res, next) {
     dayStart.setUTCHours(0, 0, 0, 0);
     const dayEnd = new Date(scheduledDateObj);
     dayEnd.setUTCHours(23, 59, 59, 999);
-    if (scheduledTime) {
+    if (scheduledTime && !useWorkshopServices && ids.length) {
       const conflicting = await prisma.booking.findFirst({
         where: {
           scheduledDate: { gte: dayStart, lte: dayEnd },
@@ -444,6 +483,19 @@ async function createBooking(req, res, next) {
       });
       if (conflicting) {
         throw new AppError('This time slot is already booked for one of the selected services', 400, 'SLOT_NOT_AVAILABLE');
+      }
+    }
+    if (scheduledTime && useWorkshopServices) {
+      const conflicting = await prisma.booking.findFirst({
+        where: {
+          workshopId,
+          scheduledDate: { gte: dayStart, lte: dayEnd },
+          scheduledTime,
+          status: { notIn: ['CANCELLED', 'REJECTED', 'NO_SHOW'] },
+        }
+      });
+      if (conflicting) {
+        throw new AppError('This time slot is already booked for this workshop', 400, 'SLOT_NOT_AVAILABLE');
       }
     }
 
@@ -475,39 +527,64 @@ async function createBooking(req, res, next) {
     const bookingServiceData = [];
     let subtotal = 0;
 
-    for (const serviceId of ids) {
-      const service = await prisma.service.findUnique({
-        where: { id: serviceId, isActive: true },
-        include: {
-          pricing: {
-            where: { isActive: true },
-            take: 1,
-            orderBy: { vehicleType: 'asc' }
-          }
-        }
-      });
-      if (!service) {
-        throw new AppError(`Service not found or inactive: ${serviceId}`, 404, 'NOT_FOUND');
-      }
-
-      let unitPrice = 0;
-      const forType = await prisma.servicePricing.findFirst({
-        where: { serviceId, vehicleType, isActive: true }
-      });
-      if (forType) {
-        unitPrice = Number(forType.discountedPrice ?? forType.basePrice);
-      } else {
-        const fallback = await prisma.servicePricing.findFirst({
-          where: { serviceId, isActive: true }
+    if (useWorkshopServices) {
+      for (const wsId of workshopServiceIds) {
+        const ws = await prisma.certifiedWorkshopService.findFirst({
+          where: { id: wsId, workshopId, isActive: true }
         });
-        unitPrice = fallback ? Number(fallback.discountedPrice ?? fallback.basePrice) : 0;
+        if (!ws) {
+          throw new AppError(`Workshop service not found or inactive: ${wsId}`, 404, 'NOT_FOUND');
+        }
+        const quantity = 1;
+        const unitPrice = Number(ws.price);
+        const totalPrice = unitPrice * quantity;
+        subtotal += totalPrice;
+        const estimatedMinutes = ws.estimatedDuration != null ? Number(ws.estimatedDuration) : null;
+        bookingServiceData.push({
+          serviceId: null,
+          workshopServiceId: ws.id,
+          quantity,
+          unitPrice,
+          totalPrice,
+          estimatedMinutes,
+          vendorId: null,
+        });
       }
-      const quantity = 1;
-      const totalPrice = unitPrice * quantity;
-      subtotal += totalPrice;
-      const estimatedMinutes = service.estimatedDuration != null ? Number(service.estimatedDuration) : null;
-      const vendorId = service.vendorId || null;
-      bookingServiceData.push({ serviceId, quantity, unitPrice, totalPrice, estimatedMinutes, vendorId });
+    } else {
+      for (const serviceId of ids) {
+        const service = await prisma.service.findUnique({
+          where: { id: serviceId, isActive: true },
+          include: {
+            pricing: {
+              where: { isActive: true },
+              take: 1,
+              orderBy: { vehicleType: 'asc' }
+            }
+          }
+        });
+        if (!service) {
+          throw new AppError(`Service not found or inactive: ${serviceId}`, 404, 'NOT_FOUND');
+        }
+
+        let unitPrice = 0;
+        const forType = await prisma.servicePricing.findFirst({
+          where: { serviceId, vehicleType, isActive: true }
+        });
+        if (forType) {
+          unitPrice = Number(forType.discountedPrice ?? forType.basePrice);
+        } else {
+          const fallback = await prisma.servicePricing.findFirst({
+            where: { serviceId, isActive: true }
+          });
+          unitPrice = fallback ? Number(fallback.discountedPrice ?? fallback.basePrice) : 0;
+        }
+        const quantity = 1;
+        const totalPrice = unitPrice * quantity;
+        subtotal += totalPrice;
+        const estimatedMinutes = service.estimatedDuration != null ? Number(service.estimatedDuration) : null;
+        const vendorId = service.vendorId || null;
+        bookingServiceData.push({ serviceId, workshopServiceId: null, quantity, unitPrice, totalPrice, estimatedMinutes, vendorId });
+      }
     }
 
     const totalEstimatedMinutes = bookingServiceData.reduce((sum, s) => sum + (s.estimatedMinutes ?? 0), 0);
@@ -570,8 +647,9 @@ async function createBooking(req, res, next) {
           vendorEarnings,
         },
         services: {
-          create: bookingServiceData.map(({ serviceId, quantity, unitPrice, totalPrice: tp, estimatedMinutes: em }) => ({
-            serviceId,
+          create: bookingServiceData.map(({ serviceId, workshopServiceId, quantity, unitPrice, totalPrice: tp, estimatedMinutes: em }) => ({
+            serviceId: serviceId || undefined,
+            workshopServiceId: workshopServiceId || undefined,
             quantity,
             unitPrice,
             totalPrice: tp,
@@ -593,11 +671,32 @@ async function createBooking(req, res, next) {
           }
         },
         workshop: workshopId ? {
-          select: { id: true, name: true, nameAr: true, city: true, phone: true }
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            city: true,
+            phone: true,
+            email: true,
+            address: true,
+            vendor: {
+              select: {
+                id: true,
+                businessName: true,
+                businessNameAr: true,
+                contactPhone: true,
+                contactEmail: true,
+                address: true,
+                city: true,
+                logo: true,
+              },
+            },
+          },
         } : false,
         services: {
           include: {
-            service: { select: { id: true, name: true, nameAr: true } }
+            service: { select: { id: true, name: true, nameAr: true } },
+            workshopService: { select: { id: true, name: true, nameAr: true } }
           }
         }
       }
@@ -720,14 +819,21 @@ async function getMyBookings(req, res, next) {
               id: true,
               name: true,
               nameAr: true,
+              city: true,
+              phone: true,
               vendor: {
                 select: {
                   id: true,
                   businessName: true,
-                  businessNameAr: true
-                }
-              }
-            }
+                  businessNameAr: true,
+                  contactPhone: true,
+                  contactEmail: true,
+                  address: true,
+                  city: true,
+                  logo: true,
+                },
+              },
+            },
           },
           mobileWorkshop: {
             select: {
@@ -874,6 +980,125 @@ async function updateBookingStatus(req, res, next) {
 }
 
 /**
+ * Vendor: confirm booking (تأكيد الحجز من قبل الورشة).
+ * PATCH /api/bookings/:id/confirm
+ * الفيندور صاحب الورشة فقط يمكنه تأكيد الحجز.
+ */
+async function confirmBookingAsVendor(req, res, next) {
+  try {
+    const { id } = req.params;
+    const vendorProfile = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!vendorProfile) throw new AppError('Vendor profile not found', 403, 'FORBIDDEN');
+
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        services: { include: { service: { select: { vendorId: true } } } },
+        workshop: { select: { vendorId: true } },
+      },
+    });
+    if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+
+    const byServiceVendor = booking.services?.some((bs) => bs.service && bs.service.vendorId === vendorProfile.id);
+    const byWorkshopVendor = booking.workshopId && booking.workshop?.vendorId === vendorProfile.id;
+    const belongsToVendor = byServiceVendor || byWorkshopVendor;
+    if (!belongsToVendor) {
+      throw new AppError('Not allowed to confirm this booking', 403, 'FORBIDDEN');
+    }
+
+    if (booking.status !== 'PENDING') {
+      throw new AppError('Only pending bookings can be confirmed', 400, 'INVALID_STATUS');
+    }
+
+    const oldStatus = booking.status;
+    const updated = await prisma.booking.update({
+      where: { id },
+      data: { status: 'CONFIRMED' },
+    });
+
+    await prisma.bookingStatusHistory.create({
+      data: {
+        bookingId: id,
+        fromStatus: oldStatus,
+        toStatus: 'CONFIRMED',
+        reason: 'Confirmed by workshop vendor',
+        changedBy: req.user.id,
+      },
+    }).catch(() => null);
+
+    res.json({
+      success: true,
+      message: 'Booking confirmed',
+      messageAr: 'تم تأكيد الحجز',
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Vendor: start booking (بدء تنفيذ الحجز — CONFIRMED → IN_PROGRESS).
+ * PATCH /api/bookings/:id/start
+ */
+async function startBookingAsVendor(req, res, next) {
+  try {
+    const { id } = req.params;
+    const vendorProfile = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id },
+    });
+    if (!vendorProfile) throw new AppError('Vendor profile not found', 403, 'FORBIDDEN');
+
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        services: { include: { service: { select: { vendorId: true } } } },
+        workshop: { select: { vendorId: true } },
+      },
+    });
+    if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+
+    const byServiceVendor = booking.services?.some((bs) => bs.service && bs.service.vendorId === vendorProfile.id);
+    const byWorkshopVendor = booking.workshopId && booking.workshop?.vendorId === vendorProfile.id;
+    const belongsToVendor = byServiceVendor || byWorkshopVendor;
+    if (!belongsToVendor) {
+      throw new AppError('Not allowed to start this booking', 403, 'FORBIDDEN');
+    }
+
+    if (booking.status !== 'CONFIRMED') {
+      throw new AppError('Only confirmed bookings can be started', 400, 'INVALID_STATUS');
+    }
+
+    const oldStatus = booking.status;
+    const updated = await prisma.booking.update({
+      where: { id },
+      data: { status: 'IN_PROGRESS' },
+    });
+
+    await prisma.bookingStatusHistory.create({
+      data: {
+        bookingId: id,
+        fromStatus: oldStatus,
+        toStatus: 'IN_PROGRESS',
+        reason: 'Work started by workshop vendor',
+        changedBy: req.user.id,
+      },
+    }).catch(() => null);
+
+    res.json({
+      success: true,
+      message: 'Booking started',
+      messageAr: 'تم بدء تنفيذ الحجز',
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Vendor: mark booking as completed (عند اكتمال الخدمة في الورشة).
  * PATCH /api/bookings/:id/complete
  * الفيندور صاحب الخدمة فقط يمكنه استدعاء هذا.
@@ -933,4 +1158,4 @@ async function completeBookingAsVendor(req, res, next) {
   }
 }
 
-module.exports = { getAllBookings, getBookingById, createBooking, getMyBookings, updateBookingStatus, completeBookingAsVendor };
+module.exports = { getAllBookings, getBookingById, createBooking, getMyBookings, updateBookingStatus, confirmBookingAsVendor, startBookingAsVendor, completeBookingAsVendor };
