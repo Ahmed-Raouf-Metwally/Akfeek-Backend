@@ -1,7 +1,9 @@
 const prisma = require('../utils/database/prisma');
 const { AppError } = require('../api/middlewares/error.middleware');
 const { getPlatformCommissionPercent } = require('../utils/pricing');
-const { emitNotification } = require('../socket');
+const { emitNotification, emitNewMobileWorkshopRequestToVendors } = require('../socket');
+const { getSystemSetting } = require('../utils/systemSettings');
+const { calculateDistance } = require('../utils/towing');
 
 const REQUEST_EXPIRY_MINUTES = 30;
 
@@ -24,12 +26,16 @@ async function generateBookingNumber() {
   return `BKG-${Date.now()}-${String(count + 1).padStart(4, '0')}`;
 }
 
+const SEARCH_RADIUS_MIN_KM = 5;
+const SEARCH_RADIUS_MAX_KM = 100;
+const SEARCH_RADIUS_DEFAULT_KM = 25;
+
 /**
  * Customer: create request → find all available workshops of this type with this service → notify them
- * Body: vehicleId, addressId?, latitude?, longitude?, addressText?, city?, workshopTypeId, workshopTypeServiceId (الخدمة من النوع)
+ * Body: vehicleId, addressId?, latitude?, longitude?, addressText?, city?, workshopTypeId, workshopTypeServiceId (الخدمة من النوع), searchRadiusKm? (نصف قطر البحث بالكم — يحدده المستخدم، 5–100)
  */
 async function createRequest(customerId, data) {
-  const { vehicleId, addressId, latitude, longitude, addressText, city, workshopTypeId, workshopTypeServiceId, serviceType } = data;
+  const { vehicleId, addressId, latitude, longitude, addressText, city, workshopTypeId, workshopTypeServiceId, serviceType, searchRadiusKm } = data;
   if (!workshopTypeId) {
     throw new AppError('workshopTypeId is required', 400, 'VALIDATION_ERROR');
   }
@@ -115,8 +121,72 @@ async function createRequest(customerId, data) {
     },
   });
 
+  // نصف قطر البحث: يحدده المستخدم (searchRadiusKm) أو الافتراضي من الإعدادات
+  let radiusKm = searchRadiusKm != null ? Number(searchRadiusKm) : await getSystemSetting('MOBILE_WORKSHOP_SEARCH_RADIUS', SEARCH_RADIUS_DEFAULT_KM);
+  if (Number.isNaN(radiusKm) || radiusKm < SEARCH_RADIUS_MIN_KM) radiusKm = SEARCH_RADIUS_MIN_KM;
+  if (radiusKm > SEARCH_RADIUS_MAX_KM) radiusKm = SEARCH_RADIUS_MAX_KM;
+
+  const requestLat = request.latitude != null ? Number(request.latitude) : null;
+  const requestLng = request.longitude != null ? Number(request.longitude) : null;
+
+  let workshopsToNotify = workshops;
+  let usedNearbyFilter = false;
+  if (requestLat != null && requestLng != null) {
+    const withDistance = workshops
+      .filter((w) => w.latitude != null && w.longitude != null)
+      .map((w) => ({
+        workshop: w,
+        distanceKm: calculateDistance(requestLat, requestLng, w.latitude, w.longitude),
+      }))
+      .filter((x) => x.distanceKm <= radiusKm)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+    if (withDistance.length > 0) {
+      workshopsToNotify = withDistance.map((x) => x.workshop);
+      usedNearbyFilter = true;
+      const vendorPayloads = withDistance.map((x) => ({
+        userId: x.workshop.vendor?.userId,
+        distanceKm: Math.round(x.distanceKm * 100) / 100,
+      })).filter((v) => v.userId);
+      try {
+        emitNewMobileWorkshopRequestToVendors(vendorPayloads, {
+          requestId: request.id,
+          requestNumber: request.requestNumber,
+          workshopTypeId,
+          workshopTypeServiceId: finalWorkshopTypeServiceId,
+          serviceType: request.serviceType,
+          addressText: request.addressText,
+          city: request.city,
+          latitude: requestLat,
+          longitude: requestLng,
+          expiresAt: request.expiresAt?.toISOString?.(),
+          workshopType: request.workshopType,
+          workshopTypeService: request.workshopTypeService,
+        });
+      } catch (_) { /* socket not ready */ }
+    }
+  }
+  if (workshopsToNotify.length > 0 && !usedNearbyFilter) {
+    const vendorPayloads = workshopsToNotify.map((w) => ({ userId: w.vendor?.userId })).filter((v) => v.userId);
+    try {
+      emitNewMobileWorkshopRequestToVendors(vendorPayloads, {
+        requestId: request.id,
+        requestNumber: request.requestNumber,
+        workshopTypeId,
+        workshopTypeServiceId: finalWorkshopTypeServiceId,
+        serviceType: request.serviceType,
+        addressText: request.addressText,
+        city: request.city,
+        latitude: requestLat ?? undefined,
+        longitude: requestLng ?? undefined,
+        expiresAt: request.expiresAt?.toISOString?.(),
+        workshopType: request.workshopType,
+        workshopTypeService: request.workshopTypeService,
+      });
+    } catch (_) { /* socket not ready */ }
+  }
+
   const serviceLabel = request.workshopTypeService?.nameAr || request.workshopTypeService?.name || request.serviceType;
-  for (const w of workshops) {
+  for (const w of workshopsToNotify) {
     if (w.vendor?.userId) {
       try {
         emitNotification(w.vendor.userId, {
@@ -148,7 +218,9 @@ async function createRequest(customerId, data) {
       expiresAt: request.expiresAt,
       createdAt: request.createdAt,
     },
-    workshopsNotified: workshops.length,
+    workshopsNotified: workshopsToNotify.length,
+    nearbyOnly: usedNearbyFilter,
+    searchRadiusKm: requestLat != null && requestLng != null ? radiusKm : null,
   };
 }
 
@@ -305,8 +377,9 @@ async function getRequestsForMyWorkshop(vendorUserId) {
 }
 
 /**
- * Vendor: accept request (موافق على الطلب) — بدون سعر؛ العميل لاحقاً يختار خدمة من قائمة خدمات الورشة بأسعارها.
- * Body اختياري: message فقط. إذا أُرسل price يصبح سلوك "عرض بسعر مخصص" (للتوافق مع القديم).
+ * Vendor: accept request (موافق على الطلب).
+ * - إذا أرسل price = عرض بسعر مخصص.
+ * - إذا لم يرسل price (موافقة فقط): يُستخدم سعر الخدمة اللي العميل طلبها في الطلب من قائمة خدمات الورشة، فيظهر للعميل فوراً ويوافق على العرض.
  */
 async function submitOffer(mobileWorkshopId, requestId, vendorUserId, data) {
   const { price, message, mobileWorkshopServiceId } = data || {};
@@ -336,22 +409,25 @@ async function submitOffer(mobileWorkshopId, requestId, vendorUserId, data) {
   const existingOffer = request.offers && request.offers[0];
   if (existingOffer) throw new AppError('You already submitted an offer for this request', 400, 'DUPLICATE_OFFER');
 
+  const workshopService = request.workshopTypeServiceId
+    ? workshop.services.find((s) => s.workshopTypeServiceId === request.workshopTypeServiceId)
+    : workshop.services.find((s) => s.serviceType === request.serviceType);
+  if (!workshopService) throw new AppError('Your workshop does not offer this service', 400, 'INVALID_SERVICE');
+
   const isAcceptOnly = price == null && !mobileWorkshopServiceId;
-  let finalPrice = 0;
-  let finalServiceId = null;
-  let estimatedMinutes = null;
+  let finalPrice;
+  let finalServiceId;
+  let estimatedMinutes = workshopService.estimatedDuration;
 
   if (isAcceptOnly) {
-    // موافقة فقط — العميل لاحقاً يختار خدمة من خدمات الورشة
-    finalPrice = 0;
+    // موافقة فقط — سعر الخدمة اللي العميل طلبها يظهر له فوراً (من خدمات الورشة)
+    finalPrice = Number(workshopService.price);
+    finalServiceId = workshopService.id;
   } else {
-    const workshopService = request.workshopTypeServiceId
-      ? workshop.services.find((s) => s.workshopTypeServiceId === request.workshopTypeServiceId)
-      : workshop.services.find((s) => s.serviceType === request.serviceType);
-    if (!workshopService) throw new AppError('Your workshop does not offer this service', 400, 'INVALID_SERVICE');
     finalServiceId = mobileWorkshopServiceId || workshopService.id;
-    estimatedMinutes = workshopService.estimatedDuration;
-    finalPrice = price != null ? Number(price) : Number(workshopService.price);
+    const chosenSvc = finalServiceId === workshopService.id ? workshopService : workshop.services.find((s) => s.id === finalServiceId);
+    if (chosenSvc) estimatedMinutes = chosenSvc.estimatedDuration;
+    finalPrice = price != null ? Number(price) : (chosenSvc ? Number(chosenSvc.price) : Number(workshopService.price));
     if (finalPrice < 0) throw new AppError('Valid price is required', 400, 'VALIDATION_ERROR');
   }
 
@@ -391,7 +467,7 @@ async function submitOffer(mobileWorkshopId, requestId, vendorUserId, data) {
       title: isAcceptOnly ? 'ورشة وافقت على طلبك' : 'عرض جديد من ورشة متنقلة',
       titleAr: isAcceptOnly ? 'ورشة وافقت على طلبك' : 'عرض جديد من ورشة متنقلة',
       message: isAcceptOnly
-        ? `${workshop.nameAr || workshop.name} وافقت على الطلب — اختر خدمة من قائمة الخدمات`
+        ? `${workshop.nameAr || workshop.name} وافقت — سعر الخدمة المطلوبة ${finalPrice} ${workshop.currency || 'SAR'}، يمكنك الموافقة على العرض`
         : `${workshop.nameAr || workshop.name} عرضت سعر ${finalPrice} ${workshop.currency || 'SAR'}`,
       requestId,
       offerId: offer.id,
@@ -430,8 +506,9 @@ async function rejectRequest(mobileWorkshopId, requestId, vendorUserId) {
 }
 
 /**
- * Customer: select an offer (وربما خدمة معينة من الورشة) → create Booking, Invoice, ChatRoom.
- * إذا العرض "موافقة فقط" (price=0) يجب إرسال mobileWorkshopServiceId ويُستخدم سعر الخدمة.
+ * Customer: select an offer → create Booking, Invoice, ChatRoom.
+ * عندما الفيندور وافق فقط، سعر الخدمة المطلوبة يكون مُدرجاً في العرض؛ العميل يرسل offerId فقط ويوافق.
+ * إذا العرض قديم (price=0 وبدون خدمة) يلزم إرسال mobileWorkshopServiceId.
  */
 async function selectOffer(requestId, offerId, customerId, body = {}) {
   const { mobileWorkshopServiceId: chosenServiceId } = body;

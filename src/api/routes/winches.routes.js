@@ -116,10 +116,12 @@ router.get('/my/broadcasts', role('VENDOR'), ctrl.getMyBroadcasts);
  *           schema:
  *             type: object
  *             properties:
- *               message: { type: string, description: "رسالة اختيارية للعميل" }
+ *               message: { type: string, description: "رسالة اختيارية للعميل — السعر يُحسب تلقائياً (basePrice + مسافة × pricePerKm)" }
+ *           example:
+ *             message: "سنصل خلال 15 دقيقة"
  *     responses:
  *       201:
- *         description: تم إرسال العرض بنجاح — السعر حسب سعر الكم
+ *         description: تم إرسال العرض — السعر محسوب من إعدادات الوينش (basePrice + مسافة الرحلة × pricePerKm)
  *         content:
  *           application/json:
  *             schema:

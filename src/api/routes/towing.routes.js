@@ -36,33 +36,47 @@ const authMiddleware = require('../middlewares/auth.middleware');
  *               vehicleId:
  *                 type: string
  *                 format: uuid
- *                 example: "123e4567-e89b-12d3-a456-426614174000"
+ *                 description: "معرف المركبة المراد سحبها"
  *               pickupLocation:
  *                 type: object
- *                 description: "موقع الالتقاط — إحداثيات وعنوان (لحساب المسافة والسعر عند موافقة الفيندور)"
+ *                 description: "موقع الالتقاط (من أين) — لحساب المسافة والسعر (basePrice + مسافة × pricePerKm)"
  *                 required: [latitude, longitude, address]
  *                 properties:
- *                   latitude: { type: number, example: 24.7136, description: "خط العرض" }
- *                   longitude: { type: number, example: 46.6753, description: "خط الطول" }
- *                   address: { type: string, example: "King Fahd Road, Riyadh" }
+ *                   latitude: { type: number, description: "خط العرض" }
+ *                   longitude: { type: number, description: "خط الطول" }
+ *                   address: { type: string, description: "عنوان الموقع" }
  *               destinationLocation:
  *                 type: object
- *                 description: "الجهة/الوجهة — إحداثيات وعنوان (لحساب مسافة الرحلة والسعر)"
+ *                 description: "الوجهة (إلى أين) — لحساب مسافة الرحلة"
  *                 required: [latitude, longitude, address]
  *                 properties:
- *                   latitude: { type: number, example: 24.7500, description: "خط العرض" }
- *                   longitude: { type: number, example: 46.7000, description: "خط الطول" }
- *                   address: { type: string, example: "Workshop, Riyadh" }
+ *                   latitude: { type: number, description: "خط العرض" }
+ *                   longitude: { type: number, description: "خط الطول" }
+ *                   address: { type: string, description: "عنوان الوجهة" }
  *               vehicleCondition:
  *                 type: string
  *                 enum: [NOT_STARTING, ACCIDENT, FLAT_TIRE, ENGINE_FAILURE, OTHER]
- *                 example: "NOT_STARTING"
+ *                 description: "حالة المركبة"
  *               urgency:
  *                 type: string
  *                 enum: [NORMAL, HIGH]
  *                 default: "NORMAL"
- *               notes: { type: string }
- *               estimatedBudget: { type: number }
+ *                 description: "درجة الاستعجال"
+ *               notes: { type: string, description: "ملاحظات اختيارية" }
+ *               estimatedBudget: { type: number, description: "ميزانية تقديرية (اختياري)" }
+ *           example:
+ *             vehicleId: "123e4567-e89b-12d3-a456-426614174000"
+ *             pickupLocation:
+ *               latitude: 24.7136
+ *               longitude: 46.6753
+ *               address: "طريق الملك فهد، نقطة الالتقاط، الرياض"
+ *             destinationLocation:
+ *               latitude: 24.75
+ *               longitude: 46.7
+ *               address: "ورشة الصيانة، العليا، الرياض"
+ *             vehicleCondition: "NOT_STARTING"
+ *             urgency: "NORMAL"
+ *             notes: "السيارة لا تعمل"
  *     responses:
  *       201:
  *         description: تم إنشاء الطلب والبث للوينشات القريبة (مع push عبر Socket)

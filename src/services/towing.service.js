@@ -14,6 +14,7 @@ const {
 const osrmService = require('./osrm.service');
 const { emitNewTowingRequestToWinches } = require('../socket');
 const { getPlatformCommissionPercent } = require('../utils/pricing');
+const { getUrgencyLabels, getVehicleConditionLabels } = require('../utils/broadcastDisplayLabels');
 
 class TowingService {
     /**
@@ -266,12 +267,15 @@ class TowingService {
             ? { plateNumber: plateNumber || vehicle.plateDigits, model: vehicle.vehicleModel.name, modelAr: vehicle.vehicleModel.nameAr, brand: vehicle.vehicleModel.brand?.name, brandAr: vehicle.vehicleModel.brand?.nameAr }
             : (vehicle ? { plateNumber } : null);
 
+        const urgencyVal = broadcast.urgency ?? 'NORMAL';
+        const vehicleCond = meta.vehicleCondition ?? null;
         return {
             id: broadcast.id,
             status: broadcast.status,
             broadcastUntil: broadcast.broadcastUntil,
             createdAt: broadcast.createdAt,
-            urgency: broadcast.urgency,
+            urgency: urgencyVal,
+            ...getUrgencyLabels(urgencyVal),
             description: broadcast.description,
             booking: {
                 id: broadcast.booking.id,
@@ -292,7 +296,8 @@ class TowingService {
             },
             estimatedDistanceKm: meta.distance ?? null,
             estimatedDurationMinutes: meta.estimatedDuration ?? null,
-            vehicleCondition: meta.vehicleCondition ?? null,
+            vehicleCondition: vehicleCond,
+            ...getVehicleConditionLabels(vehicleCond),
             offersCount: broadcast._count?.offers ?? 0
         };
     }

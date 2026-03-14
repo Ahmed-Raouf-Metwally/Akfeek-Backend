@@ -95,8 +95,8 @@ router.get('/my/requests', role('VENDOR'), reqCtrl.getRequestsForMyWorkshop);
  *   post:
  *     summary: موافقة على الطلب أو إرسال عرض (بائع)
  *     description: |
- *       الفيندور إما يرسل "موافق على الطلب" فقط (بدون price) — ثم العميل يرى خدمات الورشة بأسعارها ويختار واحدة.
- *       أو يرسل price و message لعرض بسعر مخصص (سلوك قديم).
+ *       الفلو الجديد: الفيندور يرسل message فقط (موافق على الطلب) بدون price — يظهر للعميل سعر الخدمة المطلوبة في الطلب من الورشة، والعميل يوافق بـ offerId فقط.
+ *       أو يرسل price و message لعرض بسعر مخصص.
  *     tags: [5. الورش المتنقلة (Mobile Workshop)]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
@@ -115,12 +115,14 @@ router.get('/my/requests', role('VENDOR'), reqCtrl.getRequestsForMyWorkshop);
  *           schema:
  *             type: object
  *             properties:
- *               message: { type: string, description: رسالة (مثلاً موافق على الطلب) }
- *               price: { type: number, description: اختياري — إن وُجد يصبح عرض بسعر مخصص }
- *               mobileWorkshopServiceId: { type: string, format: uuid, description: اختياري مع price }
+ *               message: { type: string, description: "رسالة (مثلاً موافق على الطلب) — الفلو الجديد: بدون price" }
+ *               price: { type: number, description: "اختياري — إن وُجد يصبح عرض بسعر مخصص" }
+ *               mobileWorkshopServiceId: { type: string, format: uuid, description: "اختياري مع price" }
+ *           example:
+ *             message: "موافق على الطلب"
  *     responses:
  *       201:
- *         description: Offer submitted or acceptance recorded
+ *         description: Offer submitted (accept only → requested service price in offer; or custom price)
  */
 router.post('/:workshopId/requests/:requestId/offer', role('VENDOR'), reqCtrl.submitOffer);
 

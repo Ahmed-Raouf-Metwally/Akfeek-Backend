@@ -3,6 +3,7 @@ const { BookingStatus } = require('@prisma/client');
 const { calculateDistance, calculateETA } = require('../utils/towing');
 const { getSystemSetting } = require('../utils/systemSettings');
 const { AppError } = require('../api/middlewares/error.middleware');
+const { getUrgencyLabels, getVehicleConditionLabels } = require('../utils/broadcastDisplayLabels');
 
 /**
  * Get winch for current vendor (userId = vendor.userId)
@@ -87,6 +88,8 @@ async function getActiveBroadcastsForWinch(vendorUserId) {
         const tripDistance = booking.metadata?.distance ?? 0;
         const myPrice = calculateWinchPrice(winch, tripDistance);
 
+        const urgencyVal = b.urgency ?? 'NORMAL';
+        const vehicleCond = booking.metadata?.vehicleCondition;
         nearby.push({
             id: b.id,
             customer: {
@@ -108,8 +111,10 @@ async function getActiveBroadcastsForWinch(vendorUserId) {
             tripDistanceKm: tripDistance,
             estimatedArrival: etaMinutes,
             yourPrice: myPrice,
-            urgency: b.urgency ?? 'NORMAL',
-            vehicleCondition: booking.metadata?.vehicleCondition,
+            urgency: urgencyVal,
+            ...getUrgencyLabels(urgencyVal),
+            vehicleCondition: vehicleCond,
+            ...getVehicleConditionLabels(vehicleCond),
             expiresAt: b.broadcastUntil,
             myOffer: b.offers[0] || null,
             createdAt: b.createdAt

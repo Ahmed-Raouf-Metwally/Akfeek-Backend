@@ -1,5 +1,6 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const { getUrgencyLabels } = require('../../utils/broadcastDisplayLabels');
 
 /**
  * Get all job broadcasts (Admin). Paginated list: بث السحب (JobBroadcast) + طلبات الورش المتنقلة (MobileWorkshopRequest).
@@ -72,23 +73,27 @@ async function getAllBroadcasts(req, res, next) {
         }),
         prisma.jobBroadcast.count({ where: towingWhere }),
       ]);
-      const towingNormalized = towingItems.map((b) => ({
-        type: 'towing',
-        id: b.id,
-        bookingId: b.bookingId,
-        customerId: b.customerId,
-        latitude: b.latitude,
-        longitude: b.longitude,
-        locationAddress: b.locationAddress,
-        description: b.description,
-        urgency: b.urgency,
-        status: b.status,
-        createdAt: b.createdAt,
-        updatedAt: b.updatedAt,
-        booking: b.booking,
-        customer: b.customer,
-        offersCount: b._count?.offers ?? 0,
-      }));
+      const towingNormalized = towingItems.map((b) => {
+        const urgencyVal = b.urgency ?? 'NORMAL';
+        return {
+          type: 'towing',
+          id: b.id,
+          bookingId: b.bookingId,
+          customerId: b.customerId,
+          latitude: b.latitude,
+          longitude: b.longitude,
+          locationAddress: b.locationAddress,
+          description: b.description,
+          urgency: urgencyVal,
+          ...getUrgencyLabels(urgencyVal),
+          status: b.status,
+          createdAt: b.createdAt,
+          updatedAt: b.updatedAt,
+          booking: b.booking,
+          customer: b.customer,
+          offersCount: b._count?.offers ?? 0,
+        };
+      });
       if (typeFilter === 'towing') {
         data = towingNormalized;
         total = towingTotal;

@@ -182,4 +182,33 @@ module.exports = {
       io.of('/technician').to(`user-${data.technicianId}`).emit('invoice_paid', payload);
     }
   },
+
+  /**
+   * بث طلب ونش جديد للوينشات القريبة (فيندورز)
+   * @param {string[]} vendorUserIds - مصفوفة userId للفيندورز
+   * @param {Object} data - بيانات الطلب للعرض الفوري
+   */
+  emitNewTowingRequestToWinches(vendorUserIds, data) {
+    if (!io || !Array.isArray(vendorUserIds) || vendorUserIds.length === 0) return;
+    const payload = { ...data, timestamp: new Date().toISOString() };
+    vendorUserIds.forEach((userId) => {
+      io.of('/technician').to(`user-${userId}`).emit('winch:new_request', payload);
+    });
+  },
+
+  /**
+   * بث طلب ورشة متنقلة للورش القريبة فقط (فيندورز) — يحدد الأقرب حسب المسافة
+   * @param {Array<{ userId: string, distanceKm?: number }>} vendors - مصفوفة فيندورز (userId + مسافة اختيارية)
+   * @param {Object} data - بيانات الطلب للعرض الفوري
+   */
+  emitNewMobileWorkshopRequestToVendors(vendors, data) {
+    if (!io || !Array.isArray(vendors) || vendors.length === 0) return;
+    const payload = { ...data, timestamp: new Date().toISOString() };
+    vendors.forEach((v) => {
+      const userId = typeof v === 'string' ? v : v.userId;
+      if (!userId) return;
+      const roomPayload = v.distanceKm != null ? { ...payload, distanceKm: v.distanceKm } : payload;
+      io.of('/technician').to(`user-${userId}`).emit('mobile_workshop:new_request', roomPayload);
+    });
+  },
 };

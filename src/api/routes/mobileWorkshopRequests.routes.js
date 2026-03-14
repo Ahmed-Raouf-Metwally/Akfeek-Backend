@@ -11,7 +11,9 @@ router.use(auth);
  * /api/mobile-workshop-requests:
  *   post:
  *     summary: إنشاء طلب ورشة متنقلة (عميل) — Create mobile workshop request
- *     description: العميل يرسل طلباً؛ يُبث للورش المتنقلة المتطابقة (نوع الورشة + الخدمة).
+ *     description: |
+ *       الفلو: العميل يرسل طلباً (مركبة + نوع ورشة + خدمة + موقع اختياري + searchRadiusKm).
+ *       يُبث للورش المتنقلة المتطابقة. الفيندور يوافق فقط → يظهر للعميل سعر الخدمة المطلوبة من الورشة → العميل يوافق على العرض (offerId فقط).
  *     tags: [5. الورش المتنقلة (Mobile Workshop)]
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
@@ -22,17 +24,27 @@ router.use(auth);
  *             type: object
  *             required: [vehicleId, workshopTypeId]
  *             properties:
- *               vehicleId: { type: string, format: uuid }
- *               workshopTypeId: { type: string, format: uuid }
- *               workshopTypeServiceId: { type: string, format: uuid }
- *               latitude: { type: number }
- *               longitude: { type: number }
- *               addressText: { type: string }
- *               city: { type: string }
- *               addressId: { type: string, format: uuid }
+ *               vehicleId: { type: string, format: uuid, description: "معرف المركبة" }
+ *               workshopTypeId: { type: string, format: uuid, description: "نوع الورشة المتنقلة" }
+ *               workshopTypeServiceId: { type: string, format: uuid, description: "الخدمة المطلوبة (من نوع الورشة) — في الفلو الجديد عند الموافقة يظهر سعرها للعميل" }
+ *               latitude: { type: number, description: "خط العرض (اختياري، للورش القريبة)" }
+ *               longitude: { type: number, description: "خط الطول (اختياري)" }
+ *               addressText: { type: string, description: "عنوان الموقع" }
+ *               city: { type: string, description: "المدينة" }
+ *               addressId: { type: string, format: uuid, description: "معرف عنوان محفوظ (اختياري)" }
+ *               searchRadiusKm: { type: number, minimum: 5, maximum: 100, description: "نصف قطر البحث بالكم، يحدده المستخدم (افتراضي 25)" }
+ *           example:
+ *             vehicleId: "1d2921d0-943c-4dbb-af5a-405ab846c15c"
+ *             workshopTypeId: "fccab2a5-615d-4859-98db-bd4d4743d1c8"
+ *             workshopTypeServiceId: "a849cd24-e2e1-414d-be61-4f80e9ef9b36"
+ *             latitude: 24.7136
+ *             longitude: 46.6753
+ *             addressText: "طريق الملك فهد، الرياض"
+ *             city: "الرياض"
+ *             searchRadiusKm: 25
  *     responses:
  *       201:
- *         description: Request created; workshops notified
+ *         description: Request created; workshops notified (request, workshopsNotified, nearbyOnly, searchRadiusKm)
  */
 router.post('/', role('CUSTOMER'), ctrl.createRequest);
 
@@ -65,6 +77,9 @@ router.get('/', role('CUSTOMER'), ctrl.getMyRequests);
  * /api/mobile-workshop-requests/{requestId}/select-offer:
  *   post:
  *     summary: اختيار عرض (عميل) — Select offer → creates booking & invoice
+ *     description: |
+ *       الفلو الجديد: الفيندور يوافق فقط فيظهر سعر الخدمة المطلوبة في العرض — العميل يرسل offerId فقط.
+ *       إن كان العرض قديماً (بدون سعر/بدون خدمة) يلزم إرسال mobileWorkshopServiceId.
  *     tags: [5. الورش المتنقلة (Mobile Workshop)]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
@@ -80,11 +95,13 @@ router.get('/', role('CUSTOMER'), ctrl.getMyRequests);
  *             type: object
  *             required: [offerId]
  *             properties:
- *               offerId: { type: string, format: uuid }
- *               mobileWorkshopServiceId: { type: string, format: uuid, description: مطلوب إن كان العرض "موافقة فقط" — العميل يختار خدمة من قائمة خدمات الورشة }
+ *               offerId: { type: string, format: uuid, description: "معرف العرض المختار" }
+ *               mobileWorkshopServiceId: { type: string, format: uuid, description: "اختياري — للعروض القديمة فقط عندما لا يكون السعر في العرض" }
+ *           example:
+ *             offerId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
  *     responses:
  *       200:
- *         description: Offer selected; booking and invoice created
+ *         description: Offer selected; booking and invoice created (booking, invoice)
  */
 router.post('/:requestId/select-offer', role('CUSTOMER'), ctrl.selectOffer);
 

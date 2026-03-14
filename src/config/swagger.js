@@ -416,8 +416,50 @@ Authorization: Bearer <your_jwt_token>
             description: 'Towing flow: POST /api/bookings/towing/request, GET /api/winches/my/broadcasts, POST .../offer, GET/POST offers/accept, PATCH /api/invoices/{id}/mark-paid, GET/PATCH /api/winches/my/jobs. Socket: customer:join_booking, driver:join_booking, driver:location, booking:message.'
         },
         {
-            name: '5. Mobile Workshop',
-            description: 'Mobile workshop flow: GET /api/mobile-workshop-types, POST /api/mobile-workshop-requests, GET/POST select-offer, PATCH /api/invoices/my/{id}/pay. CRUD: /api/mobile-workshops.'
+            name: '5. الورش المتنقلة (Mobile Workshop)',
+            description: `**الورش المتنقلة — جميع الاند بوينت**
+
+---
+
+**1. أنواع الورش — /api/mobile-workshop-types**
+| Method | Path | الوصف | صلاحية |
+|--------|------|--------|--------|
+| GET | /api/mobile-workshop-types | قائمة أنواع الورش + خدمات كل نوع | عام |
+| GET | /api/mobile-workshop-types/:typeId/services | خدمات نوع معيّن | عام |
+| GET | /api/mobile-workshop-types/:id | تفاصيل نوع ورشة | عام |
+| POST | /api/mobile-workshop-types | إضافة نوع ورشة | أدمن |
+| PUT | /api/mobile-workshop-types/:id | تحديث نوع ورشة | أدمن |
+| DELETE | /api/mobile-workshop-types/:id | حذف نوع ورشة | أدمن |
+| POST | /api/mobile-workshop-types/:typeId/services | إضافة خدمة للنوع | أدمن |
+| PUT | /api/mobile-workshop-types/:typeId/services/:serviceId | تحديث خدمة النوع | أدمن |
+| DELETE | /api/mobile-workshop-types/:typeId/services/:serviceId | حذف خدمة من النوع | أدمن |
+
+**2. طلبات العميل — /api/mobile-workshop-requests**
+| Method | Path | الوصف | صلاحية |
+|--------|------|--------|--------|
+| POST | /api/mobile-workshop-requests | إنشاء طلب (vehicleId, workshopTypeId, موقع، searchRadiusKm?) | عميل |
+| GET | /api/mobile-workshop-requests | طلباتي (status, page, limit) | عميل |
+| GET | /api/mobile-workshop-requests/:id | تفاصيل طلب مع العروض | عميل |
+| POST | /api/mobile-workshop-requests/:requestId/select-offer | اختيار عرض → حجز + فاتورة | عميل |
+
+**3. الورش المتنقلة — /api/mobile-workshops**
+| Method | Path | الوصف | صلاحية |
+|--------|------|--------|--------|
+| GET | /api/mobile-workshops | قائمة كل الورش | مصادق |
+| GET | /api/mobile-workshops/my | ورشتي المتنقلة | فيندور |
+| GET | /api/mobile-workshops/my/requests | طلبات ورشتي | فيندور |
+| POST | /api/mobile-workshops/:workshopId/requests/:requestId/offer | إرسال عرض أو موافقة | فيندور |
+| POST | /api/mobile-workshops/:workshopId/requests/:requestId/reject | رفض الطلب | فيندور |
+| GET | /api/mobile-workshops/:id | تفاصيل ورشة | مصادق |
+| POST | /api/mobile-workshops | إضافة ورشة | أدمن |
+| PUT | /api/mobile-workshops/:id | تحديث ورشة | أدمن |
+| DELETE | /api/mobile-workshops/:id | حذف ورشة | أدمن |
+| POST | /api/mobile-workshops/:id/upload-image | رفع صورة (logo أو vehicle) | أدمن |
+| POST | /api/mobile-workshops/:id/services | إضافة خدمة لورشة | أدمن |
+| PUT | /api/mobile-workshops/:id/services/:svcId | تحديث خدمة | أدمن |
+| DELETE | /api/mobile-workshops/:id/services/:svcId | حذف خدمة | أدمن |
+
+**4. دفع الفاتورة:** PATCH /api/invoices/:id/mark-paid (بعد select-offer)`
         },
         {
             name: 'Authentication',

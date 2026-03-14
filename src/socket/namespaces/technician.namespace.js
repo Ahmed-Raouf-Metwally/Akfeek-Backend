@@ -14,9 +14,9 @@ module.exports = {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Verify user role is TECHNICIAN
-        if (decoded.role !== 'TECHNICIAN') {
-          return next(new Error('Unauthorized: Not a technician - غير مصرح: ليس فنياً'));
+        // TECHNICIAN or VENDOR (winch / mobile workshop vendors receive broadcasts here)
+        if (decoded.role !== 'TECHNICIAN' && decoded.role !== 'VENDOR') {
+          return next(new Error('Unauthorized - غير مصرح'));
         }
 
         socket.userId = decoded.userId;
