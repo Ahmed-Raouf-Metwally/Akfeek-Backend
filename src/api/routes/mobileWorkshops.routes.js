@@ -66,6 +66,118 @@ router.get('/my',   role('VENDOR'), ctrl.getMy);
 
 /**
  * @swagger
+ * /api/mobile-workshops/my:
+ *   post:
+ *     summary: إنشاء ورشتي المتنقلة (بائع) — Create my mobile workshop
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name: { type: string, description: "اسم الورشة (EN)" }
+ *               nameAr: { type: string, description: "اسم الورشة (AR)" }
+ *               description: { type: string, description: "وصف" }
+ *               workshopTypeId: { type: string, format: uuid, description: "معرف نوع الورشة" }
+ *               vehicleType: { type: string, description: "نوع المركبة" }
+ *               vehicleModel: { type: string, description: "موديل المركبة" }
+ *               year: { type: integer, description: "سنة الصنع" }
+ *               plateNumber: { type: string, description: "رقم اللوحة" }
+ *               servicesOffered: { type: string, description: "الخدمات المقدمة (نص)" }
+ *               city: { type: string, description: "المدينة" }
+ *               latitude: { type: number, format: float }
+ *               longitude: { type: number, format: float }
+ *               serviceRadius: { type: number, description: "نطاق الخدمة بالكم" }
+ *               basePrice: { type: number }
+ *               pricePerKm: { type: number }
+ *               hourlyRate: { type: number }
+ *               minPrice: { type: number }
+ *               currency: { type: string, default: "SAR" }
+ *     responses:
+ *       201:
+ *         description: Created
+ */
+router.post('/my',  role('VENDOR'), ctrl.createMy);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/my:
+ *   put:
+ *     summary: تحديث بيانات ورشتي (بائع) — Update my mobile workshop
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: { type: string }
+ *               nameAr: { type: string }
+ *               description: { type: string }
+ *               workshopTypeId: { type: string, format: uuid }
+ *               vehicleType: { type: string }
+ *               vehicleModel: { type: string }
+ *               year: { type: integer }
+ *               plateNumber: { type: string }
+ *               servicesOffered: { type: string }
+ *               city: { type: string }
+ *               latitude: { type: number }
+ *               longitude: { type: number }
+ *               serviceRadius: { type: number }
+ *               basePrice: { type: number }
+ *               pricePerKm: { type: number }
+ *               hourlyRate: { type: number }
+ *               minPrice: { type: number }
+ *               currency: { type: string }
+ *               isAvailable: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Updated
+ */
+router.put('/my',   role('VENDOR'), ctrl.updateMy);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/my:
+ *   delete:
+ *     summary: حذف ورشتي (بائع) — Delete my mobile workshop
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Deleted
+ */
+router.delete('/my', role('VENDOR'), ctrl.deleteMy);
+
+/**
+ * @swagger
+ * /api/mobile-workshops/my/upload-image:
+ *   post:
+ *     summary: رفع صورة لورشتي (بائع) — Upload image for my workshop
+ *     tags: [5. الورش المتنقلة (Mobile Workshop)]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image: { type: string, format: binary }
+ *               type: { type: string, enum: [logo, vehicle] }
+ *     responses:
+ *       200:
+ *         description: Uploaded
+ */
+router.post('/my/upload-image', role('VENDOR'), mwUpload.single('image'), ctrl.uploadMyImage);
+
+/**
+ * @swagger
  * /api/mobile-workshops/my/requests:
  *   get:
  *     summary: طلبات ورشتي (بائع) — Get requests for my mobile workshop
@@ -179,11 +291,29 @@ router.get('/:id',  ctrl.getById);
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [name, vendorId]
  *             properties:
  *               vendorId: { type: string, format: uuid }
  *               name: { type: string }
  *               nameAr: { type: string }
  *               description: { type: string }
+ *               workshopTypeId: { type: string, format: uuid }
+ *               vehicleType: { type: string }
+ *               vehicleModel: { type: string }
+ *               year: { type: integer }
+ *               plateNumber: { type: string }
+ *               servicesOffered: { type: string }
+ *               city: { type: string }
+ *               latitude: { type: number }
+ *               longitude: { type: number }
+ *               serviceRadius: { type: number }
+ *               basePrice: { type: number }
+ *               pricePerKm: { type: number }
+ *               hourlyRate: { type: number }
+ *               minPrice: { type: number }
+ *               currency: { type: string, default: "SAR" }
+ *               imageUrl: { type: string }
+ *               vehicleImageUrl: { type: string }
  *               notes: { type: string }
  *     responses:
  *       201:
@@ -209,11 +339,31 @@ router.post('/',    role('ADMIN'), ctrl.create);
  *           schema:
  *             type: object
  *             properties:
- *               vendorId: { type: string }
+ *               vendorId: { type: string, format: uuid }
  *               name: { type: string }
  *               nameAr: { type: string }
  *               description: { type: string }
+ *               workshopTypeId: { type: string, format: uuid }
+ *               vehicleType: { type: string }
+ *               vehicleModel: { type: string }
+ *               year: { type: integer }
+ *               plateNumber: { type: string }
+ *               servicesOffered: { type: string }
+ *               city: { type: string }
+ *               latitude: { type: number }
+ *               longitude: { type: number }
+ *               serviceRadius: { type: number }
+ *               basePrice: { type: number }
+ *               pricePerKm: { type: number }
+ *               hourlyRate: { type: number }
+ *               minPrice: { type: number }
+ *               currency: { type: string }
+ *               imageUrl: { type: string }
+ *               vehicleImageUrl: { type: string }
  *               notes: { type: string }
+ *               isAvailable: { type: boolean }
+ *               isActive: { type: boolean }
+ *               isVerified: { type: boolean }
  *     responses:
  *       200:
  *         description: Mobile workshop updated
@@ -279,11 +429,16 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [name, price]
  *             properties:
+ *               workshopTypeServiceId: { type: string, format: uuid }
+ *               serviceType: { type: string, enum: [GENERAL, REPAIR, INSPECTION, OIL_CHANGE, TIRE_SERVICE, BATTERY_SERVICE, TOWING] }
  *               name: { type: string }
  *               nameAr: { type: string }
- *               price: { type: number }
  *               description: { type: string }
+ *               price: { type: number }
+ *               currency: { type: string, default: "SAR" }
+ *               estimatedDuration: { type: integer, description: "minutes" }
  *     responses:
  *       201:
  *         description: Service added
@@ -291,7 +446,6 @@ router.post(
 router.post('/:id/services',             role('ADMIN'), ctrl.addService);
 
 /**
- * @swagger
  * /api/mobile-workshops/{id}/services/{svcId}:
  *   put:
  *     summary: تحديث خدمة ورشة متنقلة (أدمن)
@@ -306,6 +460,21 @@ router.post('/:id/services',             role('ADMIN'), ctrl.addService);
  *         name: svcId
  *         required: true
  *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               workshopTypeServiceId: { type: string, format: uuid }
+ *               serviceType: { type: string }
+ *               name: { type: string }
+ *               nameAr: { type: string }
+ *               description: { type: string }
+ *               price: { type: number }
+ *               currency: { type: string }
+ *               estimatedDuration: { type: integer, description: "minutes" }
+ *               isActive: { type: boolean }
  *     responses:
  *       200:
  *         description: Service updated

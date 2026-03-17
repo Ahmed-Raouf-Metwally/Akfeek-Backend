@@ -659,6 +659,22 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
           where: { id: wallet.id },
           data: { availableBalance: { decrement: amount } },
         });
+
+        // إشعار محفظة: خصم (Customer)
+        try {
+          await tx.notification.create({
+            data: {
+              userId: invoice.customerId,
+              type: 'WALLET',
+              title: 'Wallet payment',
+              titleAr: 'دفع من المحفظة',
+              message: `A payment of ${amount} SAR was deducted from your wallet.`,
+              messageAr: `تم خصم مبلغ ${amount} ر.س من محفظتك.`,
+              bookingId: invoice.bookingId,
+              metadata: { invoiceId: invoice.id, paymentId: payment.id, method: 'WALLET', amount, txnType: 'WITHDRAWAL' },
+            },
+          });
+        } catch (_) { /* non-blocking */ }
       }
 
       // 3) تحديث الفاتورة (استخدم invoice.id لأن الـ id في الرابط قد يكون bookingId)
@@ -709,12 +725,31 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
           where: { id: wallet.id },
           data: { pointsBalance: pointsAfter },
         });
+
+        // إشعار نقاط: إضافة (Customer)
+        try {
+          await tx.notification.create({
+            data: {
+              userId: invoice.customerId,
+              type: 'POINTS',
+              title: 'Points earned',
+              titleAr: 'تم إضافة نقاط',
+              message: `You earned ${pointsToAward} points.`,
+              messageAr: `تم إضافة ${pointsToAward} نقطة إلى رصيدك.`,
+              bookingId: invoice.bookingId,
+              metadata: { invoiceId: invoice.id, paymentId: payment.id, points: pointsToAward, balanceBefore: pointsBefore, balanceAfter: pointsAfter },
+            },
+          });
+        } catch (_) { /* non-blocking */ }
       }
 
       // 5) إيداع حصة الفيندور في محفظته وخصم نسبة المنصة (نسبة مسجلة وقت الحجز أو الحالية من الفيندور)
       const booking = await tx.booking.findUnique({
         where: { id: invoice.bookingId },
-        include: {
+        select: {
+          bookingNumber: true,
+          subtotal: true,
+          platformCommissionPercent: true,
           workshop: {
             select: {
               vendorId: true,
@@ -723,7 +758,7 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
           },
           services: {
             take: 1,
-            include: { service: { select: { vendorId: true } } },
+            select: { service: { select: { vendorId: true } } },
           },
           jobBroadcast: {
             select: {
@@ -827,8 +862,58 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
             where: { id: vendorWallet.id },
             data: { availableBalance: { increment: vendorEarnings } },
           });
+
+          // إشعار محفظة: إضافة إيراد (Vendor)
+          try {
+            await tx.notification.create({
+              data: {
+                userId: vendorUserId,
+                type: 'WALLET',
+                title: 'Wallet credited',
+                titleAr: 'تم إضافة رصيد للمحفظة',
+                message: `You received ${vendorEarnings} SAR earnings.`,
+                messageAr: `تم إضافة ${vendorEarnings} ر.س كإيراد إلى محفظتك.`,
+                bookingId: invoice.bookingId,
+                metadata: { invoiceId: invoice.id, paymentId: payment.id, vendorEarnings, platformCommission, commissionPercentUsed: commissionPercent },
+              },
+            });
+          } catch (_) { /* non-blocking */ }
         }
       }
+
+      // 6) إشعارات الدفع (للعميل + الفيندور إن وجد)
+      try {
+        const invNo = invoice.invoiceNumber || updatedInvoice.invoiceNumber || invoice.id;
+        const bkgNo = booking?.bookingNumber || invoice.bookingId;
+
+        await tx.notification.create({
+          data: {
+            userId: invoice.customerId,
+            type: 'PAYMENT_RECEIVED',
+            title: 'Payment successful',
+            titleAr: 'تم الدفع بنجاح',
+            message: `Payment received for invoice ${invNo}.`,
+            messageAr: `تم استلام الدفع للفاتورة ${invNo}.`,
+            bookingId: invoice.bookingId,
+            metadata: { invoiceId: invoice.id, invoiceNumber: invNo, bookingId: invoice.bookingId, bookingNumber: bkgNo, method, amount },
+          },
+        });
+
+        if (vendorUserId) {
+          await tx.notification.create({
+            data: {
+              userId: vendorUserId,
+              type: 'PAYMENT_RECEIVED',
+              title: 'Payment received',
+              titleAr: 'تم استلام دفعة',
+              message: `A customer paid for booking ${bkgNo}.`,
+              messageAr: `تم دفع فاتورة للحجز ${bkgNo}.`,
+              bookingId: invoice.bookingId,
+              metadata: { invoiceId: invoice.id, invoiceNumber: invNo, bookingId: invoice.bookingId, bookingNumber: bkgNo, method, amount },
+            },
+          });
+        }
+      } catch (_) { /* non-blocking */ }
 
       return { payment, invoice: updatedInvoice };
   });

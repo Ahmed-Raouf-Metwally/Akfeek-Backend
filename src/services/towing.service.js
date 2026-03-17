@@ -116,6 +116,22 @@ class TowingService {
             }
         });
 
+        // DB Notification (Customer): towing request created/broadcasting
+        try {
+            await prisma.notification.create({
+                data: {
+                    userId: customerId,
+                    type: 'BROADCAST_NEW',
+                    title: 'Towing request created',
+                    titleAr: 'تم إنشاء طلب سحب',
+                    message: `Your towing request ${booking.bookingNumber} is being broadcast to nearby winches.`,
+                    messageAr: `تم إنشاء طلب السحب رقم ${booking.bookingNumber} وجاري إرساله للونشات القريبة.`,
+                    bookingId: booking.id,
+                    metadata: { bookingNumber: booking.bookingNumber, status: booking.status, urgency, vehicleCondition, estimatedBudget }
+                }
+            });
+        } catch (_) { /* non-blocking */ }
+
         // Find nearby winches (Vendor + Winch) — البث للوينشات القريبة فقط
         const nearbyWinches = await findNearbyWinches(
             pickupLocation.latitude,
@@ -172,6 +188,27 @@ class TowingService {
                 status: 'BROADCASTING'
             }
         });
+
+        // DB Notification (Vendors): new broadcast available
+        try {
+            const vendorUserIds = nearbyWinches
+                .map((n) => n.winch?.vendor?.userId)
+                .filter(Boolean);
+            for (const uid of vendorUserIds) {
+                await prisma.notification.create({
+                    data: {
+                        userId: uid,
+                        type: 'BROADCAST_NEW',
+                        title: 'New towing request',
+                        titleAr: 'طلب سحب جديد',
+                        message: `New towing request ${booking.bookingNumber} in your area.`,
+                        messageAr: `طلب سحب جديد رقم ${booking.bookingNumber} قريب منك.`,
+                        bookingId: booking.id,
+                        metadata: { broadcastId: broadcast.id, bookingId: booking.id }
+                    }
+                });
+            }
+        } catch (_) { /* non-blocking */ }
 
         // إرسال فوري (push) للوينشات القريبة عبر السوكت — حتى يظهر الطلب بدون polling
         try {

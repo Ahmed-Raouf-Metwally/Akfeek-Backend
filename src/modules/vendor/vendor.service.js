@@ -126,6 +126,7 @@ class VendorService {
                         await tx.vendorProfile.create({
                             data: {
                                 userId: vendor.userId,
+                                vendorType: vendor.vendorType,
                                 businessName: vendor.tradeName || vendor.legalName,
                                 businessNameAr: vendor.legalName, // Fallback or handle translations
                                 contactEmail: vendor.companyEmail,

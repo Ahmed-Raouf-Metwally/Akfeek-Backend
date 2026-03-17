@@ -176,6 +176,111 @@ async function getMyWinch(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// POST /api/winches/my — فيندور TOWING_SERVICE: إنشاء ونش جديد مرتبط بحسابه
+async function createMyWinch(req, res, next) {
+  try {
+    const vendor = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id, vendorType: 'TOWING_SERVICE' },
+      include: { winch: true },
+    });
+    if (!vendor) throw new AppError('You must be a TOWING_SERVICE vendor to create a winch', 403, 'FORBIDDEN');
+    if (vendor.winch) throw new AppError('You already have a winch linked. Edit it instead.', 409, 'DUPLICATE');
+
+    const {
+      name, nameAr, plateNumber, vehicleModel, year, capacity,
+      description, city, latitude, longitude,
+      basePrice, pricePerKm, minPrice, currency,
+    } = req.body;
+
+    if (!name || !plateNumber) {
+      throw new AppError('name and plateNumber are required', 400, 'VALIDATION_ERROR');
+    }
+
+    const winch = await prisma.winch.create({
+      data: {
+        name,
+        nameAr:       nameAr       || null,
+        plateNumber,
+        vehicleModel: vehicleModel || null,
+        year:         year         ? parseInt(year)        : null,
+        capacity:     capacity     ? parseFloat(capacity)  : null,
+        description:  description  || null,
+        city:         city         || null,
+        latitude:     latitude     ? parseFloat(latitude)  : null,
+        longitude:    longitude    ? parseFloat(longitude) : null,
+        basePrice:    basePrice    ? parseFloat(basePrice)  : null,
+        pricePerKm:   pricePerKm   ? parseFloat(pricePerKm) : null,
+        minPrice:     minPrice     ? parseFloat(minPrice)   : null,
+        currency:     currency     || 'SAR',
+        vendorId:     vendor.id,
+        isAvailable:  true,
+        isActive:     true,
+      },
+      select: WINCH_SELECT,
+    });
+
+    res.status(201).json({ success: true, data: winch });
+  } catch (err) { next(err); }
+}
+
+// PUT /api/winches/my — فيندور الوينش: تحديث بيانات ونشه
+async function updateMyWinch(req, res, next) {
+  try {
+    const vendor = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id, vendorType: 'TOWING_SERVICE' },
+      include: { winch: true },
+    });
+    if (!vendor?.winch) throw new AppError('No winch linked to your vendor account', 404, 'NO_WINCH');
+    const winchId = vendor.winch.id;
+
+    // فيلدز مسموح للفيندور يعدلها (بدون isVerified وvendorId)
+    const {
+      name, nameAr, plateNumber, vehicleModel, year, capacity,
+      description, city, latitude, longitude,
+      isAvailable, basePrice, pricePerKm, minPrice, currency
+    } = req.body;
+
+    const updated = await prisma.winch.update({
+      where: { id: winchId },
+      data: {
+        ...(name         !== undefined && { name }),
+        ...(nameAr       !== undefined && { nameAr }),
+        ...(plateNumber  !== undefined && { plateNumber }),
+        ...(vehicleModel !== undefined && { vehicleModel }),
+        ...(year         !== undefined && { year: year ? parseInt(year) : null }),
+        ...(capacity     !== undefined && { capacity: capacity ? parseFloat(capacity) : null }),
+        ...(description  !== undefined && { description }),
+        ...(city         !== undefined && { city }),
+        ...(latitude     !== undefined && { latitude: latitude ? parseFloat(latitude) : null }),
+        ...(longitude    !== undefined && { longitude: longitude ? parseFloat(longitude) : null }),
+        ...(isAvailable  !== undefined && { isAvailable: Boolean(isAvailable) }),
+        ...(basePrice    !== undefined && { basePrice:  basePrice  ? parseFloat(basePrice)  : null }),
+        ...(pricePerKm   !== undefined && { pricePerKm: pricePerKm ? parseFloat(pricePerKm) : null }),
+        ...(minPrice     !== undefined && { minPrice:   minPrice   ? parseFloat(minPrice)   : null }),
+        ...(currency     !== undefined && { currency:   currency   || 'SAR' }),
+      },
+      select: WINCH_SELECT,
+    });
+    res.json({ success: true, data: updated });
+  } catch (err) { next(err); }
+}
+
+// POST /api/winches/my/upload-image — فيندور الوينش: رفع صورة ونشه
+async function uploadMyWinchImage(req, res, next) {
+  try {
+    const vendor = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id, vendorType: 'TOWING_SERVICE' },
+      include: { winch: true },
+    });
+    if (!vendor?.winch) throw new AppError('No winch linked to your vendor account', 404, 'NO_WINCH');
+    if (!req.file) return res.status(400).json({ success: false, error: 'No image uploaded' });
+    const winchId = vendor.winch.id;
+    const imageUrl = `/uploads/winches/${winchId}/${req.file.filename}`;
+    await prisma.winch.update({ where: { id: winchId }, data: { imageUrl } });
+    res.json({ success: true, imageUrl });
+  } catch (err) { next(err); }
+}
+
 // GET /api/winches/my/broadcasts — فيندور الوينش: طلبات السحب القريبة من ونشي
 async function getMyBroadcasts(req, res, next) {
   try {
@@ -218,6 +323,37 @@ async function updateMyJobStatus(req, res, next) {
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 }
+// DELETE /api/winches/my — فيندور الوينش: حذف ونشه (مش مسموح لو عنده مهام نشطة)
+async function deleteMyWinch(req, res, next) {
+  try {
+    const vendor = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id, vendorType: 'TOWING_SERVICE' },
+      include: { winch: true },
+    });
+    if (!vendor?.winch) throw new AppError('No winch linked to your vendor account', 404, 'NO_WINCH');
+    const winchId = vendor.winch.id;
+
+    // تحقق مفيش مهام نشطة
+    const activeJobs = await prisma.jobOffer.count({
+      where: {
+        winchId,
+        isSelected: true,
+        broadcast: {
+          booking: {
+            status: { in: ['TECHNICIAN_ASSIGNED', 'TECHNICIAN_EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'] },
+          },
+        },
+      },
+    });
+    if (activeJobs > 0) {
+      throw new AppError('لا يمكن حذف الونش وهو لديه مهام نشطة — أكمل المهام أولاً', 409, 'HAS_ACTIVE_JOBS');
+    }
+
+    await prisma.winch.delete({ where: { id: winchId } });
+    res.json({ success: true, message: 'Winch deleted successfully' });
+  } catch (err) { next(err); }
+}
+
 
 module.exports = {
   getAllWinches,
@@ -226,6 +362,10 @@ module.exports = {
   updateWinch,
   deleteWinch,
   getMyWinch,
+  createMyWinch,
+  updateMyWinch,
+  deleteMyWinch,
+  uploadMyWinchImage,
   getMyBroadcasts,
   submitMyOffer,
   getMyJobs,

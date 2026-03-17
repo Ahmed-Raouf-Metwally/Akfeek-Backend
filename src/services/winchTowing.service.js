@@ -216,6 +216,22 @@ async function submitWinchOffer(vendorUserId, broadcastId, data) {
         }
     });
 
+    // DB Notification (Customer): offer received from winch/vendor
+    try {
+        await prisma.notification.create({
+            data: {
+                userId: broadcast.booking.customerId,
+                type: 'OFFER_RECEIVED',
+                title: 'New winch offer received',
+                titleAr: 'تم استلام عرض ونش جديد',
+                message: `A winch offered ${Number(bidAmount)} SAR.`,
+                messageAr: `تم استلام عرض ونش بقيمة ${Number(bidAmount)} ر.س.`,
+                bookingId: broadcast.booking.id,
+                metadata: { broadcastId, offerId: offer.id, winchId: winch.id, bidAmount: Number(bidAmount) }
+            }
+        });
+    } catch (_) { /* non-blocking */ }
+
     return {
         offer: {
             id: offer.id,
@@ -327,6 +343,22 @@ async function updateWinchJobStatus(vendorUserId, bookingId, newStatus) {
             ...(newStatus === BookingStatus.COMPLETED && { completedAt: new Date() })
         }
     });
+
+    // DB Notification (Customer): status update from winch
+    try {
+        await prisma.notification.create({
+            data: {
+                userId: booking.customerId,
+                type: 'STATUS_UPDATE',
+                title: 'Status updated',
+                titleAr: 'تم تحديث الحالة',
+                message: `Your towing status is now ${newStatus}.`,
+                messageAr: `تم تحديث حالة السحب إلى ${newStatus}.`,
+                bookingId: booking.id,
+                metadata: { fromStatus: booking.status, toStatus: newStatus, source: 'winch' }
+            }
+        });
+    } catch (_) { /* non-blocking */ }
     return {
         booking: {
             id: updatedBooking.id,

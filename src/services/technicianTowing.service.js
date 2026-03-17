@@ -241,7 +241,21 @@ class TechnicianTowingService {
             }
         });
 
-        // TODO: Notify customer via Socket.io about new offer
+        // DB Notification (Customer): offer received
+        try {
+            await prisma.notification.create({
+                data: {
+                    userId: broadcast.booking.customerId,
+                    type: 'OFFER_RECEIVED',
+                    title: 'New offer received',
+                    titleAr: 'تم استلام عرض جديد',
+                    message: `A technician offered ${Number(bidAmount)} SAR.`,
+                    messageAr: `تم استلام عرض بقيمة ${Number(bidAmount)} ر.س.`,
+                    bookingId: broadcast.booking.id,
+                    metadata: { broadcastId, offerId: offer.id, technicianId, bidAmount: Number(bidAmount) }
+                }
+            });
+        } catch (_) { /* non-blocking */ }
 
         return {
             offer: {
@@ -357,7 +371,21 @@ class TechnicianTowingService {
             }
         });
 
-        // TODO: Notify customer via Socket.io
+        // DB Notification (Customer): status update
+        try {
+            await prisma.notification.create({
+                data: {
+                    userId: booking.customerId,
+                    type: 'STATUS_UPDATE',
+                    title: 'Status updated',
+                    titleAr: 'تم تحديث الحالة',
+                    message: `Your job status is now ${newStatus}.`,
+                    messageAr: `تم تحديث حالة الطلب إلى ${newStatus}.`,
+                    bookingId: booking.id,
+                    metadata: { fromStatus: booking.status, toStatus: newStatus, source: 'technician_towing' }
+                }
+            });
+        } catch (_) { /* non-blocking */ }
 
         return {
             booking: {

@@ -14,11 +14,19 @@ const fs = require('fs');
 process.chdir(__dirname);
 
 const swaggerSpec = require('./src/config/swagger');
-const outputPath = path.join(__dirname, 'openapi.json');
+const outputs = [
+  'openapi.json',
+  'openapi-mobile.json',
+  'openapi-admin.json',
+  'openapi-vendor.json',
+  'openapi-technician.json',
+].map((f) => path.join(__dirname, f));
 
 const json = JSON.stringify(swaggerSpec, null, 2);
 
-fs.writeFileSync(outputPath, json, 'utf8');
-console.log('✅ تم تصدير OpenAPI إلى:', outputPath);
-console.log('   استورد هذا الملف في Postman: File → Import → openapi.json');
+outputs.forEach((p) => fs.writeFileSync(p, json, 'utf8'));
+
+console.log('✅ تم تصدير OpenAPI إلى الملفات التالية:');
+outputs.forEach((p) => console.log('  -', p));
+console.log('   استورد أي ملف في Postman: File → Import → openapi-*.json');
 console.log('   أو استورد من الرابط (مع تشغيل السيرفر): http://localhost:3000/api-docs.json');

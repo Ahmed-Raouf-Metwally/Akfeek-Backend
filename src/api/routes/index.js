@@ -23,6 +23,7 @@ const technicianTowingRoutes = require('./technicianTowing.routes');
 const feedbackRoutes = require('./feedback.routes');
 const feedbackAdminRoutes = require('./admin/feedback.admin.routes');
 const technicalSupportRoutes = require('./technicalSupport.routes');
+const bannersRoutes = require('./banners.routes');
 
 // Winch routes
 const winchRoutes = require('./winches.routes');
@@ -53,6 +54,9 @@ router.use('/cart', cartRoutes);
 
 // Certified Workshops routes
 router.use('/workshops', workshopRoutes);
+
+// Public banners for mobile app
+router.use('/banners', bannersRoutes);
 
 // Winch / Towing vehicles
 router.use('/winches', winchRoutes);
@@ -117,6 +121,7 @@ router.use('/vendor-onboarding', vendorOnboardingRoutes);
 router.use('/admin/settings', adminSettingsRoutes);
 router.use('/admin/feedback', feedbackAdminRoutes);
 router.use('/admin/employees', require('./admin/employees.routes'));
+router.use('/admin/banners', require('./admin/banners.routes'));
 router.use('/dashboard', require('./dashboard.routes'));
 router.use('/admin/finance', require('./admin/finance.routes'));
 

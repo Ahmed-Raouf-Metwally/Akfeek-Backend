@@ -75,7 +75,7 @@ async function getAll(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// GET /api/mobile-workshops/my — ورشة المورد الحالي (VENDOR + MOBILE_WORKSHOP فقط)
+// GET /api/mobile-workshops/my
 async function getMy(req, res, next) {
   try {
     const vendor = await prisma.vendorProfile.findFirst({
@@ -89,10 +89,148 @@ async function getMy(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// POST /api/mobile-workshops/my — فيندور MOBILE_WORKSHOP: إنشاء ورشته المتنقلة
+async function createMy(req, res, next) {
+  try {
+    const vendor = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id, vendorType: 'MOBILE_WORKSHOP' },
+      include: { mobileWorkshop: true },
+    });
+    if (!vendor) throw new AppError('You must be a MOBILE_WORKSHOP vendor', 403, 'FORBIDDEN');
+    if (vendor.mobileWorkshop) throw new AppError('You already have a mobile workshop. Edit it instead.', 409, 'DUPLICATE');
+
+    const {
+      name, nameAr, description, workshopTypeId,
+      vehicleType, vehicleModel, year, plateNumber, servicesOffered,
+      city, latitude, longitude, serviceRadius,
+      basePrice, pricePerKm, hourlyRate, minPrice, currency,
+    } = req.body;
+
+    if (!name) throw new AppError('name is required', 400, 'VALIDATION_ERROR');
+
+    const item = await prisma.mobileWorkshop.create({
+      data: {
+        name, nameAr: nameAr || null, description: description || null,
+        workshopTypeId: workshopTypeId || null,
+        vehicleType: vehicleType || null, vehicleModel: vehicleModel || null,
+        year: year ? parseInt(year) : null,
+        plateNumber: plateNumber || null,
+        servicesOffered: servicesOffered || null,
+        city: city || null,
+        latitude:      latitude      ? parseFloat(latitude)      : null,
+        longitude:     longitude     ? parseFloat(longitude)     : null,
+        serviceRadius: serviceRadius ? parseFloat(serviceRadius) : null,
+        basePrice:  basePrice  ? parseFloat(basePrice)  : null,
+        pricePerKm: pricePerKm ? parseFloat(pricePerKm) : null,
+        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+        minPrice:   minPrice   ? parseFloat(minPrice)   : null,
+        currency:   currency   || 'SAR',
+        vendorId: vendor.id,
+        isAvailable: true,
+        isActive: true,
+      },
+      select: SELECT,
+    });
+
+    res.status(201).json({ success: true, data: item });
+  } catch (err) { next(err); }
+}
+
+// PUT /api/mobile-workshops/my — فيندور: تحديث ورشته المتنقلة
+async function updateMy(req, res, next) {
+  try {
+    const vendor = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id, vendorType: 'MOBILE_WORKSHOP' },
+      include: { mobileWorkshop: true },
+    });
+    if (!vendor?.mobileWorkshop) throw new AppError('No mobile workshop linked to your vendor account', 404, 'NOT_FOUND');
+    const wid = vendor.mobileWorkshop.id;
+
+    const {
+      name, nameAr, description, workshopTypeId,
+      vehicleType, vehicleModel, year, plateNumber, servicesOffered,
+      city, latitude, longitude, serviceRadius,
+      basePrice, pricePerKm, hourlyRate, minPrice, currency,
+      isAvailable,
+    } = req.body;
+
+    const item = await prisma.mobileWorkshop.update({
+      where: { id: wid },
+      data: {
+        ...(name             !== undefined && { name }),
+        ...(nameAr           !== undefined && { nameAr }),
+        ...(description      !== undefined && { description }),
+        ...(workshopTypeId   !== undefined && { workshopTypeId: workshopTypeId || null }),
+        ...(vehicleType      !== undefined && { vehicleType }),
+        ...(vehicleModel     !== undefined && { vehicleModel }),
+        ...(year             !== undefined && { year: year ? parseInt(year) : null }),
+        ...(plateNumber      !== undefined && { plateNumber }),
+        ...(servicesOffered  !== undefined && { servicesOffered }),
+        ...(city             !== undefined && { city }),
+        ...(latitude         !== undefined && { latitude:      latitude      ? parseFloat(latitude)      : null }),
+        ...(longitude        !== undefined && { longitude:     longitude     ? parseFloat(longitude)     : null }),
+        ...(serviceRadius    !== undefined && { serviceRadius: serviceRadius ? parseFloat(serviceRadius) : null }),
+        ...(basePrice        !== undefined && { basePrice:  basePrice  ? parseFloat(basePrice)  : null }),
+        ...(pricePerKm       !== undefined && { pricePerKm: pricePerKm ? parseFloat(pricePerKm) : null }),
+        ...(hourlyRate       !== undefined && { hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null }),
+        ...(minPrice         !== undefined && { minPrice:   minPrice   ? parseFloat(minPrice)   : null }),
+        ...(currency         !== undefined && { currency }),
+        ...(isAvailable      !== undefined && { isAvailable: Boolean(isAvailable) }),
+      },
+      select: SELECT,
+    });
+
+    res.json({ success: true, data: item });
+  } catch (err) { next(err); }
+}
+
+// DELETE /api/mobile-workshops/my
+async function deleteMy(req, res, next) {
+  try {
+    const vendor = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id, vendorType: 'MOBILE_WORKSHOP' },
+      include: { mobileWorkshop: true },
+    });
+    if (!vendor?.mobileWorkshop) throw new AppError('No mobile workshop linked to your vendor account', 404, 'NOT_FOUND');
+
+    const activeJobs = await prisma.booking.count({
+      where: {
+        mobileWorkshopId: vendor.mobileWorkshop.id,
+        status: { in: ['CONFIRMED', 'TECHNICIAN_ASSIGNED', 'TECHNICIAN_EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'] },
+      },
+    });
+    if (activeJobs > 0) {
+      throw new AppError('لا يمكن حذف الورشة وهي لديها مهام نشطة — أكمل المهام أولاً', 409, 'HAS_ACTIVE_JOBS');
+    }
+
+    await prisma.mobileWorkshop.delete({ where: { id: vendor.mobileWorkshop.id } });
+    res.json({ success: true, message: 'Mobile workshop deleted successfully' });
+  } catch (err) { next(err); }
+}
+
+// POST /api/mobile-workshops/my/upload-image
+async function uploadMyImage(req, res, next) {
+  try {
+    const vendor = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id, vendorType: 'MOBILE_WORKSHOP' },
+      include: { mobileWorkshop: true },
+    });
+    if (!vendor?.mobileWorkshop) throw new AppError('No mobile workshop linked to your vendor account', 404, 'NOT_FOUND');
+    if (!req.file) return res.status(400).json({ success: false, error: 'No image uploaded' });
+    const wid = vendor.mobileWorkshop.id;
+    const type = (req.body?.type || 'logo').toLowerCase();
+    const imageUrl = `/uploads/mobile-workshops/${wid}/${req.file.filename}`;
+    const updateData = type === 'vehicle' ? { vehicleImageUrl: imageUrl } : { imageUrl };
+    await prisma.mobileWorkshop.update({ where: { id: wid }, data: updateData });
+    res.json({ success: true, imageUrl, field: type === 'vehicle' ? 'vehicleImageUrl' : 'imageUrl' });
+  } catch (err) { next(err); }
+}
+
 // GET /api/mobile-workshops/:id
 async function getById(req, res, next) {
   try {
-    const item = await prisma.mobileWorkshop.findUnique({ where: { id: req.params.id }, select: SELECT });
+    const { id } = req.params;
+    const item = await prisma.mobileWorkshop.findUnique({ where: { id }, select: SELECT });
     if (!item) throw new AppError('Mobile workshop not found', 404, 'NOT_FOUND');
     res.json({ success: true, data: item });
   } catch (err) { next(err); }
@@ -288,4 +426,8 @@ async function removeService(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getAll, getMy, getById, create, update, remove, addService, updateService, removeService };
+module.exports = {
+  getAll, getMy, getById, create, update, remove,
+  addService, updateService, removeService,
+  createMy, updateMy, deleteMy, uploadMyImage
+};

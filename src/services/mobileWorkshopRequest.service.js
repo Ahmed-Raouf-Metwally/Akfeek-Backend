@@ -97,6 +97,30 @@ async function createRequest(customerId, data) {
     },
   });
 
+  // DB Notification (Customer): request created/broadcasting
+  try {
+    const svcName = request.workshopTypeService?.name || request.workshopType?.name || request.serviceType;
+    const svcNameAr = request.workshopTypeService?.nameAr || request.workshopType?.nameAr || request.serviceType;
+    await prisma.notification.create({
+      data: {
+        userId: customerId,
+        type: 'BROADCAST_NEW',
+        title: 'Request created',
+        titleAr: 'تم إنشاء الطلب',
+        message: `Your mobile workshop request (${svcName}) is now being broadcast.`,
+        messageAr: `تم إنشاء طلب الورشة المتنقلة (${svcNameAr}) وجاري إرساله للورش.`,
+        metadata: {
+          mobileWorkshopRequestId: request.id,
+          requestNumber: request.requestNumber,
+          status: request.status,
+          workshopTypeId,
+          workshopTypeServiceId: finalWorkshopTypeServiceId,
+          serviceType: request.serviceType,
+        },
+      },
+    });
+  } catch (_) { /* non-blocking */ }
+
   // Find workshops: same type + have this service (by workshopTypeServiceId or by serviceType)
   const whereClause = {
     workshopTypeId,
@@ -461,6 +485,28 @@ async function submitOffer(mobileWorkshopId, requestId, vendorUserId, data) {
     data: { status: 'OFFERS_RECEIVED' },
   });
 
+  // DB Notification (Customer): offer received
+  try {
+    await prisma.notification.create({
+      data: {
+        userId: request.customerId,
+        type: 'OFFER_RECEIVED',
+        title: 'New offer received',
+        titleAr: 'تم استلام عرض جديد',
+        message: `${workshop.name || 'Workshop'} offered ${finalPrice} ${workshop.currency || 'SAR'}.`,
+        messageAr: `${workshop.nameAr || workshop.name || 'ورشة'} قدمت عرض ${finalPrice} ${workshop.currency || 'SAR'}.`,
+        metadata: {
+          mobileWorkshopRequestId: requestId,
+          offerId: offer.id,
+          mobileWorkshopId,
+          price: finalPrice,
+          currency: workshop.currency || 'SAR',
+          acceptOnly: isAcceptOnly,
+        },
+      },
+    });
+  } catch (_) { /* non-blocking */ }
+
   try {
     emitNotification(request.customerId, {
       type: 'MOBILE_WORKSHOP_OFFER',
@@ -658,6 +704,41 @@ async function selectOffer(requestId, offerId, customerId, body = {}) {
 
     return { booking, invoice };
   });
+
+  // DB Notifications: offer accepted / booking assigned
+  try {
+    const vendorUserId = workshop.vendor.userId;
+    const bkgNo = result.booking.bookingNumber;
+    const price = Number(result.booking.totalPrice) || agreedPrice;
+
+    await prisma.notification.create({
+      data: {
+        userId: customerId,
+        type: 'OFFER_ACCEPTED',
+        title: 'Offer accepted',
+        titleAr: 'تم قبول العرض',
+        message: `You selected an offer. Booking ${bkgNo} is assigned.`,
+        messageAr: `تم اختيار العرض وربط الحجز رقم ${bkgNo}.`,
+        bookingId: result.booking.id,
+        metadata: { mobileWorkshopRequestId: requestId, offerId, mobileWorkshopId: workshop.id, agreedPrice: price },
+      },
+    });
+
+    if (vendorUserId) {
+      await prisma.notification.create({
+        data: {
+          userId: vendorUserId,
+          type: 'OFFER_ACCEPTED',
+          title: 'Offer accepted by customer',
+          titleAr: 'تم قبول عرضك',
+          message: `Customer accepted your offer. Booking ${bkgNo} assigned to you.`,
+          messageAr: `تم قبول عرضك وربط الحجز رقم ${bkgNo} بك.`,
+          bookingId: result.booking.id,
+          metadata: { mobileWorkshopRequestId: requestId, offerId, mobileWorkshopId: workshop.id, agreedPrice: price },
+        },
+      });
+    }
+  } catch (_) { /* non-blocking */ }
 
   const { emitBookingReady } = require('../socket');
   try {

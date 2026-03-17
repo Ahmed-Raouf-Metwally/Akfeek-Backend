@@ -712,6 +712,26 @@ async function createBooking(req, res, next) {
       }
     });
 
+    // إشعار للعميل: تم إنشاء الحجز
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: customerId,
+          type: 'BOOKING_CREATED',
+          title: 'Booking created',
+          titleAr: 'تم إنشاء الحجز',
+          message: `Your booking ${booking.bookingNumber} has been created successfully.`,
+          messageAr: `تم إنشاء حجزك رقم ${booking.bookingNumber} بنجاح.`,
+          bookingId: booking.id,
+          metadata: {
+            bookingNumber: booking.bookingNumber,
+            status: booking.status,
+            totalPrice: booking.totalPrice,
+          },
+        },
+      });
+    } catch (_) { /* notification is non-blocking */ }
+
     // إنشاء فاتورة تلقائياً لتمكين الدفع: العناية الشاملة، ورش الغسيل، والورش المعتمدة
     if (booking.id) {
       try {
@@ -951,7 +971,10 @@ async function updateBookingStatus(req, res, next) {
     const { id } = req.params;
     const { status, reason } = req.body;
 
-    const booking = await prisma.booking.findUnique({ where: { id } });
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      select: { id: true, bookingNumber: true, status: true, customerId: true },
+    });
     if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
 
     const oldStatus = booking.status;
@@ -972,6 +995,29 @@ async function updateBookingStatus(req, res, next) {
         timestamp: new Date(),
       },
     }).catch(() => null); // ignore if model doesn't exist
+
+    // إشعار للعميل: تغيير حالة الحجز (Admin)
+    try {
+      const statusAr =
+        status === 'PENDING' ? 'قيد الانتظار' :
+        status === 'CONFIRMED' ? 'مؤكد' :
+        status === 'IN_PROGRESS' ? 'قيد التنفيذ' :
+        status === 'COMPLETED' ? 'مكتمل' :
+        status === 'CANCELLED' ? 'ملغي' :
+        status;
+      await prisma.notification.create({
+        data: {
+          userId: booking.customerId,
+          type: 'STATUS_UPDATE',
+          title: 'Booking status updated',
+          titleAr: 'تم تحديث حالة الحجز',
+          message: `Booking ${booking.bookingNumber} status changed from ${oldStatus} to ${status}.`,
+          messageAr: `تم تحديث حالة الحجز رقم ${booking.bookingNumber} إلى ${statusAr}.`,
+          bookingId: booking.id,
+          metadata: { fromStatus: oldStatus, toStatus: status, reason: reason || null },
+        },
+      });
+    } catch (_) { /* non-blocking */ }
 
     res.json({ success: true, message: 'تم تحديث الحالة', data: updated });
   } catch (error) {
@@ -1027,6 +1073,22 @@ async function confirmBookingAsVendor(req, res, next) {
         changedBy: req.user.id,
       },
     }).catch(() => null);
+
+    // إشعار للعميل: الحجز تم تأكيده
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: booking.customerId,
+          type: 'BOOKING_CONFIRMED',
+          title: 'Booking confirmed',
+          titleAr: 'تم تأكيد الحجز',
+          message: `Your booking has been confirmed.`,
+          messageAr: 'تم تأكيد حجزك.',
+          bookingId: booking.id,
+          metadata: { fromStatus: oldStatus, toStatus: 'CONFIRMED' },
+        },
+      });
+    } catch (_) { /* non-blocking */ }
 
     res.json({
       success: true,
@@ -1087,6 +1149,22 @@ async function startBookingAsVendor(req, res, next) {
       },
     }).catch(() => null);
 
+    // إشعار للعميل: بدء تنفيذ الحجز
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: booking.customerId,
+          type: 'STATUS_UPDATE',
+          title: 'Booking started',
+          titleAr: 'تم بدء تنفيذ الحجز',
+          message: 'Your booking is now in progress.',
+          messageAr: 'حجزك الآن قيد التنفيذ.',
+          bookingId: booking.id,
+          metadata: { fromStatus: oldStatus, toStatus: 'IN_PROGRESS' },
+        },
+      });
+    } catch (_) { /* non-blocking */ }
+
     res.json({
       success: true,
       message: 'Booking started',
@@ -1146,6 +1224,22 @@ async function completeBookingAsVendor(req, res, next) {
         changedBy: req.user.id,
       },
     }).catch(() => null);
+
+    // إشعار للعميل: اكتمال الحجز
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: booking.customerId,
+          type: 'STATUS_UPDATE',
+          title: 'Booking completed',
+          titleAr: 'اكتمل الحجز',
+          message: 'Your booking has been completed.',
+          messageAr: 'تم اكتمال حجزك.',
+          bookingId: booking.id,
+          metadata: { fromStatus: oldStatus, toStatus: 'COMPLETED' },
+        },
+      });
+    } catch (_) { /* non-blocking */ }
 
     res.json({
       success: true,

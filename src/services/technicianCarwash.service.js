@@ -158,6 +158,22 @@ class TechnicianCarWashService {
             }
         });
 
+        // DB Notification (Customer): offer received
+        try {
+            await prisma.notification.create({
+                data: {
+                    userId: broadcast.booking.customerId,
+                    type: 'OFFER_RECEIVED',
+                    title: 'New offer received',
+                    titleAr: 'تم استلام عرض جديد',
+                    message: `A technician offered ${Number(bidAmount)} SAR.`,
+                    messageAr: `تم استلام عرض بقيمة ${Number(bidAmount)} ر.س.`,
+                    bookingId: broadcast.booking.id,
+                    metadata: { broadcastId, offerId: offer.id, technicianId, bidAmount: Number(bidAmount) }
+                }
+            });
+        } catch (_) { /* non-blocking */ }
+
         return offer;
     }
 }

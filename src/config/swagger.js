@@ -400,6 +400,10 @@ Authorization: Bearer <your_jwt_token>
         }],
         tags: [
         {
+            name: 'Banners',
+            description: 'Top/Bottom banners for the mobile app. Public: GET /api/banners. Admin: /api/admin/banners.'
+        },
+        {
             name: '1. Certified Workshops',
             description: 'Certified workshops CRUD + booking (POST /api/bookings with workshopId).'
         },
@@ -447,6 +451,10 @@ Authorization: Bearer <your_jwt_token>
 |--------|------|--------|--------|
 | GET | /api/mobile-workshops | قائمة كل الورش | مصادق |
 | GET | /api/mobile-workshops/my | ورشتي المتنقلة | فيندور |
+| POST | /api/mobile-workshops/my | إنشاء ورشتي المتنقلة | فيندور |
+| PUT | /api/mobile-workshops/my | تحديث بيانات ورشتي | فيندور |
+| DELETE | /api/mobile-workshops/my | حذف ورشتي | فيندور |
+| POST | /api/mobile-workshops/my/upload-image | رفع صورة لورشتي | فيندور |
 | GET | /api/mobile-workshops/my/requests | طلبات ورشتي | فيندور |
 | POST | /api/mobile-workshops/:workshopId/requests/:requestId/offer | إرسال عرض أو موافقة | فيندور |
 | POST | /api/mobile-workshops/:workshopId/requests/:requestId/reject | رفض الطلب | فيندور |
@@ -454,7 +462,7 @@ Authorization: Bearer <your_jwt_token>
 | POST | /api/mobile-workshops | إضافة ورشة | أدمن |
 | PUT | /api/mobile-workshops/:id | تحديث ورشة | أدمن |
 | DELETE | /api/mobile-workshops/:id | حذف ورشة | أدمن |
-| POST | /api/mobile-workshops/:id/upload-image | رفع صورة (logo أو vehicle) | أدمن |
+| POST | /api/mobile-workshops/:id/upload-image | رفع صورة (لأدمن) | أدمن |
 | POST | /api/mobile-workshops/:id/services | إضافة خدمة لورشة | أدمن |
 | PUT | /api/mobile-workshops/:id/services/:svcId | تحديث خدمة | أدمن |
 | DELETE | /api/mobile-workshops/:id/services/:svcId | حذف خدمة | أدمن |

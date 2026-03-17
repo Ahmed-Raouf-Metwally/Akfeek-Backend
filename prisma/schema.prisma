@@ -2305,6 +2305,9 @@ model Vendor {
   tradeName    String?
   supplierType String
 
+  // Requested vendor type (used on approval to create VendorProfile)
+  vendorType   VendorType @default(AUTO_PARTS)
+
   // Address & Registration
   country           String
   city              String
@@ -2420,4 +2423,40 @@ model TechnicalSupportRequest {
   @@index([customerId])
   @@index([technicianId])
   @@index([status])
+}
+
+// ================================================================================================
+// BANNERS (Top / Bottom)
+// ================================================================================================
+
+enum BannerPosition {
+  TOP
+  BOTTOM
+}
+
+model Banner {
+  id        String         @id @default(uuid())
+  position  BannerPosition
+  title     String?
+  titleAr   String?
+  isActive  Boolean        @default(true)
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  images BannerImage[]
+
+  @@index([position, isActive, sortOrder])
+}
+
+model BannerImage {
+  id        String   @id @default(uuid())
+  bannerId  String
+  banner    Banner   @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+  imageUrl  String
+  linkUrl   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([bannerId, sortOrder])
 }

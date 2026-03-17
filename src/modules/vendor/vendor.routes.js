@@ -23,11 +23,12 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [legalName, supplierType, country, city, addressLine1, nationalAddress, postalCode, commercialRegNo, companyEmail, companyPhone, contactPersonName, contactPersonTitle, contactPersonMobile, mainService, servicesOffered, coverageRegion, operatingModel, coverageCities, payoutMethod]
+ *             required: [legalName, supplierType, vendorType, country, city, addressLine1, nationalAddress, postalCode, commercialRegNo, companyEmail, companyPhone, contactPersonName, contactPersonTitle, contactPersonMobile, mainService, servicesOffered, coverageRegion, operatingModel, coverageCities, payoutMethod]
  *             properties:
  *               legalName: { type: string, example: "Al-Futtaim Motors" }
  *               tradeName: { type: string, example: "Toyota Saudi" }
  *               supplierType: { type: string, example: "CORPORATE" }
+ *               vendorType: { type: string, enum: ["AUTO_PARTS","COMPREHENSIVE_CARE","CERTIFIED_WORKSHOP","CAR_WASH","MOBILE_WORKSHOP","TOWING_SERVICE"], example: "AUTO_PARTS" }
  *               country: { type: string, example: "Saudi Arabia" }
  *               city: { type: string, example: "Riyadh" }
  *               addressLine1: { type: string, example: "King Fahd Branch Rd, Al Murabbah" }

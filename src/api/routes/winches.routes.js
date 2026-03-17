@@ -37,15 +37,244 @@ router.use(auth);
  * @swagger
  * /api/winches/my:
  *   get:
- *     summary: "ونشي — Get my winch (Winch vendor)"
- *     description: فيندور الوينش (TOWING_SERVICE) يجلب بيانات الوينش المرتبط بحسابه.
+ *     summary: "1. ونشي — Get my winch (Winch vendor)"
+ *     description: فيندور السحب (TOWING_SERVICE) يجلب بيانات الوينش المرتبط بحسابه.
  *     tags: [4. Towing]
  *     security: [{ bearerAuth: [] }]
  *     responses:
- *       200: { description: Winch profile }
- *       404: { description: No winch linked to your vendor account }
+ *       200:
+ *         description: بيانات الونش
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { $ref: '#/components/schemas/Winch' }
+ *       404:
+ *         description: No winch linked to your vendor account
  */
 router.get('/my', role('VENDOR'), ctrl.getMyWinch);
+
+/**
+ * @swagger
+ * /api/winches/my:
+ *   post:
+ *     summary: "إنشاء ونش — Create my winch (Winch vendor)"
+ *     description: |
+ *       فيندور السحب (TOWING_SERVICE) ينشئ ونشه المرتبط بحسابه. كل فيندور مسموح له بونش واحد فقط.
+ *       يتطلب تسجيل الدخول كـ VENDOR من نوع TOWING_SERVICE.
+ *     tags: [4. Towing]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, plateNumber]
+ *             properties:
+ *               name:         { type: string, example: "Eagle Towing" }
+ *               nameAr:       { type: string, example: "نسر للسحب" }
+ *               plateNumber:  { type: string, example: "ABC 1234" }
+ *               vehicleModel: { type: string, example: "Toyota Hilux" }
+ *               year:         { type: integer, example: 2022 }
+ *               capacity:     { type: number, example: 3.5, description: "طاقة السحب بالطن" }
+ *               description:  { type: string }
+ *               city:         { type: string, example: "الرياض" }
+ *               latitude:     { type: number, example: 24.7136 }
+ *               longitude:    { type: number, example: 46.6753 }
+ *               basePrice:    { type: number, example: 50 }
+ *               pricePerKm:   { type: number, example: 5 }
+ *               minPrice:     { type: number, example: 80 }
+ *               currency:     { type: string, example: "SAR", default: "SAR" }
+ *           example:
+ *             name: "Eagle Towing"
+ *             nameAr: "نسر للسحب"
+ *             plateNumber: "ABC 1234"
+ *             vehicleModel: "Toyota Hilux"
+ *             year: 2022
+ *             capacity: 3.5
+ *             city: "الرياض"
+ *             latitude: 24.7136
+ *             longitude: 46.6753
+ *             basePrice: 50
+ *             pricePerKm: 5
+ *             minPrice: 80
+ *     responses:
+ *       201:
+ *         description: تم إنشاء الونش بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { $ref: '#/components/schemas/Winch' }
+ *       400:
+ *         description: name and plateNumber are required
+ *       403:
+ *         description: You must be a TOWING_SERVICE vendor
+ *       409:
+ *         description: You already have a winch linked
+ */
+router.post('/my', role('VENDOR'), ctrl.createMyWinch);
+
+/**
+ * @swagger
+ * /api/winches/my:
+ *   put:
+ *     summary: "تحديث ونشي — Update my winch (Winch vendor)"
+ *     description: |
+ *       فيندور السحب يحدّث بيانات ونشه. الفيلدز المسموح بتحديثها: name, nameAr, plateNumber,
+ *       vehicleModel, year, capacity, description, city, latitude, longitude, isAvailable,
+ *       basePrice, pricePerKm, minPrice, currency.
+ *       الفيلدز المحظورة: isVerified, isActive, vendorId (تعديل ADMIN فقط).
+ *     tags: [4. Towing]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:         { type: string }
+ *               nameAr:       { type: string }
+ *               plateNumber:  { type: string }
+ *               vehicleModel: { type: string }
+ *               year:         { type: integer }
+ *               capacity:     { type: number }
+ *               description:  { type: string }
+ *               city:         { type: string }
+ *               latitude:     { type: number }
+ *               longitude:    { type: number }
+ *               isAvailable:  { type: boolean }
+ *               basePrice:    { type: number }
+ *               pricePerKm:   { type: number }
+ *               minPrice:     { type: number }
+ *               currency:     { type: string }
+ *           example:
+ *             city: "جدة"
+ *             latitude: 21.5433
+ *             longitude: 39.1728
+ *             isAvailable: true
+ *             basePrice: 60
+ *             pricePerKm: 6
+ *     responses:
+ *       200:
+ *         description: تم التحديث بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { $ref: '#/components/schemas/Winch' }
+ *       404:
+ *         description: No winch linked to your vendor account
+ */
+router.put('/my', role('VENDOR'), ctrl.updateMyWinch);
+
+/**
+ * @swagger
+ * /api/winches/my:
+ *   delete:
+ *     summary: "حذف ونشي — Delete my winch (Winch vendor)"
+ *     description: |
+ *       فيندور السحب يحذف ونشه. **غير مسموح** بالحذف إذا كان هناك مهام نشطة
+ *       (TECHNICIAN_ASSIGNED، TECHNICIAN_EN_ROUTE، ARRIVED، أو IN_PROGRESS).
+ *       أكمل جميع المهام النشطة أولاً قبل الحذف.
+ *     tags: [4. Towing]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: تم حذف الونش بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 message: { type: string, example: "Winch deleted successfully" }
+ *       404:
+ *         description: No winch linked to your vendor account
+ *       409:
+ *         description: لا يمكن الحذف — يوجد مهام نشطة
+ */
+router.delete('/my', role('VENDOR'), ctrl.deleteMyWinch);
+
+/**
+ * @swagger
+ * /api/winches/my/upload-image:
+ *   post:
+ *     summary: "رفع صورة الونش — Upload my winch image (Winch vendor)"
+ *     description: |
+ *       فيندور السحب يرفع أو يستبدل صورة ونشه.
+ *       الصيغ المقبولة: JPEG، PNG، WebP. الحد الأقصى للحجم: 5 MB.
+ *       يجب إرسال الصورة كـ multipart/form-data بالحقل `image`.
+ *     tags: [4. Towing]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [image]
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: "ملف الصورة (JPEG, PNG, WebP — max 5MB)"
+ *     responses:
+ *       200:
+ *         description: تم رفع الصورة بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 imageUrl: { type: string, example: "/uploads/winches/abc123/image-1710000000000.jpg" }
+ *       400:
+ *         description: No image uploaded
+ *       404:
+ *         description: No winch linked to your vendor account
+ */
+router.post(
+  '/my/upload-image',
+  role('VENDOR'),
+  (req, res, next) => {
+    req.params.id = 'vendor-my';
+    next();
+  },
+  multer({
+    storage: multer.diskStorage({
+      destination: async (req, file, cb) => {
+        const prisma = require('../../utils/database/prisma');
+        const vendor = await prisma.vendorProfile.findFirst({
+          where: { userId: req.user.id, vendorType: 'TOWING_SERVICE' },
+          include: { winch: true },
+        });
+        const winchId = vendor?.winch?.id || 'unknown';
+        req._vendorWinchId = winchId;
+        const dir = path.join(winchUploadDir, winchId);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+      },
+      filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname) || '.jpg';
+        cb(null, `image-${Date.now()}${ext}`);
+      },
+    }),
+    fileFilter: (req, file, cb) => {
+      const ok = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.mimetype);
+      cb(ok ? null : new Error('Only images allowed'), ok);
+    },
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }).single('image'),
+  ctrl.uploadMyWinchImage
+);
 
 /**
  * @swagger

@@ -78,6 +78,22 @@ class CarWashService {
             }
         });
 
+        // DB Notification (Customer): carwash request created/broadcasting
+        try {
+            await prisma.notification.create({
+                data: {
+                    userId: customerId,
+                    type: 'BROADCAST_NEW',
+                    title: 'Car wash request created',
+                    titleAr: 'تم إنشاء طلب غسيل سيارة',
+                    message: `Your car wash request ${booking.bookingNumber} is being broadcast.`,
+                    messageAr: `تم إنشاء طلب غسيل السيارة رقم ${booking.bookingNumber} وجاري إرساله.`,
+                    bookingId: booking.id,
+                    metadata: { bookingNumber: booking.bookingNumber, status: booking.status, serviceType, estimatedBudget }
+                }
+            });
+        } catch (_) { /* non-blocking */ }
+
         // Create broadcast
         const broadcastTimeout = await getSystemSetting('CARWASH_BROADCAST_TIMEOUT', 15);
         const expiresAt = new Date(Date.now() + broadcastTimeout * 60000);
@@ -285,6 +301,36 @@ class CarWashService {
 
             return updatedBooking;
         });
+
+        // DB Notifications: offer accepted / technician assigned
+        try {
+            await prisma.notification.create({
+                data: {
+                    userId: customerId,
+                    type: 'OFFER_ACCEPTED',
+                    title: 'Offer accepted',
+                    titleAr: 'تم قبول العرض',
+                    message: `Offer accepted. Booking ${result.bookingNumber} assigned.`,
+                    messageAr: `تم قبول العرض وربط الحجز رقم ${result.bookingNumber}.`,
+                    bookingId: result.id,
+                    metadata: { broadcastId, offerId, agreedPrice: Number(result.totalPrice) }
+                }
+            });
+            if (offer.technicianId) {
+                await prisma.notification.create({
+                    data: {
+                        userId: offer.technicianId,
+                        type: 'OFFER_ACCEPTED',
+                        title: 'Your offer was accepted',
+                        titleAr: 'تم قبول عرضك',
+                        message: `Customer accepted your offer. Booking ${result.bookingNumber} assigned to you.`,
+                        messageAr: `تم قبول عرضك وربط الحجز رقم ${result.bookingNumber} بك.`,
+                        bookingId: result.id,
+                        metadata: { broadcastId, offerId, agreedPrice: Number(result.totalPrice) }
+                    }
+                });
+            }
+        } catch (_) { /* non-blocking */ }
 
         return {
             booking: {

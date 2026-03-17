@@ -67,6 +67,9 @@ router.get('/:id', ctrl.getTypeById);
  *               name: { type: string }
  *               nameAr: { type: string }
  *               description: { type: string }
+ *               serviceType: { type: string, enum: [GENERAL, REPAIR, INSPECTION, OIL_CHANGE, TIRE_SERVICE, BATTERY_SERVICE, TOWING] }
+ *               sortOrder: { type: integer, default: 0 }
+ *               isActive: { type: boolean, default: true }
  *     responses:
  *       201:
  *         description: Workshop type created
@@ -94,6 +97,9 @@ router.post('/', auth, role('ADMIN'), ctrl.createType);
  *               name: { type: string }
  *               nameAr: { type: string }
  *               description: { type: string }
+ *               serviceType: { type: string }
+ *               sortOrder: { type: integer }
+ *               isActive: { type: boolean }
  *     responses:
  *       200:
  *         description: Workshop type updated
@@ -139,6 +145,8 @@ router.delete('/:id', auth, role('ADMIN'), ctrl.deleteType);
  *               name: { type: string }
  *               nameAr: { type: string }
  *               description: { type: string }
+ *               sortOrder: { type: integer, default: 0 }
+ *               isActive: { type: boolean, default: true }
  *     responses:
  *       201:
  *         description: Type service created
@@ -170,6 +178,8 @@ router.post('/:typeId/services', auth, role('ADMIN'), ctrl.createTypeService);
  *               name: { type: string }
  *               nameAr: { type: string }
  *               description: { type: string }
+ *               sortOrder: { type: integer }
+ *               isActive: { type: boolean }
  *     responses:
  *       200:
  *         description: Type service updated

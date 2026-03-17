@@ -8,6 +8,14 @@ const registerVendorSchema = z.object({
     legalName: z.string().min(2, "Legal name is required"),
     tradeName: z.string().optional(),
     supplierType: z.string().min(1, "Supplier type is required"),
+    vendorType: z.enum([
+        'AUTO_PARTS',
+        'COMPREHENSIVE_CARE',
+        'CERTIFIED_WORKSHOP',
+        'CAR_WASH',
+        'MOBILE_WORKSHOP',
+        'TOWING_SERVICE',
+    ], { message: "Vendor type is required" }),
 
     // Address & Registration
     country: z.string().min(1, "Country is required"),
