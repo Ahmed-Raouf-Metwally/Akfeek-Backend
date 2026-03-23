@@ -149,6 +149,10 @@ router.delete('/:id', ctrl.adminRemove);
  * /api/admin/banners/{id}/images:
  *   post:
  *     summary: (Admin) Upload banner images (multiple)
+ *     description: |
+ *       Upload one or many images for a banner.
+ *       Supported field names: `images` (array) or `image` (single).
+ *       Max file size per image: 10MB. Allowed: JPEG/PNG/WebP.
  *     tags: [Banners]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
@@ -166,16 +170,34 @@ router.delete('/:id', ctrl.adminRemove);
  *               images:
  *                 type: array
  *                 items: { type: string, format: binary }
+ *                 description: Preferred field for multiple files
  *               image:
  *                 type: string
  *                 format: binary
- *                 description: Alternative field name (single image)
+ *                 description: Alternative field name for single file
  *               linkUrl:
  *                 type: string
  *                 description: Optional URL applied to uploaded images
+ *           encoding:
+ *             images:
+ *               style: form
+ *             image:
+ *               style: form
+ *     x-codeSamples:
+ *       - lang: cURL
+ *         source: |
+ *           curl -X POST "http://localhost:3000/api/admin/banners/{id}/images" \
+ *             -H "Authorization: Bearer <token>" \
+ *             -F "images=@/path/banner-1.jpg" \
+ *             -F "images=@/path/banner-2.png" \
+ *             -F "linkUrl=https://example.com"
  *     responses:
  *       201:
  *         description: Uploaded
+ *       400:
+ *         description: No images found in request / invalid file type
+ *       404:
+ *         description: Banner not found
  */
 router.post('/:id/images', upload.any(), ctrl.adminUploadImages);
 

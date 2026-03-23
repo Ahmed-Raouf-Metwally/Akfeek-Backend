@@ -323,6 +323,32 @@ function emitBookingReady(bookingId, payload = {}) {
 }
 
 /**
+ * Emit invoice paid event then open booking room flow (chat + tracking)
+ * @param {string} bookingId
+ * @param {object} payload - { customerId, technicianId }
+ */
+function emitInvoicePaid(bookingId, payload = {}) {
+    if (!io) return;
+    const data = {
+        bookingId,
+        message: 'Invoice paid. Chat and tracking are now enabled.',
+        messageAr: 'تم دفع الفاتورة. تم تفعيل المحادثة والتتبع.',
+        ...payload
+    };
+
+    // Legacy/general event for clients listening to invoice status
+    io.to(`booking:${bookingId}`).emit('invoice:paid', data);
+    if (payload.customerId) io.to(`user:${payload.customerId}`).emit('invoice:paid', data);
+    if (payload.technicianId) io.to(`user:${payload.technicianId}`).emit('invoice:paid', data);
+
+    // Primary event used by booking flows (towing + mobile workshop)
+    emitBookingReady(bookingId, {
+        customerId: payload.customerId,
+        driverId: payload.technicianId,
+    });
+}
+
+/**
  * Emit new reply to feedback ticket subscribers
  * @param {string} feedbackId - Feedback ID
  * @param {object} replyData - Reply details
@@ -346,5 +372,6 @@ module.exports = {
     emitTechnicianArrival,
     emitNewTowingRequestToWinches,
     emitBookingReady,
+    emitInvoicePaid,
     emitFeedbackReply
 };

@@ -446,6 +446,7 @@ router.post(
 router.post('/:id/services',             role('ADMIN'), ctrl.addService);
 
 /**
+ * @swagger
  * /api/mobile-workshops/{id}/services/{svcId}:
  *   put:
  *     summary: تحديث خدمة ورشة متنقلة (أدمن)

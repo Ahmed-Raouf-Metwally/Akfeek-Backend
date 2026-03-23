@@ -4,7 +4,10 @@
  * 1) Customer: login -> get workshop types -> create request (vehicle + type + service + location + searchRadiusKm)
  * 2) Vendor: login -> get my/requests -> submit "موافقة فقط" (بدون price) → يظهر سعر الخدمة المطلوبة في العرض
  * 3) Customer: get request by id -> sees offer with price -> select offer (offerId فقط، بدون mobileWorkshopServiceId)
- * 4) Optional: Admin mark invoice paid
+ * 4) Customer: pay invoice (opens chat/tracking)
+ * 5) Verify chat and tracking APIs
+ * 6) Vendor: update booking status through full execution flow
+ *    TECHNICIAN_ASSIGNED -> TECHNICIAN_EN_ROUTE -> ARRIVED -> IN_PROGRESS -> COMPLETED
  *
  * Prerequisites:
  * - Server running: npm run dev
@@ -209,14 +212,70 @@ async function selectOffer(requestId, offerId, mobileWorkshopServiceId = null) {
   return res.data.data ?? res.data;
 }
 
-async function markInvoicePaid(invoiceId) {
-  setAuth(adminToken);
-  const res = await api.patch(`/invoices/${invoiceId}/mark-paid`, { method: 'CASH' });
+async function customerPayInvoice(invoiceId) {
+  setAuth(customerToken);
+  const res = await api.patch(`/invoices/my/${invoiceId}/pay`, { method: 'CARD' });
   if (!res.data.success) {
-    throw new Error('Mark invoice paid failed: ' + JSON.stringify(res.data));
+    throw new Error('Customer pay invoice failed: ' + JSON.stringify(res.data));
   }
-  log('Invoice marked paid');
+  log('Invoice paid by customer (chat/tracking should be enabled)');
   return res.data;
+}
+
+async function verifyChatApis(bookingId) {
+  setAuth(customerToken);
+  const sendRes = await api.post(`/bookings/${bookingId}/chat/messages`, {
+    content: 'Hello vendor, I have paid and waiting for technician.',
+  });
+  if (!sendRes.data?.success) {
+    throw new Error('Send chat message failed: ' + JSON.stringify(sendRes.data));
+  }
+  const listRes = await api.get(`/bookings/${bookingId}/chat/messages`);
+  if (!listRes.data?.success || !Array.isArray(listRes.data?.data)) {
+    throw new Error('Get chat messages failed: ' + JSON.stringify(listRes.data));
+  }
+  log('Chat APIs verified', {
+    roomId: listRes.data.roomId,
+    messagesCount: listRes.data.data.length,
+  });
+}
+
+async function verifyTrackingApis(bookingId) {
+  setAuth(customerToken);
+  const trackRes = await api.get(`/bookings/${bookingId}/track`);
+  if (!trackRes.data?.success) {
+    throw new Error('Get tracking info failed: ' + JSON.stringify(trackRes.data));
+  }
+  const historyRes = await api.get(`/bookings/${bookingId}/location-history`);
+  if (!historyRes.data?.success || !historyRes.data?.data || !Array.isArray(historyRes.data?.data?.points)) {
+    throw new Error('Get location history failed: ' + JSON.stringify(historyRes.data));
+  }
+  log('Tracking APIs verified', {
+    hasTrackingInfo: !!trackRes.data?.data,
+    locationHistoryCount: historyRes.data.data.points.length,
+  });
+}
+
+async function vendorUpdateMobileWorkshopBookingStatus(bookingId, status, reason) {
+  setAuth(vendorToken);
+  const res = await api.patch(`/bookings/${bookingId}/mobile-workshop-status`, { status, reason });
+  if (!res.data.success) {
+    throw new Error(`Update booking status (${status}) failed: ` + JSON.stringify(res.data));
+  }
+  log(`Vendor booking status -> ${status}`, { bookingId, currentStatus: res.data?.data?.status });
+  return res.data;
+}
+
+async function runVendorExecutionFlow(bookingId) {
+  const transitions = [
+    { status: 'TECHNICIAN_EN_ROUTE', reason: 'Technician is on the way' },
+    { status: 'ARRIVED', reason: 'Technician arrived to customer location' },
+    { status: 'IN_PROGRESS', reason: 'Service work started' },
+    { status: 'COMPLETED', reason: 'Service completed' },
+  ];
+  for (const step of transitions) {
+    await vendorUpdateMobileWorkshopBookingStatus(bookingId, step.status, step.reason);
+  }
 }
 
 async function run() {
@@ -250,13 +309,20 @@ async function run() {
     // الفلو الجديد: العرض فيه سعر الخدمة المطلوبة — العميل يوافق بـ offerId فقط
     const selectData = await selectOffer(requestId, offer.id, null);
     const invoiceId = selectData?.invoice?.id;
+    const bookingId = selectData?.booking?.id;
 
-    if (invoiceId) {
-      await loginAsAdmin();
-      await markInvoicePaid(invoiceId);
+    if (invoiceId) await customerPayInvoice(invoiceId);
+
+    if (bookingId) {
+      await verifyChatApis(bookingId);
+      await verifyTrackingApis(bookingId);
+      await loginAsVendor();
+      await runVendorExecutionFlow(bookingId);
+    } else {
+      throw new Error('No bookingId returned from select-offer');
     }
 
-    console.log('\n--- Mobile Workshop flow test passed (الفلو الجديد: موافقة فقط → سعر الخدمة يظهر → عميل يوافق بـ offerId) ---\n');
+    console.log('\n--- Mobile Workshop full flow test passed (request -> offer -> select -> customer pay -> chat+tracking -> in transit -> arrived -> in progress -> completed) ---\n');
   } catch (err) {
     const msg = err.response?.data || err.message;
     console.error('\nTest failed:', typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg);

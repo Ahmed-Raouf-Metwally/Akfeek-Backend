@@ -597,7 +597,7 @@
     },
     {
       "name": "5. الورش المتنقلة (Mobile Workshop)",
-      "description": "**الورش المتنقلة — جميع الاند بوينت**\n\n---\n\n**1. أنواع الورش — /api/mobile-workshop-types**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| GET | /api/mobile-workshop-types | قائمة أنواع الورش + خدمات كل نوع | عام |\n| GET | /api/mobile-workshop-types/:typeId/services | خدمات نوع معيّن | عام |\n| GET | /api/mobile-workshop-types/:id | تفاصيل نوع ورشة | عام |\n| POST | /api/mobile-workshop-types | إضافة نوع ورشة | أدمن |\n| PUT | /api/mobile-workshop-types/:id | تحديث نوع ورشة | أدمن |\n| DELETE | /api/mobile-workshop-types/:id | حذف نوع ورشة | أدمن |\n| POST | /api/mobile-workshop-types/:typeId/services | إضافة خدمة للنوع | أدمن |\n| PUT | /api/mobile-workshop-types/:typeId/services/:serviceId | تحديث خدمة النوع | أدمن |\n| DELETE | /api/mobile-workshop-types/:typeId/services/:serviceId | حذف خدمة من النوع | أدمن |\n\n**2. طلبات العميل — /api/mobile-workshop-requests**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| POST | /api/mobile-workshop-requests | إنشاء طلب (vehicleId, workshopTypeId, موقع، searchRadiusKm?) | عميل |\n| GET | /api/mobile-workshop-requests | طلباتي (status, page, limit) | عميل |\n| GET | /api/mobile-workshop-requests/:id | تفاصيل طلب مع العروض | عميل |\n| POST | /api/mobile-workshop-requests/:requestId/select-offer | اختيار عرض → حجز + فاتورة | عميل |\n\n**3. الورش المتنقلة — /api/mobile-workshops**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| GET | /api/mobile-workshops | قائمة كل الورش | مصادق |\n| GET | /api/mobile-workshops/my | ورشتي المتنقلة | فيندور |\n| POST | /api/mobile-workshops/my | إنشاء ورشتي المتنقلة | فيندور |\n| PUT | /api/mobile-workshops/my | تحديث بيانات ورشتي | فيندور |\n| DELETE | /api/mobile-workshops/my | حذف ورشتي | فيندور |\n| POST | /api/mobile-workshops/my/upload-image | رفع صورة لورشتي | فيندور |\n| GET | /api/mobile-workshops/my/requests | طلبات ورشتي | فيندور |\n| POST | /api/mobile-workshops/:workshopId/requests/:requestId/offer | إرسال عرض أو موافقة | فيندور |\n| POST | /api/mobile-workshops/:workshopId/requests/:requestId/reject | رفض الطلب | فيندور |\n| GET | /api/mobile-workshops/:id | تفاصيل ورشة | مصادق |\n| POST | /api/mobile-workshops | إضافة ورشة | أدمن |\n| PUT | /api/mobile-workshops/:id | تحديث ورشة | أدمن |\n| DELETE | /api/mobile-workshops/:id | حذف ورشة | أدمن |\n| POST | /api/mobile-workshops/:id/upload-image | رفع صورة (لأدمن) | أدمن |\n| POST | /api/mobile-workshops/:id/services | إضافة خدمة لورشة | أدمن |\n| PUT | /api/mobile-workshops/:id/services/:svcId | تحديث خدمة | أدمن |\n| DELETE | /api/mobile-workshops/:id/services/:svcId | حذف خدمة | أدمن |\n\n**4. دفع الفاتورة:** PATCH /api/invoices/:id/mark-paid (بعد select-offer)"
+      "description": "**الورش المتنقلة — جميع الاند بوينت**\n\n---\n\n**1. أنواع الورش — /api/mobile-workshop-types**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| GET | /api/mobile-workshop-types | قائمة أنواع الورش + خدمات كل نوع | عام |\n| GET | /api/mobile-workshop-types/:typeId/services | خدمات نوع معيّن | عام |\n| GET | /api/mobile-workshop-types/:id | تفاصيل نوع ورشة | عام |\n| POST | /api/mobile-workshop-types | إضافة نوع ورشة | أدمن |\n| PUT | /api/mobile-workshop-types/:id | تحديث نوع ورشة | أدمن |\n| DELETE | /api/mobile-workshop-types/:id | حذف نوع ورشة | أدمن |\n| POST | /api/mobile-workshop-types/:typeId/services | إضافة خدمة للنوع | أدمن |\n| PUT | /api/mobile-workshop-types/:typeId/services/:serviceId | تحديث خدمة النوع | أدمن |\n| DELETE | /api/mobile-workshop-types/:typeId/services/:serviceId | حذف خدمة من النوع | أدمن |\n\n**2. طلبات العميل — /api/mobile-workshop-requests**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| POST | /api/mobile-workshop-requests | إنشاء طلب (vehicleId, workshopTypeId, موقع، searchRadiusKm?) | عميل |\n| GET | /api/mobile-workshop-requests | طلباتي (status, page, limit) | عميل |\n| GET | /api/mobile-workshop-requests/:id | تفاصيل طلب مع العروض | عميل |\n| POST | /api/mobile-workshop-requests/:requestId/select-offer | اختيار عرض → حجز + فاتورة | عميل |\n\n**3. الورش المتنقلة — /api/mobile-workshops**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| GET | /api/mobile-workshops | قائمة كل الورش | مصادق |\n| GET | /api/mobile-workshops/my | ورشتي المتنقلة | فيندور |\n| POST | /api/mobile-workshops/my | إنشاء ورشتي المتنقلة | فيندور |\n| PUT | /api/mobile-workshops/my | تحديث بيانات ورشتي | فيندور |\n| DELETE | /api/mobile-workshops/my | حذف ورشتي | فيندور |\n| POST | /api/mobile-workshops/my/upload-image | رفع صورة لورشتي | فيندور |\n| GET | /api/mobile-workshops/my/requests | طلبات ورشتي | فيندور |\n| POST | /api/mobile-workshops/:workshopId/requests/:requestId/offer | إرسال عرض أو موافقة | فيندور |\n| POST | /api/mobile-workshops/:workshopId/requests/:requestId/reject | رفض الطلب | فيندور |\n| GET | /api/mobile-workshops/:id | تفاصيل ورشة | مصادق |\n| POST | /api/mobile-workshops | إضافة ورشة | أدمن |\n| PUT | /api/mobile-workshops/:id | تحديث ورشة | أدمن |\n| DELETE | /api/mobile-workshops/:id | حذف ورشة | أدمن |\n| POST | /api/mobile-workshops/:id/upload-image | رفع صورة (لأدمن) | أدمن |\n| POST | /api/mobile-workshops/:id/services | إضافة خدمة لورشة | أدمن |\n| PUT | /api/mobile-workshops/:id/services/:svcId | تحديث خدمة | أدمن |\n| DELETE | /api/mobile-workshops/:id/services/:svcId | حذف خدمة | أدمن |\n\n**4. تنفيذ الحجز بعد قبول العرض — /api/bookings**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| PATCH | /api/bookings/:id/mobile-workshop-status | تحديث حالة التنفيذ (TECHNICIAN_EN_ROUTE -> ARRIVED -> IN_PROGRESS -> COMPLETED) | فيندور ورشة متنقلة |\n| GET | /api/bookings/:bookingId/chat/messages | جلب رسائل شات الحجز | عميل/فيندور الورشة |\n| POST | /api/bookings/:bookingId/chat/messages | إرسال رسالة شات | عميل/فيندور الورشة |\n| GET | /api/bookings/:bookingId/track | بيانات التتبع الحالية | عميل صاحب الحجز |\n| GET | /api/bookings/:bookingId/location-history | سجل المواقع للتتبع | عميل |\n\n**5. دفع الفاتورة بعد اختيار العرض:**\n- Customer: `PATCH /api/invoices/my/:id/pay` (يفتح الشات والتتبع مباشرة)\n- Admin fallback: `PATCH /api/invoices/:id/mark-paid`\n\n**6. Socket events بعد الدفع (Realtime):**\n- `invoice:paid`\n- `booking:ready`\n- `customer:join_booking`, `driver:join_booking`\n- `booking:message`\n- `driver:location`, `technician:location_update`"
     },
     {
       "name": "Authentication",
@@ -1760,7 +1760,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Banners"
+            "description": "- If `position` is provided: returns array `Banner[]`\n- If `position` is omitted: returns object `{ top: Banner[], bottom: Banner[] }`\n"
           }
         }
       }
@@ -2509,6 +2509,75 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}/mobile-workshop-status": {
+      "patch": {
+        "summary": "Update mobile workshop booking status (Vendor) — في الطريق / وصل / جاري التنفيذ / تم",
+        "description": "لفيندور الورشة المتنقلة فقط. يسمح بالانتقالات التالية فقط:\n- TECHNICIAN_ASSIGNED -> TECHNICIAN_EN_ROUTE\n- TECHNICIAN_EN_ROUTE -> ARRIVED\n- ARRIVED -> IN_PROGRESS\n- IN_PROGRESS -> COMPLETED\n",
+        "tags": [
+          "Bookings",
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Booking ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "TECHNICIAN_EN_ROUTE",
+                      "ARRIVED",
+                      "IN_PROGRESS",
+                      "COMPLETED"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Optional reason for transition"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Booking status updated"
+          },
+          "400": {
+            "description": "Invalid booking type or invalid transition"
+          },
+          "403": {
+            "description": "Not the owner mobile workshop vendor"
+          },
+          "404": {
+            "description": "Booking not found"
           }
         }
       }
@@ -4183,7 +4252,7 @@
     "/api/invoices/{id}/mark-paid": {
       "patch": {
         "summary": "Mark invoice as paid (Admin) — إيداع حصة الفيندور وخصم عمولة المنصة",
-        "description": "تحديد الفاتورة كمدفوعة. يسجل الدفع، يودع حصة الفيندور في محفظته ويخصم عمولة المنصة (نسبة مسجلة وقت الحجز — لا تتأثر الحجوزات القديمة بتغيير النسبة)، ويمنح النقاط للعميل.\nلحجز السحب/الوينش: بعد الدفع يُرسل حدث booking:ready للعميل وفيندور الوينش فيفتح السوكت للتتبع والمحادثة.\n",
+        "description": "تحديد الفاتورة كمدفوعة. يسجل الدفع، يودع حصة الفيندور في محفظته ويخصم عمولة المنصة (نسبة مسجلة وقت الحجز — لا تتأثر الحجوزات القديمة بتغيير النسبة)، ويمنح النقاط للعميل.\nلحجز السحب/الوينش والورش المتنقلة: بعد الدفع يُرسل حدث booking:ready للعميل والفيندور (التقني) لفتح السوكت للتتبع والمحادثة.\n",
         "tags": [
           "Invoices",
           "4. Towing"
@@ -4907,6 +4976,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": [
+                  "name",
+                  "vendorId"
+                ],
                 "properties": {
                   "vendorId": {
                     "type": "string",
@@ -4919,6 +4992,59 @@
                     "type": "string"
                   },
                   "description": {
+                    "type": "string"
+                  },
+                  "workshopTypeId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "vehicleType": {
+                    "type": "string"
+                  },
+                  "vehicleModel": {
+                    "type": "string"
+                  },
+                  "year": {
+                    "type": "integer"
+                  },
+                  "plateNumber": {
+                    "type": "string"
+                  },
+                  "servicesOffered": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "serviceRadius": {
+                    "type": "number"
+                  },
+                  "basePrice": {
+                    "type": "number"
+                  },
+                  "pricePerKm": {
+                    "type": "number"
+                  },
+                  "hourlyRate": {
+                    "type": "number"
+                  },
+                  "minPrice": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "default": "SAR"
+                  },
+                  "imageUrl": {
+                    "type": "string"
+                  },
+                  "vehicleImageUrl": {
                     "type": "string"
                   },
                   "notes": {
@@ -4973,18 +5099,78 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": [
+                  "name"
+                ],
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "اسم الورشة (EN)"
                   },
                   "nameAr": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "اسم الورشة (AR)"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "وصف"
                   },
                   "workshopTypeId": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "معرف نوع الورشة"
+                  },
+                  "vehicleType": {
+                    "type": "string",
+                    "description": "نوع المركبة"
+                  },
+                  "vehicleModel": {
+                    "type": "string",
+                    "description": "موديل المركبة"
+                  },
+                  "year": {
+                    "type": "integer",
+                    "description": "سنة الصنع"
+                  },
+                  "plateNumber": {
+                    "type": "string",
+                    "description": "رقم اللوحة"
+                  },
+                  "servicesOffered": {
+                    "type": "string",
+                    "description": "الخدمات المقدمة (نص)"
                   },
                   "city": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "المدينة"
+                  },
+                  "latitude": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "serviceRadius": {
+                    "type": "number",
+                    "description": "نطاق الخدمة بالكم"
+                  },
+                  "basePrice": {
+                    "type": "number"
+                  },
+                  "pricePerKm": {
+                    "type": "number"
+                  },
+                  "hourlyRate": {
+                    "type": "number"
+                  },
+                  "minPrice": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "default": "SAR"
                   }
                 }
               }
@@ -5012,7 +5198,67 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "workshopTypeId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "vehicleType": {
+                    "type": "string"
+                  },
+                  "vehicleModel": {
+                    "type": "string"
+                  },
+                  "year": {
+                    "type": "integer"
+                  },
+                  "plateNumber": {
+                    "type": "string"
+                  },
+                  "servicesOffered": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "serviceRadius": {
+                    "type": "number"
+                  },
+                  "basePrice": {
+                    "type": "number"
+                  },
+                  "pricePerKm": {
+                    "type": "number"
+                  },
+                  "hourlyRate": {
+                    "type": "number"
+                  },
+                  "minPrice": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "isAvailable": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }
@@ -5284,7 +5530,8 @@
                 "type": "object",
                 "properties": {
                   "vendorId": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "uuid"
                   },
                   "name": {
                     "type": "string"
@@ -5295,8 +5542,69 @@
                   "description": {
                     "type": "string"
                   },
+                  "workshopTypeId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "vehicleType": {
+                    "type": "string"
+                  },
+                  "vehicleModel": {
+                    "type": "string"
+                  },
+                  "year": {
+                    "type": "integer"
+                  },
+                  "plateNumber": {
+                    "type": "string"
+                  },
+                  "servicesOffered": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "serviceRadius": {
+                    "type": "number"
+                  },
+                  "basePrice": {
+                    "type": "number"
+                  },
+                  "pricePerKm": {
+                    "type": "number"
+                  },
+                  "hourlyRate": {
+                    "type": "number"
+                  },
+                  "minPrice": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "imageUrl": {
+                    "type": "string"
+                  },
+                  "vehicleImageUrl": {
+                    "type": "string"
+                  },
                   "notes": {
                     "type": "string"
+                  },
+                  "isAvailable": {
+                    "type": "boolean"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "isVerified": {
+                    "type": "boolean"
                   }
                 }
               }
@@ -5364,18 +5672,46 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": [
+                  "name",
+                  "price"
+                ],
                 "properties": {
+                  "workshopTypeServiceId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "serviceType": {
+                    "type": "string",
+                    "enum": [
+                      "GENERAL",
+                      "REPAIR",
+                      "INSPECTION",
+                      "OIL_CHANGE",
+                      "TIRE_SERVICE",
+                      "BATTERY_SERVICE",
+                      "TOWING"
+                    ]
+                  },
                   "name": {
                     "type": "string"
                   },
                   "nameAr": {
                     "type": "string"
                   },
+                  "description": {
+                    "type": "string"
+                  },
                   "price": {
                     "type": "number"
                   },
-                  "description": {
-                    "type": "string"
+                  "currency": {
+                    "type": "string",
+                    "default": "SAR"
+                  },
+                  "estimatedDuration": {
+                    "type": "integer",
+                    "description": "minutes"
                   }
                 }
               }
@@ -5418,6 +5754,46 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "workshopTypeServiceId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "serviceType": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "estimatedDuration": {
+                    "type": "integer",
+                    "description": "minutes"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Service updated"
@@ -5496,6 +5872,26 @@
                   },
                   "description": {
                     "type": "string"
+                  },
+                  "serviceType": {
+                    "type": "string",
+                    "enum": [
+                      "GENERAL",
+                      "REPAIR",
+                      "INSPECTION",
+                      "OIL_CHANGE",
+                      "TIRE_SERVICE",
+                      "BATTERY_SERVICE",
+                      "TOWING"
+                    ]
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "isActive": {
+                    "type": "boolean",
+                    "default": true
                   }
                 }
               }
@@ -5567,6 +5963,14 @@
                   },
                   "description": {
                     "type": "string"
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "isActive": {
+                    "type": "boolean",
+                    "default": true
                   }
                 }
               }
@@ -5638,6 +6042,15 @@
                   },
                   "description": {
                     "type": "string"
+                  },
+                  "serviceType": {
+                    "type": "string"
+                  },
+                  "sortOrder": {
+                    "type": "integer"
+                  },
+                  "isActive": {
+                    "type": "boolean"
                   }
                 }
               }
@@ -5723,6 +6136,12 @@
                   },
                   "description": {
                     "type": "string"
+                  },
+                  "sortOrder": {
+                    "type": "integer"
+                  },
+                  "isActive": {
+                    "type": "boolean"
                   }
                 }
               }
@@ -12035,6 +12454,7 @@
     "/api/admin/banners/{id}/images": {
       "post": {
         "summary": "(Admin) Upload banner images (multiple)",
+        "description": "Upload one or many images for a banner.\nSupported field names: `images` (array) or `image` (single).\nMax file size per image: 10MB. Allowed: JPEG/PNG/WebP.\n",
         "tags": [
           "Banners"
         ],
@@ -12066,25 +12486,46 @@
                     "items": {
                       "type": "string",
                       "format": "binary"
-                    }
+                    },
+                    "description": "Preferred field for multiple files"
                   },
                   "image": {
                     "type": "string",
                     "format": "binary",
-                    "description": "Alternative field name (single image)"
+                    "description": "Alternative field name for single file"
                   },
                   "linkUrl": {
                     "type": "string",
                     "description": "Optional URL applied to uploaded images"
                   }
                 }
+              },
+              "encoding": {
+                "images": {
+                  "style": "form"
+                },
+                "image": {
+                  "style": "form"
+                }
               }
             }
           }
         },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "source": "curl -X POST \"http://localhost:3000/api/admin/banners/{id}/images\" \\\n  -H \"Authorization: Bearer <token>\" \\\n  -F \"images=@/path/banner-1.jpg\" \\\n  -F \"images=@/path/banner-2.png\" \\\n  -F \"linkUrl=https://example.com\"\n"
+          }
+        ],
         "responses": {
           "201": {
             "description": "Uploaded"
+          },
+          "400": {
+            "description": "No images found in request / invalid file type"
+          },
+          "404": {
+            "description": "Banner not found"
           }
         }
       }

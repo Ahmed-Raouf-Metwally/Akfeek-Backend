@@ -100,13 +100,12 @@ class TrackingService {
                 technician: {
                     select: {
                         id: true,
-                        firstName: true,
-                        lastName: true,
-                        avatar: true,
                         phone: true,
                         profile: {
                             select: {
-                                rating: true
+                                firstName: true,
+                                lastName: true,
+                                avatar: true
                             }
                         }
                     }
@@ -114,16 +113,17 @@ class TrackingService {
                 vehicle: {
                     select: {
                         id: true,
-                        plateNumber: true,
+                        plateLettersAr: true,
+                        plateDigits: true,
                         color: true,
                         vehicleModel: {
                             select: {
                                 nameAr: true,
-                                nameEn: true,
+                                name: true,
                                 brand: {
                                     select: {
                                         nameAr: true,
-                                        nameEn: true
+                                        name: true
                                     }
                                 }
                             }
@@ -195,11 +195,11 @@ class TrackingService {
             },
             technician: {
                 id: booking.technician.id,
-                firstName: booking.technician.firstName,
-                lastName: booking.technician.lastName,
-                avatar: booking.technician.avatar,
+                firstName: booking.technician.profile?.firstName || null,
+                lastName: booking.technician.profile?.lastName || null,
+                avatar: booking.technician.profile?.avatar || null,
                 phone: booking.technician.phone,
-                rating: booking.technician.profile?.rating || null,
+                rating: null,
                 currentLocation: location ? {
                     latitude: location.latitude,
                     longitude: location.longitude,

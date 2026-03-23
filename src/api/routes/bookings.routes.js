@@ -449,6 +449,52 @@ router.patch('/:id/start', requireRole('VENDOR'), bookingController.startBooking
  */
 router.patch('/:id/complete', requireRole('VENDOR'), bookingController.completeBookingAsVendor);
 
+/**
+ * @swagger
+ * /api/bookings/{id}/mobile-workshop-status:
+ *   patch:
+ *     summary: Update mobile workshop booking status (Vendor) — في الطريق / وصل / جاري التنفيذ / تم
+ *     description: |
+ *       لفيندور الورشة المتنقلة فقط. يسمح بالانتقالات التالية فقط:
+ *       - TECHNICIAN_ASSIGNED -> TECHNICIAN_EN_ROUTE
+ *       - TECHNICIAN_EN_ROUTE -> ARRIVED
+ *       - ARRIVED -> IN_PROGRESS
+ *       - IN_PROGRESS -> COMPLETED
+ *     tags: [Bookings, 5. الورش المتنقلة (Mobile Workshop)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *         description: Booking ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [TECHNICIAN_EN_ROUTE, ARRIVED, IN_PROGRESS, COMPLETED]
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for transition
+ *     responses:
+ *       200:
+ *         description: Booking status updated
+ *       400:
+ *         description: Invalid booking type or invalid transition
+ *       403:
+ *         description: Not the owner mobile workshop vendor
+ *       404:
+ *         description: Booking not found
+ */
+router.patch('/:id/mobile-workshop-status', requireRole('VENDOR'), bookingController.updateMobileWorkshopBookingStatusAsVendor);
+
 // Real-time tracking endpoints (for customers)
 const trackingController = require('../controllers/tracking.controller');
 router.get('/:bookingId/track', trackingController.getTrackingInfo);

@@ -16,8 +16,8 @@ async function getMessages(req, res, next) {
         technicianId: true,
         mobileWorkshopId: true,
         chatRoom: { select: { id: true } },
+        mobileWorkshop: { select: { vendorId: true, vendor: { select: { userId: true } } } },
       },
-      include: { mobileWorkshop: { select: { vendorId: true, vendor: { select: { userId: true } } } } },
     });
     if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
     const vendorUserId = booking.mobileWorkshop?.vendor?.userId || null;

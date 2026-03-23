@@ -467,7 +467,25 @@ Authorization: Bearer <your_jwt_token>
 | PUT | /api/mobile-workshops/:id/services/:svcId | تحديث خدمة | أدمن |
 | DELETE | /api/mobile-workshops/:id/services/:svcId | حذف خدمة | أدمن |
 
-**4. دفع الفاتورة:** PATCH /api/invoices/:id/mark-paid (بعد select-offer)`
+**4. تنفيذ الحجز بعد قبول العرض — /api/bookings**
+| Method | Path | الوصف | صلاحية |
+|--------|------|--------|--------|
+| PATCH | /api/bookings/:id/mobile-workshop-status | تحديث حالة التنفيذ (TECHNICIAN_EN_ROUTE -> ARRIVED -> IN_PROGRESS -> COMPLETED) | فيندور ورشة متنقلة |
+| GET | /api/bookings/:bookingId/chat/messages | جلب رسائل شات الحجز | عميل/فيندور الورشة |
+| POST | /api/bookings/:bookingId/chat/messages | إرسال رسالة شات | عميل/فيندور الورشة |
+| GET | /api/bookings/:bookingId/track | بيانات التتبع الحالية | عميل صاحب الحجز |
+| GET | /api/bookings/:bookingId/location-history | سجل المواقع للتتبع | عميل |
+
+**5. دفع الفاتورة بعد اختيار العرض:**
+- Customer: \`PATCH /api/invoices/my/:id/pay\` (يفتح الشات والتتبع مباشرة)
+- Admin fallback: \`PATCH /api/invoices/:id/mark-paid\`
+
+**6. Socket events بعد الدفع (Realtime):**
+- \`invoice:paid\`
+- \`booking:ready\`
+- \`customer:join_booking\`, \`driver:join_booking\`
+- \`booking:message\`
+- \`driver:location\`, \`technician:location_update\``
         },
         {
             name: 'Authentication',

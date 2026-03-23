@@ -2,6 +2,22 @@ const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
 const { getPlatformCommissionPercent } = require('../../utils/pricing');
 const { buildStatusWhere, getDisplayStatus } = require('../../constants/bookingStatus');
+const { emitBookingStatusChange } = require('../../socket');
+
+const MOBILE_WORKSHOP_VENDOR_TRANSITIONS = {
+  TECHNICIAN_ASSIGNED: ['TECHNICIAN_EN_ROUTE'],
+  TECHNICIAN_EN_ROUTE: ['ARRIVED'],
+  ARRIVED: ['IN_PROGRESS'],
+  IN_PROGRESS: ['COMPLETED'],
+};
+
+const STATUS_AR_LABEL = {
+  TECHNICIAN_ASSIGNED: 'تم تعيين الفني',
+  TECHNICIAN_EN_ROUTE: 'الفني في الطريق',
+  ARRIVED: 'تم الوصول',
+  IN_PROGRESS: 'جاري التنفيذ',
+  COMPLETED: 'تم الإنجاز',
+};
 
 /**
  * Get all bookings (Admin). Paginated list with customer/vehicle summary.
@@ -1252,4 +1268,112 @@ async function completeBookingAsVendor(req, res, next) {
   }
 }
 
-module.exports = { getAllBookings, getBookingById, createBooking, getMyBookings, updateBookingStatus, confirmBookingAsVendor, startBookingAsVendor, completeBookingAsVendor };
+/**
+ * Vendor (Mobile Workshop): update booking execution status
+ * PATCH /api/bookings/:id/mobile-workshop-status
+ * Allowed transitions:
+ * TECHNICIAN_ASSIGNED -> TECHNICIAN_EN_ROUTE -> ARRIVED -> IN_PROGRESS -> COMPLETED
+ */
+async function updateMobileWorkshopBookingStatusAsVendor(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { status, reason } = req.body || {};
+    const nextStatus = String(status || '').toUpperCase();
+    if (!nextStatus) throw new AppError('status is required', 400, 'VALIDATION_ERROR');
+
+    const vendorProfile = await prisma.vendorProfile.findFirst({
+      where: { userId: req.user.id, vendorType: 'MOBILE_WORKSHOP' },
+      select: { id: true },
+    });
+    if (!vendorProfile) throw new AppError('Mobile workshop vendor profile not found', 403, 'FORBIDDEN');
+
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        bookingNumber: true,
+        status: true,
+        customerId: true,
+        mobileWorkshop: { select: { id: true, vendorId: true } },
+      },
+    });
+    if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+    if (!booking.mobileWorkshop) {
+      throw new AppError('This booking is not a mobile workshop booking', 400, 'INVALID_BOOKING_TYPE');
+    }
+    if (booking.mobileWorkshop.vendorId !== vendorProfile.id) {
+      throw new AppError('Not allowed to update this booking', 403, 'FORBIDDEN');
+    }
+
+    const allowedNext = MOBILE_WORKSHOP_VENDOR_TRANSITIONS[booking.status] || [];
+    if (!allowedNext.includes(nextStatus)) {
+      throw new AppError(
+        `Invalid transition from ${booking.status} to ${nextStatus}. Allowed: ${allowedNext.join(', ') || 'none'}`,
+        400,
+        'INVALID_STATUS_TRANSITION'
+      );
+    }
+
+    const updated = await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: nextStatus },
+    });
+
+    await prisma.bookingStatusHistory.create({
+      data: {
+        bookingId: booking.id,
+        fromStatus: booking.status,
+        toStatus: nextStatus,
+        reason: reason || `Updated by mobile workshop vendor (${req.user.id})`,
+        changedBy: req.user.id,
+      },
+    }).catch(() => null);
+
+    try {
+      emitBookingStatusChange(booking.id, {
+        bookingId: booking.id,
+        bookingNumber: booking.bookingNumber,
+        fromStatus: booking.status,
+        toStatus: nextStatus,
+        updatedBy: req.user.id,
+        reason: reason || null,
+      });
+    } catch (_) { /* non-blocking */ }
+
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: booking.customerId,
+          type: 'STATUS_UPDATE',
+          title: 'Booking status updated',
+          titleAr: 'تم تحديث حالة الحجز',
+          message: `Booking ${booking.bookingNumber} updated to ${nextStatus}.`,
+          messageAr: `تم تحديث حالة الحجز ${booking.bookingNumber} إلى ${STATUS_AR_LABEL[nextStatus] || nextStatus}.`,
+          bookingId: booking.id,
+          metadata: { fromStatus: booking.status, toStatus: nextStatus, reason: reason || null },
+        },
+      });
+    } catch (_) { /* non-blocking */ }
+
+    res.json({
+      success: true,
+      message: 'Booking status updated',
+      messageAr: 'تم تحديث حالة الحجز',
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = {
+  getAllBookings,
+  getBookingById,
+  createBooking,
+  getMyBookings,
+  updateBookingStatus,
+  confirmBookingAsVendor,
+  startBookingAsVendor,
+  completeBookingAsVendor,
+  updateMobileWorkshopBookingStatusAsVendor,
+};

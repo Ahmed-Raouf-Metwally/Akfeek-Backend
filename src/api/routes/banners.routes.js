@@ -20,7 +20,9 @@ const ctrl = require('../controllers/banner.controller');
  *           enum: [TOP, BOTTOM]
  *     responses:
  *       200:
- *         description: Banners
+ *         description: |
+ *           - If `position` is provided: returns array `Banner[]`
+ *           - If `position` is omitted: returns object `{ top: Banner[], bottom: Banner[] }`
  */
 router.get('/', ctrl.getPublic);
 
