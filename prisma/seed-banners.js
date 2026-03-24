@@ -3,6 +3,8 @@ const prisma = require('../src/utils/database/prisma');
 async function main() {
   console.log('🖼️ Seeding banners (TOP/BOTTOM)...');
 
+  // صور ثابتة من placehold.co (PNG مباشر — غالباً أوثق من picsum على الموبايل)
+  // روابط تجربة: example.com فقط
   const seeds = [
     {
       position: 'TOP',
@@ -10,8 +12,11 @@ async function main() {
       titleAr: 'بنر علوي 1',
       sortOrder: 0,
       images: [
-        { imageUrl: '/uploads/banners/seed/top-1-a.jpg', linkUrl: 'https://akfeek.com/top-1-a', sortOrder: 0 },
-        { imageUrl: '/uploads/banners/seed/top-1-b.jpg', linkUrl: 'https://akfeek.com/top-1-b', sortOrder: 1 },
+        {
+          imageUrl: 'https://placehold.co/1200x360/4f46e5/ffffff/png?text=Akfeek+Top+1',
+          linkUrl: 'https://example.com/?src=banner-top-1a',
+          sortOrder: 0,
+        },
       ],
     },
     {
@@ -20,7 +25,11 @@ async function main() {
       titleAr: 'بنر علوي 2',
       sortOrder: 1,
       images: [
-        { imageUrl: '/uploads/banners/seed/top-2-a.jpg', linkUrl: 'https://akfeek.com/top-2-a', sortOrder: 0 },
+        {
+          imageUrl: 'https://placehold.co/1200x360/059669/ffffff/png?text=Akfeek+Top+2',
+          linkUrl: 'https://example.com/?src=banner-top-2',
+          sortOrder: 0,
+        },
       ],
     },
     {
@@ -29,8 +38,16 @@ async function main() {
       titleAr: 'بنر سفلي 1',
       sortOrder: 0,
       images: [
-        { imageUrl: '/uploads/banners/seed/bottom-1-a.jpg', linkUrl: 'https://akfeek.com/bottom-1-a', sortOrder: 0 },
-        { imageUrl: '/uploads/banners/seed/bottom-1-b.jpg', linkUrl: 'https://akfeek.com/bottom-1-b', sortOrder: 1 },
+        {
+          imageUrl: 'https://placehold.co/1200x360/7c3aed/ffffff/png?text=Akfeek+Bottom+A',
+          linkUrl: 'https://example.com/?src=banner-bottom-1a',
+          sortOrder: 0,
+        },
+        {
+          imageUrl: 'https://placehold.co/1200x360/b45309/ffffff/png?text=Akfeek+Bottom+B',
+          linkUrl: 'https://example.com/?src=banner-bottom-1b',
+          sortOrder: 1,
+        },
       ],
     },
   ];
