@@ -11,9 +11,9 @@ class AutoPartController {
    */
   async getAllParts(req, res, next) {
     try {
-      const { category, vendor, vehicleModel, search, isActive, isApproved, status } = req.query;
+      const { category, vendor, vehicleModel, vehicleBrandId, search, isActive, isApproved, status } = req.query;
       const parts = await autoPartService.getAllParts(
-        { category, vendor, vehicleModel, search, isActive, isApproved, status },
+        { category, vendor, vehicleModel, vehicleBrandId, search, isActive, isApproved, status },
         req.user
       );
 
@@ -67,6 +67,23 @@ class AutoPartController {
   async getPartsByVehicle(req, res, next) {
     try {
       const parts = await autoPartService.getPartsByVehicle(req.params.vehicleModelId);
+
+      res.json({
+        success: true,
+        data: parts,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get parts by vehicle brand
+   * GET /api/auto-parts/brand/:vehicleBrandId
+   */
+  async getPartsByBrand(req, res, next) {
+    try {
+      const parts = await autoPartService.getPartsByBrand(req.params.vehicleBrandId);
 
       res.json({
         success: true,

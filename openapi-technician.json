@@ -1352,6 +1352,14 @@
             }
           },
           {
+            "in": "query",
+            "name": "vehicleBrandId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter products by vehicle brand"
+          },
+          {
             "$ref": "#/components/parameters/PageParam"
           },
           {
@@ -1481,6 +1489,32 @@
         "responses": {
           "200": {
             "description": "List of compatible parts"
+          }
+        }
+      }
+    },
+    "/api/auto-parts/brand/{vehicleBrandId}": {
+      "get": {
+        "summary": "Get parts compatible with vehicle brand",
+        "tags": [
+          "Auto Parts"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vehicleBrandId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of parts compatible with this brand"
+          },
+          "404": {
+            "description": "Brand not found"
           }
         }
       }

@@ -24,6 +24,11 @@ const requireRole = require('../middlewares/role.middleware');
  *         name: vendorId
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: vehicleBrandId
+ *         schema:
+ *           type: string
+ *         description: Filter products by vehicle brand
  *       - $ref: '#/components/parameters/PageParam'
  *       - $ref: '#/components/parameters/LimitParam'
  *     responses:
@@ -80,6 +85,26 @@ router.get('/vendor/:vendorId', autoPartController.getPartsByVendor);
  *         description: List of compatible parts
  */
 router.get('/vehicle/:vehicleModelId', autoPartController.getPartsByVehicle);
+
+/**
+ * @swagger
+ * /api/auto-parts/brand/{vehicleBrandId}:
+ *   get:
+ *     summary: Get parts compatible with vehicle brand
+ *     tags: [Auto Parts]
+ *     parameters:
+ *       - in: path
+ *         name: vehicleBrandId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of parts compatible with this brand
+ *       404:
+ *         description: Brand not found
+ */
+router.get('/brand/:vehicleBrandId', authMiddleware.optionalAuth, autoPartController.getPartsByBrand);
 
 /**
  * @swagger

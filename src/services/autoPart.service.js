@@ -14,7 +14,7 @@ class AutoPartService {
    * @returns {Array} List of parts
    */
   async getAllParts(filters = {}, requestingUser = null) {
-    const { category, vendor, vehicleModel, search, isActive, isApproved, status } = filters;
+    const { category, vendor, vehicleModel, vehicleBrandId, search, isActive, isApproved, status } = filters;
 
     const where = {
       ...(category && { categoryId: category }),
@@ -71,6 +71,36 @@ class AutoPartService {
           vehicleModelId: vehicleModel,
         },
       };
+    }
+
+    // Filter by car brand selected by user.
+    // We support both:
+    // 1) parts with explicit compatibility to models of this brand
+    // 2) fallback legacy text brand field matching brand name/nameAr
+    if (vehicleBrandId) {
+      const brand = await prisma.vehicleBrand.findUnique({
+        where: { id: vehicleBrandId },
+        select: { name: true, nameAr: true },
+      });
+
+      if (brand) {
+        where.AND = [
+          ...(where.AND || []),
+          {
+            OR: [
+              {
+                compatibility: {
+                  some: {
+                    vehicleModel: { brandId: vehicleBrandId },
+                  },
+                },
+              },
+              { brand: { equals: brand.name } },
+              ...(brand.nameAr ? [{ brand: { equals: brand.nameAr } }] : []),
+            ],
+          },
+        ];
+      }
     }
 
     const parts = await prisma.autoPart.findMany({
@@ -216,6 +246,57 @@ class AutoPartService {
             vehicleModelId,
           },
         },
+      },
+      include: {
+        category: true,
+        vendor: {
+          select: {
+            id: true,
+            businessName: true,
+            businessNameAr: true,
+            logo: true,
+          },
+        },
+        images: {
+          where: { isPrimary: true },
+          take: 1,
+        },
+      },
+      orderBy: [{ isFeatured: 'desc' }, { name: 'asc' }],
+    });
+
+    return parts;
+  }
+
+  /**
+   * Get parts compatible with a vehicle brand
+   * @param {string} vehicleBrandId - Vehicle brand ID
+   * @returns {Array} Compatible parts (approved only)
+   */
+  async getPartsByBrand(vehicleBrandId) {
+    const brand = await prisma.vehicleBrand.findUnique({
+      where: { id: vehicleBrandId },
+      select: { id: true, name: true, nameAr: true },
+    });
+    if (!brand) {
+      throw new AppError('Vehicle brand not found', 404, 'NOT_FOUND');
+    }
+
+    const parts = await prisma.autoPart.findMany({
+      where: {
+        isActive: true,
+        isApproved: true,
+        OR: [
+          {
+            compatibility: {
+              some: {
+                vehicleModel: { brandId: vehicleBrandId },
+              },
+            },
+          },
+          { brand: { equals: brand.name } },
+          ...(brand.nameAr ? [{ brand: { equals: brand.nameAr } }] : []),
+        ],
       },
       include: {
         category: true,

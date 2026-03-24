@@ -44,7 +44,8 @@ const seedGroups = [
       'seed-workshop-services-with-prices.js',
       'seed-5-services-per-comprehensive-care.js',
       'seed-5-services-per-mobile-workshop.js',
-      'seed-mobile-workshop-flow-data.js'
+      'seed-mobile-workshop-flow-data.js',
+      'seed-auto-parts-by-brand.js'
     ]
   },
   {
@@ -60,7 +61,14 @@ const seedGroups = [
   {
     name: '07 - Financials & Wallets',
     scripts: [
-      'seed-backfill-vendor-wallet-paid-invoices.js'
+      'seed-backfill-vendor-wallet-paid-invoices.js',
+      'seed-coupons.js'
+    ]
+  },
+  {
+    name: '08 - Marketing & Content',
+    scripts: [
+      'seed-banners.js'
     ]
   }
 ];
