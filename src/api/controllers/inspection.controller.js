@@ -54,12 +54,23 @@ class InspectionController {
                 where: { id },
                 include: {
                     items: true,
-                    booking: { include: { customer: { include: { profile: true } }, vehicle: true } },
+                    booking: {
+                        select: {
+                            id: true,
+                            customerId: true,
+                            customer: { include: { profile: true } },
+                            vehicle: true,
+                        },
+                    },
                     technician: { include: { profile: true } }
                 }
             });
 
             if (!report) throw new AppError('Inspection report not found', 404, 'NOT_FOUND');
+
+            if (req.user.role === 'CUSTOMER' && report.booking.customerId !== req.user.id) {
+                throw new AppError('Access denied', 403, 'FORBIDDEN');
+            }
 
             res.json({ success: true, data: report });
         } catch (error) {

@@ -177,6 +177,24 @@ router.get('/my', bookingController.getMyBookings);
 router.get('/:bookingId/chat/messages', chatController.getMessages);
 router.post('/:bookingId/chat/messages', chatController.sendMessage);
 
+/**
+ * @swagger
+ * /api/bookings/{id}/inspection-report:
+ *   get:
+ *     summary: Get inspection report for booking (customer / workshop vendor / admin)
+ *     description: |
+ *       تقرير التقييم/الكشف للورشة المعتمدة مع البنود وتقدير التكلفة. يُحدَّث من الورشة عبر PUT /api/workshops/profile/me/bookings/{bookingId}/inspection.
+ *       When status is COMPLETED/APPROVED: if unpaid, invoice gains INSPECTION_LINE / REPAIR_ESTIMATE; if already paid, report becomes PENDING_CUSTOMER until PATCH .../inspection-supplement/approve or reject.
+ *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops)]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.get('/:id/inspection-report', bookingController.getBookingInspectionReport);
+
+/** Customer: approve supplemental invoice lines after initial payment (report status PENDING_CUSTOMER). */
+router.patch('/:id/inspection-supplement/approve', bookingController.approveInspectionSupplement);
+/** Customer: reject supplemental estimate. */
+router.patch('/:id/inspection-supplement/reject', bookingController.rejectInspectionSupplement);
+
 router.get('/:id', bookingController.getBookingById);
 
 /**
@@ -195,8 +213,10 @@ router.get('/:id', bookingController.getBookingById);
  *
  *       **3) ورش الغسيل (Car Wash):** نفس (2) — أرسل serviceIds فقط (خدمات تابعة لفيندور غسيل، من GET /api/services?category=CLEANING أو vendorId).
  *
+ *       **رحلة أكفيك:** بعد إنشاء حجز ورشة معتمدة، اربطه بالرحلة عبر `PATCH /api/akfeek-journey/{journeyId}/step/WORKSHOP_BOOKING/link` مع `{ "bookingId" }` ثم ادفع فاتورة الورشة.
+ *
  *       Create a new booking. (1) Certified Workshop — workshopId + deliveryMethod + workshopServiceIds or serviceIds; (2) Comprehensive Care; (3) Car Wash — serviceIds only (like 2).
- *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops), 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
+ *     tags: [Bookings, Akfeek Journey, 1. الورش المعتمدة (Certified Workshops), 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -354,7 +374,8 @@ router.patch('/:id/status', requireAdminOrPermission('bookings'), bookingControl
  *     description: |
  *       فيندور الورشة المعتمدة يؤكد الحجز (PENDING → CONFIRMED).
  *       Certified workshop vendor confirms a pending booking for their workshop.
- *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops)]
+ *       **رحلة أكفيك:** قد يُنشأ/يُتاح دفع فاتورة الورشة بعد التأكيد — ثم `PATCH /api/invoices/my/{id}/pay` لإكمال خطوة WORKSHOP_BOOKING.
+ *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops), Akfeek Journey]
  *     security:
  *       - bearerAuth: []
  *     parameters:

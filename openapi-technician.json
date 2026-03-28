@@ -580,6 +580,10 @@
       "description": "Top/Bottom banners for the mobile app. Public: GET /api/banners. Admin: /api/admin/banners."
     },
     {
+      "name": "Akfeek Journey",
+      "description": "خدمة أكفيك — رحلة موجّهة: POST /api/akfeek-journey/start، GET /me، تخطي/ربط حجز، رفع وثائق. الخطوات: INSURANCE_TOW → INSURANCE_DOCS → TOW_TO_WORKSHOP → WORKSHOP_BOOKING → POST_REPAIR_TOW_HOME. السحب والورشة عبر الـ APIs الحالية. Admin: GET /api/admin/akfeek-journey."
+    },
+    {
       "name": "1. Certified Workshops",
       "description": "Certified workshops CRUD + booking (POST /api/bookings with workshopId)."
     },
@@ -725,6 +729,139 @@
     }
   ],
   "paths": {
+    "/api/akfeek-journey/start": {
+      "post": {
+        "summary": "Start Akfeek journey",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "vehicleId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Journey created"
+          },
+          "409": {
+            "description": "Active journey already exists"
+          }
+        }
+      }
+    },
+    "/api/akfeek-journey/me": {
+      "get": {
+        "summary": "Current customer journey and step summary",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/akfeek-journey/{id}/abandon": {
+      "patch": {
+        "summary": "Abandon journey",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/akfeek-journey/{id}/step/{stepKey}/skip": {
+      "patch": {
+        "summary": "Skip current step",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/akfeek-journey/{id}/step/{stepKey}/complete": {
+      "patch": {
+        "summary": "Mark insurance documents step done without new uploads (INSURANCE_DOCS only)",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/akfeek-journey/{id}/step/{stepKey}/link": {
+      "patch": {
+        "summary": "Link a booking to this step (towing or workshop)",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "bookingId"
+                ],
+                "properties": {
+                  "bookingId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/akfeek-journey/{id}/documents": {
+      "post": {
+        "summary": "Upload insurance documents (multipart, field files[])",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/auth/register": {
       "post": {
         "summary": "Register new user",
@@ -2294,6 +2431,21 @@
             "$ref": "#/components/responses/NotFoundError"
           }
         }
+      }
+    },
+    "/api/bookings/{id}/inspection-report": {
+      "get": {
+        "summary": "Get inspection report for booking (customer / workshop vendor / admin)",
+        "description": "تقرير التقييم/الكشف للورشة المعتمدة مع البنود وتقدير التكلفة. يُحدَّث من الورشة عبر PUT /api/workshops/profile/me/bookings/{bookingId}/inspection.\nWhen status is COMPLETED/APPROVED, invoice gains INSPECTION_LINE / REPAIR_ESTIMATE rows (if unpaid).\n",
+        "tags": [
+          "Bookings",
+          "1. الورش المعتمدة (Certified Workshops)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/bookings/{id}/status": {
@@ -11282,6 +11434,30 @@
         }
       }
     },
+    "/api/workshops/profile/me/bookings/{bookingId}/inspection": {
+      "get": {
+        "summary": "Get inspection report for a workshop booking (vendor)",
+        "tags": [
+          "1. الورش المعتمدة (Certified Workshops)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "Create/update inspection; when status COMPLETED or APPROVED syncs repair estimate to unpaid invoice",
+        "tags": [
+          "1. الورش المعتمدة (Certified Workshops)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/workshops/{id}": {
       "get": {
         "summary": "Get workshop details by ID",
@@ -12309,6 +12485,49 @@
             "description": "Workshop not found"
           }
         }
+      }
+    },
+    "/api/admin/akfeek-journey": {
+      "get": {
+        "summary": "List Akfeek journeys (admin)",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "COMPLETED",
+                "ABANDONED"
+              ]
+            }
+          }
+        ]
       }
     },
     "/api/admin/banners": {

@@ -111,9 +111,9 @@ router.get('/my/:id', invoiceController.getMyInvoice);
  *   patch:
  *     summary: Pay my invoice (Customer) — دفع فاتورتي
  *     description: |
- *       العميل يدفع فاتورته (method: CARD أو WALLET). يُستخدم في فلو العناية الشاملة وورش الغسيل بعد الحجز.
- *       Customer pays their invoice. Used in Comprehensive Care and Car Wash flows after booking.
- *     tags: [Invoices, 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
+ *       العميل يدفع فاتورته (method: CARD أو WALLET).
+ *       **الاستخدام:** العناية الشاملة، ورش الغسيل، **سحب الونش** (بعد قبول العرض)، **فاتورة الورشة المعتمدة** ضمن **رحلة أكفيك** (بعد PATCH .../WORKSHOP_BOOKING/link حتى تُكمَل خطوة الورشة).
+ *     tags: [Invoices, Akfeek Journey, 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care), 4. Towing]
  *     security:
  *       - bearerAuth: []
  *     parameters:

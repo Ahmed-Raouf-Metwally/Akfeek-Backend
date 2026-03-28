@@ -56,8 +56,13 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static file serving for uploads — allow cross-origin so frontend (e.g. :5173) can load images from API (:3000)
+// مستندات رحلة أكفيك (تأمين) لا تُخدم علناً — التنزيل عبر API مع توكن الورشة/العميل فقط
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  const p = req.path || '';
+  if (p.includes('akfeek-journey')) {
+    return res.status(404).json({ success: false, error: 'Not found', code: 'NOT_FOUND' });
+  }
   next();
 });
 app.use('/uploads', express.static('uploads'));

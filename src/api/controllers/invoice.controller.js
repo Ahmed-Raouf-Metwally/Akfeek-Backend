@@ -575,13 +575,17 @@ async function markInvoicePaid(req, res, next) {
       return res.json({ success: true, message: 'الفاتورة مدفوعة بالفعل', data: invoice });
     }
 
-    const amount = Number(invoice.totalAmount) || 0;
-    if (amount <= 0) throw new AppError('Invoice amount must be positive', 400, 'VALIDATION_ERROR');
+    const totalDue = Number(invoice.totalAmount) || 0;
+    const paidSoFar = Number(invoice.paidAmount) || 0;
+    const remaining = Math.round((totalDue - paidSoFar) * 100) / 100;
+    if (remaining <= 0) {
+      return res.json({ success: true, message: 'الفاتورة مدفوعة بالفعل', data: invoice });
+    }
 
     const performedById = req.user?.id ?? null;
     const defaultCommissionPercent = await getPlatformCommissionPercent();
 
-    const result = await runPaymentTransaction(invoice, amount, method, performedById, defaultCommissionPercent);
+    const result = await runPaymentTransaction(invoice, remaining, method, performedById, defaultCommissionPercent);
 
     // بعد الدفع: إشعار الطرفين لفتح التتبع والشات (ورشة متنقلة / ونش / إلخ)
     try {
@@ -677,13 +681,23 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
         } catch (_) { /* non-blocking */ }
       }
 
-      // 3) تحديث الفاتورة (استخدم invoice.id لأن الـ id في الرابط قد يكون bookingId)
+      // 3) تحديث الفاتورة — دفع المتبقي عند وجود paidAmount سابق (بنود تكميلية بعد الفحص)
+      const previousPaid = Number(invoice.paidAmount) || 0;
+      const totalDue = Number(invoice.totalAmount) || 0;
+      const newPaid = Math.round((previousPaid + amount) * 100) / 100;
+      const eps = 0.005;
+      const fullyPaid = newPaid >= totalDue - eps;
+      let newStatus;
+      if (fullyPaid) newStatus = 'PAID';
+      else if (newPaid > 0) newStatus = 'PARTIALLY_PAID';
+      else newStatus = invoice.status;
+
       const updatedInvoice = await tx.invoice.update({
         where: { id: invoice.id },
         data: {
-          status: 'PAID',
-          paidAmount: amount,
-          paidAt: new Date(),
+          status: newStatus,
+          paidAmount: newPaid,
+          paidAt: fullyPaid ? invoice.paidAt || new Date() : invoice.paidAt,
         },
       });
 
@@ -822,9 +836,9 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
           : defaultCommissionPercent;
 
       if (vendorUserId) {
-        const subtotal = Number(booking?.subtotal) ?? Number(invoice.subtotal) ?? amount;
-        const platformCommission = Math.round(subtotal * (commissionPercent / 100) * 100) / 100;
-        const vendorEarnings = Math.round((subtotal - platformCommission) * 100) / 100;
+        const revenueBasis = amount;
+        const platformCommission = Math.round(revenueBasis * (commissionPercent / 100) * 100) / 100;
+        const vendorEarnings = Math.round((revenueBasis - platformCommission) * 100) / 100;
         if (vendorEarnings > 0) {
           let vendorWallet = await tx.wallet.findUnique({ where: { userId: vendorUserId } });
           if (!vendorWallet) {
@@ -942,11 +956,15 @@ async function customerPayInvoice(req, res, next) {
       return res.json({ success: true, message: 'الفاتورة مدفوعة بالفعل', data: invoice });
     }
 
-    const amount = Number(invoice.totalAmount) || 0;
-    if (amount <= 0) throw new AppError('Invoice amount must be positive', 400, 'VALIDATION_ERROR');
+    const totalDue = Number(invoice.totalAmount) || 0;
+    const paidSoFar = Number(invoice.paidAmount) || 0;
+    const remaining = Math.round((totalDue - paidSoFar) * 100) / 100;
+    if (remaining <= 0) {
+      return res.json({ success: true, message: 'الفاتورة مدفوعة بالفعل', data: invoice });
+    }
 
     const defaultCommissionPercent = await getPlatformCommissionPercent();
-    const result = await runPaymentTransaction(invoice, amount, method, req.user.id, defaultCommissionPercent);
+    const result = await runPaymentTransaction(invoice, remaining, method, req.user.id, defaultCommissionPercent);
 
     try {
       const booking = await prisma.booking.findUnique({

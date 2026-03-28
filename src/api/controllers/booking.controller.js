@@ -1,5 +1,7 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const workshopService = require('../../services/workshop.service');
+const workshopInspectionService = require('../../services/workshopInspection.service');
 const { getPlatformCommissionPercent } = require('../../utils/pricing');
 const { buildStatusWhere, getDisplayStatus } = require('../../constants/bookingStatus');
 const { emitBookingStatusChange } = require('../../socket');
@@ -1366,6 +1368,103 @@ async function updateMobileWorkshopBookingStatusAsVendor(req, res, next) {
   }
 }
 
+/**
+ * Inspection report for certified-workshop booking (customer, workshop vendor, admin).
+ * GET /api/bookings/:id/inspection-report
+ */
+async function getBookingInspectionReport(req, res, next) {
+  try {
+    const { id: bookingId } = req.params;
+    const user = req.user;
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true, customerId: true, workshopId: true },
+    });
+    if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+
+    let allowed = false;
+    if (user.role === 'ADMIN') {
+      allowed = true;
+    } else if (user.role === 'CUSTOMER' && booking.customerId === user.id) {
+      allowed = true;
+    } else if (user.role === 'VENDOR' && booking.workshopId) {
+      try {
+        const workshop = await workshopService.getWorkshopByVendorUserId(user.id);
+        if (workshop && workshop.id === booking.workshopId) allowed = true;
+      } catch (_) {
+        /* not certified workshop vendor */
+      }
+    }
+
+    if (!allowed) {
+      throw new AppError('Not authorized to view this inspection', 403, 'FORBIDDEN');
+    }
+
+    const report = await workshopInspectionService.getByBookingId(bookingId);
+    res.json({ success: true, data: report });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Customer approves supplemental repair lines after paying the initial workshop invoice.
+ * PATCH /api/bookings/:id/inspection-supplement/approve
+ */
+async function approveInspectionSupplement(req, res, next) {
+  try {
+    if (req.user.role !== 'CUSTOMER') {
+      throw new AppError('Customers only', 403, 'FORBIDDEN');
+    }
+    const { id: bookingId } = req.params;
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true, customerId: true },
+    });
+    if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+    if (booking.customerId !== req.user.id) {
+      throw new AppError('Not authorized', 403, 'FORBIDDEN');
+    }
+
+    const result = await workshopInspectionService.approveSupplementalForCustomer(req.user.id, bookingId);
+    res.json({ success: true, message: 'تمت الموافقة على البنود الإضافية', data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Customer declines supplemental charges (report was PENDING_CUSTOMER).
+ * PATCH /api/bookings/:id/inspection-supplement/reject
+ * Body: { comment?: string, customerComment?: string }
+ */
+async function rejectInspectionSupplement(req, res, next) {
+  try {
+    if (req.user.role !== 'CUSTOMER') {
+      throw new AppError('Customers only', 403, 'FORBIDDEN');
+    }
+    const { id: bookingId } = req.params;
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true, customerId: true },
+    });
+    if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+    if (booking.customerId !== req.user.id) {
+      throw new AppError('Not authorized', 403, 'FORBIDDEN');
+    }
+
+    const result = await workshopInspectionService.rejectSupplementalForCustomer(
+      req.user.id,
+      bookingId,
+      req.body || {}
+    );
+    res.json({ success: true, message: 'تم رفض التقدير الإضافي', data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getAllBookings,
   getBookingById,
@@ -1376,4 +1475,7 @@ module.exports = {
   startBookingAsVendor,
   completeBookingAsVendor,
   updateMobileWorkshopBookingStatusAsVendor,
+  getBookingInspectionReport,
+  approveInspectionSupplement,
+  rejectInspectionSupplement,
 };

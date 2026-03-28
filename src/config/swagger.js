@@ -404,6 +404,65 @@ Authorization: Bearer <your_jwt_token>
             description: 'Top/Bottom banners for the mobile app. Public: GET /api/banners. Admin: /api/admin/banners.'
         },
         {
+            name: 'Akfeek Journey',
+            description: `
+**رحلة موجّهة للعميل (CUSTOMER)** — الخطوات: \`INSURANCE_TOW\` → \`INSURANCE_DOCS\` → \`TOW_TO_WORKSHOP\` → \`WORKSHOP_BOOKING\` → \`POST_REPAIR_TOW_HOME\`.
+
+### ترتيب اختبار E2E في Swagger (من البداية لحد العودة للبيت)
+
+1. **POST** \`/api/auth/login\` — توكن عميل (\`CUSTOMER\`).
+2. **POST** \`/api/akfeek-journey/start\` — Body: \`vehicleId\` (مستحسن لمسار السحب).
+3. **GET** \`/api/akfeek-journey/me\` — احفظ \`journey.id\` و \`currentStep\`.
+
+**أ) خطوة سحب التأمين \`INSURANCE_TOW\`**
+4. **POST** \`/api/bookings/towing/request\` → \`bookingId\`, \`broadcastId\`.
+5. **GET** \`/api/bookings/towing/{broadcastId}\` (اختياري).
+6. **GET** \`/api/bookings/towing/{broadcastId}/offers\`
+7. **POST** \`/api/bookings/towing/{broadcastId}/offers/{offerId}/accept\` → فاتورة.
+8. **PATCH** \`/api/invoices/my/{invoiceId}/pay\` — دفع العميل (أو أدمن: \`/api/invoices/{id}/mark-paid\`).
+9. **PATCH** \`/api/akfeek-journey/{journeyId}/step/INSURANCE_TOW/link\` — Body: \`{ "bookingId" }\`.
+   - بديل سريع: **PATCH** \`.../step/INSURANCE_TOW/skip\`.
+
+**ب) وثائق التأمين \`INSURANCE_DOCS\`**
+10. **POST** \`/api/akfeek-journey/{journeyId}/documents\` (multipart \`files\`) **أو** **PATCH** \`.../step/INSURANCE_DOCS/complete\` **أو** \`.../skip\`.
+11. **GET** \`/api/akfeek-journey/me\`.
+
+**ج) سحب للورشة \`TOW_TO_WORKSHOP\`**
+12. كرر فلو السحب (4–8) ثم **PATCH** \`.../step/TOW_TO_WORKSHOP/link\` — أو \`skip\`.
+
+**د) حجز الورشة \`WORKSHOP_BOOKING\`**
+13. **GET** \`/api/workshops\` — **GET** \`/api/workshops/{workshopId}/services\`.
+14. **POST** \`/api/bookings\` — \`workshopId\`, \`deliveryMethod\`, \`workshopServiceIds\` أو \`serviceIds\`, \`scheduledDate\`, …
+15. **PATCH** \`/api/bookings/{bookingId}/confirm\` — توكن **فيندور الورشة** (إن لزم).
+16. **PATCH** \`/api/akfeek-journey/{journeyId}/step/WORKSHOP_BOOKING/link\` — Body: \`{ "bookingId" }\`.
+17. **PATCH** \`/api/invoices/my/{invoiceId}/pay\` — حتى تصبح فاتورة الورشة مدفوعة (شرط إكمال الخطوة في الرحلة).
+18. **GET** \`/api/akfeek-journey/me\`.
+
+**هـ) العودة للمنزل \`POST_REPAIR_TOW_HOME\`**
+19. فلو سحب مرة أخرى ثم **PATCH** \`.../step/POST_REPAIR_TOW_HOME/link\` — أو **PATCH** \`.../step/POST_REPAIR_TOW_HOME/skip\` (رفض العودة بالسحب → إكمال الرحلة).
+
+20. **GET** \`/api/akfeek-journey/me\` — توقع \`status: COMPLETED\`.
+
+**أدمن (ليس للموبايل):** \`GET /api/admin/akfeek-journey\`, \`GET .../{id}\`, \`GET .../documents/{documentId}/file\`.
+`.trim()
+        },
+        {
+            name: 'Inspections',
+            description: 'تقارير الفحص — قائمة (أدمن/فني) وتفاصيل (أدمن/فني/عميل لحجزه).'
+        },
+        {
+            name: 'Dashboard',
+            description: 'إحصائيات ولوحة تحكم للأدمن والفيندور — /api/dashboard/*'
+        },
+        {
+            name: 'Activity Logs',
+            description: 'سجل النشاط — أدمن فقط: GET/POST /api/activity'
+        },
+        {
+            name: 'Admin Employees',
+            description: 'موظفو أكفيك — إدارة وصلاحيات (أدمن فقط) — /api/admin/employees'
+        },
+        {
             name: '1. Certified Workshops',
             description: 'Certified workshops CRUD + booking (POST /api/bookings with workshopId).'
         },
@@ -590,12 +649,15 @@ Authorization: Bearer <your_jwt_token>
         {
             name: 'Marketplace Orders',
             description: 'Orders from marketplace (customer, vendor, admin)'
+        },
+        {
+            name: 'Reference',
+            description: 'بيانات مرجعية عامة للواجهات (بدون مصادقة حيث يُذكر ذلك)'
         }
         ]
     },
     apis: [
-        './src/api/routes/*.js',
-        './src/api/routes/admin/*.js',
+        './src/api/routes/**/*.js',
         './src/api/controllers/*.js',
         './src/config/swagger-schemas.js',
         './src/modules/vendor/*.js'

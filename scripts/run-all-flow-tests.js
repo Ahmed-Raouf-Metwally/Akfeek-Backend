@@ -23,6 +23,11 @@ const SCRIPTS_DIR = path.join(ROOT, 'scripts');
 const FLOW_TESTS = [
   { key: 'comprehensive-care', name: 'العناية الشاملة (Comprehensive Care)', script: 'test-comprehensive-care-flow.js' },
   { key: 'certified-workshop', name: 'الورش المعتمدة (Certified Workshop)', script: 'test-certified-workshop-flow.js' },
+  {
+    key: 'workshop-inspection-supplement',
+    name: 'الفحص التكميلي بعد الدفع (Inspection supplement)',
+    script: 'test-workshop-inspection-supplement-flow.js',
+  },
   { key: 'carwash', name: 'غسيل السيارات (Car Wash)', script: 'test-carwash-flow.js' },
   { key: 'mobile-workshop', name: 'الورش المتنقلة (Mobile Workshop)', script: 'test-mobile-workshop-flow.js' },
   { key: 'winch', name: 'الوينش / السحب (Winch/Towing)', script: 'test-winch-flow.js' },

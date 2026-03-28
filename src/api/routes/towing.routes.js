@@ -19,7 +19,8 @@ const authMiddleware = require('../middlewares/auth.middleware');
  *       العميل يحدد موقع الالتقاط (من أين) والجهة/الوجهة (إلى أين) مع إحداثيات كل منهما (latitude, longitude, address).
  *       المسافة تُحسب من الإحداثيات، وعندما فيندور الوينش يوافق يُرد عليه السعر المحسوب من (basePrice + مسافة الرحلة × pricePerKm).
  *       يُنشأ الحجز والبث ويُرسل push للوينشات القريبة عبر Socket (winch:new_request). ثم GET offers ثم POST accept.
- *     tags: [4. Towing]
+ *       **رحلة أكفيك:** بعد الدفع اربط `bookingId` بـ `PATCH /api/akfeek-journey/{journeyId}/step/{INSURANCE_TOW|TOW_TO_WORKSHOP|POST_REPAIR_TOW_HOME}/link`.
+ *     tags: [4. Towing, Akfeek Journey]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -211,7 +212,9 @@ router.get('/:broadcastId/offers', authMiddleware, towingController.getOffers);
  *     summary: "4. قبول عرض الوينش — Accept winch offer"
  *     description: |
  *       العميل يوافق على عرض فيندور الوينش. يُربط الحجز بفيندور الوينش ويُسجّل نسبة عمولة المنصة وقت الحجز، ويُنشأ فاتورة (PENDING).
- *       الدفع: PATCH /api/invoices/{id}/mark-paid — إيداع حصة الفيندور في محفظته وخصم عمولة المنصة (النسبة المسجلة وقت الحجز)، ثم يتفتح السوكت للتتبع. استخدم data.invoice.id.
+ *       **دفع العميل:** `PATCH /api/invoices/my/{invoiceId}/pay` (method: CARD أو WALLET) — ثم يتفتح السوكت للتتبع. استخدم `data.invoice.id` من الاستجابة.
+ *       **أدمن/صلاحية فواتير:** `PATCH /api/invoices/{id}/mark-paid`.
+ *       **رحلة أكفيك:** بعد الدفع استخدم `PATCH /api/akfeek-journey/{journeyId}/step/INSURANCE_TOW|...|link` مع `bookingId` نفس حجز السحب.
  *     tags: [4. Towing]
  *     security:
  *       - bearerAuth: []

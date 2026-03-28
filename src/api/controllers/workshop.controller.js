@@ -1,4 +1,5 @@
 const workshopService = require('../../services/workshop.service');
+const akfeekJourneyService = require('../../services/akfeekJourney.service');
 const { parseGoogleMapsUrl } = require('../../utils/mapsParser');
 
 /**
@@ -254,6 +255,45 @@ class WorkshopController {
                 success: true,
                 data: result.list,
                 pagination: result.pagination
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * GET /api/workshops/profile/me/bookings/:bookingId/akfeek-journey/documents
+     */
+    async getAkfeekJourneyDocumentsForBooking(req, res, next) {
+        try {
+            const data = await akfeekJourneyService.getJourneyDocumentsForWorkshopBooking(
+                req.user.id,
+                req.params.bookingId
+            );
+            res.json({ success: true, data });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * GET /api/workshops/profile/me/bookings/:bookingId/akfeek-journey/documents/:documentId/file
+     */
+    async downloadAkfeekJourneyDocument(req, res, next) {
+        try {
+            const { absolutePath, mimeType, downloadName } =
+                await akfeekJourneyService.streamDocumentForWorkshopBooking(
+                    req.user.id,
+                    req.params.bookingId,
+                    req.params.documentId
+                );
+            res.setHeader('Content-Type', mimeType);
+            res.setHeader(
+                'Content-Disposition',
+                `inline; filename*=UTF-8''${encodeURIComponent(downloadName)}`
+            );
+            res.sendFile(absolutePath, (err) => {
+                if (err) next(err);
             });
         } catch (error) {
             next(error);

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const workshopController = require('../controllers/workshop.controller');
+const workshopInspectionController = require('../controllers/workshopInspection.controller');
 const workshopReviewController = require('../controllers/workshopReview.controller');
 const workshopImageController = require('../controllers/workshopImage.controller');
 const workshopServiceController = require('../controllers/workshopService.controller');
@@ -16,8 +17,10 @@ router.use(authMiddleware);
  * /api/workshops:
  *   get:
  *     summary: Get all certified workshops
- *     description: Retrieve a list of active and verified workshops with optional filtering
- *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     description: |
+ *       Retrieve a list of active and verified workshops with optional filtering.
+ *       **رحلة أكفيك:** اختر ورشة ثم GET /api/workshops/{id}/services ثم POST /api/bookings لخطوة WORKSHOP_BOOKING.
+ *     tags: [1. الورش المعتمدة (Certified Workshops), Akfeek Journey]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -141,6 +144,49 @@ router.put('/profile/me', requireRole('VENDOR'), workshopController.updateMyWork
  *         description: Not a certified workshop vendor
  */
 router.get('/profile/me/bookings', requireRole('VENDOR'), workshopController.getMyWorkshopBookings);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me/bookings/{bookingId}/akfeek-journey/documents:
+ *   get:
+ *     summary: List Akfeek journey insurance documents for this workshop booking (vendor)
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.get(
+  '/profile/me/bookings/:bookingId/akfeek-journey/documents',
+  requireRole('VENDOR'),
+  workshopController.getAkfeekJourneyDocumentsForBooking
+);
+router.get(
+  '/profile/me/bookings/:bookingId/akfeek-journey/documents/:documentId/file',
+  requireRole('VENDOR'),
+  workshopController.downloadAkfeekJourneyDocument
+);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me/bookings/{bookingId}/inspection:
+ *   get:
+ *     summary: Get inspection report for a workshop booking (vendor)
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security: [{ bearerAuth: [] }]
+ *   put:
+ *     summary: Create/update inspection; when status COMPLETED or APPROVED syncs repair estimate to unpaid invoice
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.get(
+  '/profile/me/bookings/:bookingId/inspection',
+  requireRole('VENDOR'),
+  workshopInspectionController.getMyBookingInspection
+);
+router.put(
+  '/profile/me/bookings/:bookingId/inspection',
+  requireRole('VENDOR'),
+  workshopInspectionController.upsertMyBookingInspection
+);
+
 // Vendor: إدارة الخدمات (مع الأسعار) — نوع الخدمة، اسم، سعر، مدة، وصف
 router.get('/profile/me/services', requireRole('VENDOR'), workshopServiceController.getMyServices);
 router.post('/profile/me/services', requireRole('VENDOR'), workshopServiceController.addMyService);
@@ -801,7 +847,8 @@ router.delete('/:id/logo', requireRole('ADMIN'), workshopImageController.deleteL
  *       Retrieve all active services offered by a certified workshop (id, name, price, duration).
  *       Use these IDs in POST /api/bookings with workshopId + workshopServiceIds to book workshop-specific services.
  *       قائمة خدمات الورشة المعتمدة (للعميل) — استخدم معرفات الخدمات في حجز ورشة مع workshopServiceIds.
- *     tags: [1. الورش المعتمدة (Certified Workshops), Bookings]
+ *       **رحلة أكفيك:** خطوة WORKSHOP_BOOKING — بعد POST /api/bookings ثم PATCH .../link.
+ *     tags: [1. الورش المعتمدة (Certified Workshops), Bookings, Akfeek Journey]
  *     security:
  *       - bearerAuth: []
  *     parameters:

@@ -58,6 +58,24 @@ async function getAllBroadcasts(req, res, next) {
                 bookingNumber: true,
                 status: true,
                 totalPrice: true,
+                pickupAddress: true,
+                destinationAddress: true,
+                technician: {
+                  select: {
+                    id: true,
+                    email: true,
+                    phone: true,
+                    profile: { select: { firstName: true, lastName: true } },
+                    vendorProfile: {
+                      select: {
+                        vendorType: true,
+                        businessName: true,
+                        businessNameAr: true,
+                        contactPhone: true,
+                      },
+                    },
+                  },
+                },
               },
             },
             customer: {

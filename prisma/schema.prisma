@@ -120,6 +120,9 @@ model User {
   employeePermissions EmployeePermission[]
   vendorEmployment    VendorEmployee? // ربط اختياري بفيندور إن لزم
 
+  // خدمة أكفيك — رحلة موجّهة (تأمين / ورشة / سحب)
+  akfeekJourneys AkfeekJourney[]
+
   @@index([email])
   @@index([phone])
   @@index([role, status])
@@ -285,6 +288,7 @@ model UserVehicle {
   // Relations
   bookings               Booking[]
   mobileWorkshopRequests  MobileWorkshopRequest[]
+  akfeekJourneys         AkfeekJourney[]
 
   @@index([userId])
   @@index([vehicleModelId])
@@ -1314,6 +1318,12 @@ model Booking {
   technicianLocations TechnicianLocation[]   @relation("BookingTracking")
   chatRoom            ChatRoom?
 
+  // خدمة أكفيك — ربط حجوزات السحب/الورشة بالرحلة
+  akfeekJourneyAsInsuranceTow  AkfeekJourney? @relation("AkfeekJourneyInsuranceTow")
+  akfeekJourneyAsTowToWorkshop AkfeekJourney? @relation("AkfeekJourneyTowToWorkshop")
+  akfeekJourneyAsWorkshop      AkfeekJourney? @relation("AkfeekJourneyWorkshop")
+  akfeekJourneyAsReturnHome    AkfeekJourney? @relation("AkfeekJourneyReturnHome")
+
   @@index([customerId])
   @@index([technicianId])
   @@index([status])
@@ -1488,6 +1498,7 @@ enum InspectionStatus {
   COMPLETED
   APPROVED
   REJECTED
+  PENDING_CUSTOMER
 }
 
 model InspectionReport {
@@ -2423,6 +2434,76 @@ model TechnicalSupportRequest {
   @@index([customerId])
   @@index([technicianId])
   @@index([status])
+}
+
+// ================================================================================================
+// AKFEEK JOURNEY (خدمة أكفيك — رحلة موجّهة)
+// ================================================================================================
+
+enum AkfeekJourneyStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum AkfeekJourneyStep {
+  INSURANCE_TOW
+  INSURANCE_DOCS
+  TOW_TO_WORKSHOP
+  WORKSHOP_BOOKING
+  POST_REPAIR_TOW_HOME
+}
+
+model AkfeekJourney {
+  id         String              @id @default(uuid())
+  customerId String
+  customer   User                @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicleId  String?
+  vehicle    UserVehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  status      AkfeekJourneyStatus @default(ACTIVE)
+  currentStep AkfeekJourneyStep   @default(INSURANCE_TOW)
+
+  insuranceTowBookingId String? @unique
+  insuranceTowBooking   Booking? @relation("AkfeekJourneyInsuranceTow", fields: [insuranceTowBookingId], references: [id], onDelete: SetNull)
+
+  towToWorkshopBookingId String? @unique
+  towToWorkshopBooking   Booking? @relation("AkfeekJourneyTowToWorkshop", fields: [towToWorkshopBookingId], references: [id], onDelete: SetNull)
+
+  workshopBookingId String? @unique
+  workshopBooking   Booking? @relation("AkfeekJourneyWorkshop", fields: [workshopBookingId], references: [id], onDelete: SetNull)
+
+  returnHomeBookingId String? @unique
+  returnHomeBooking   Booking? @relation("AkfeekJourneyReturnHome", fields: [returnHomeBookingId], references: [id], onDelete: SetNull)
+
+  insuranceTowSkipped  Boolean @default(false)
+  insuranceDocsSkipped Boolean @default(false)
+  insuranceDocsCompleted Boolean @default(false)
+  towToWorkshopSkipped Boolean @default(false)
+  workshopSkipped      Boolean @default(false)
+  returnHomeDeclined   Boolean @default(false)
+
+  documents AkfeekJourneyDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId, status])
+}
+
+model AkfeekJourneyDocument {
+  id        String        @id @default(uuid())
+  journeyId String
+  journey   AkfeekJourney @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+
+  label          String // repair_auth, najm, traffic_report, other
+  fileUrl        String
+  mimeType       String?
+  originalName   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([journeyId])
 }
 
 // ================================================================================================

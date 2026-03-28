@@ -24,6 +24,7 @@ const feedbackRoutes = require('./feedback.routes');
 const feedbackAdminRoutes = require('./admin/feedback.admin.routes');
 const technicalSupportRoutes = require('./technicalSupport.routes');
 const bannersRoutes = require('./banners.routes');
+const akfeekJourneyRoutes = require('./akfeekJourney.routes');
 
 // Winch routes
 const winchRoutes = require('./winches.routes');
@@ -58,6 +59,9 @@ router.use('/workshops', workshopRoutes);
 // Public banners for mobile app
 router.use('/banners', bannersRoutes);
 
+// Akfeek guided journey (customer)
+router.use('/akfeek-journey', akfeekJourneyRoutes);
+
 // Winch / Towing vehicles
 router.use('/winches', winchRoutes);
 // Mobile Workshops
@@ -67,6 +71,32 @@ router.use('/mobile-workshop-requests', mobileWorkshopRequestsRoutes);
 
 // تسميات الأدوار للعرض في الواجهة (بدون مفاتيح تقنية مثل users.roles.EMPLOYEE)
 const { ROLE_LABELS } = require('../../constants/roles');
+
+/**
+ * @swagger
+ * /api/role-labels:
+ *   get:
+ *     summary: Human-readable role labels for UI (AR/EN map)
+ *     description: تسميات الأدوار للعرض في الواجهة — عام بدون توكن
+ *     tags: [Reference]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Map of role key to { en, ar }
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 data:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: object
+ *                     properties:
+ *                       en: { type: string }
+ *                       ar: { type: string }
+ */
 router.get('/role-labels', (req, res) => res.json({ success: true, data: ROLE_LABELS }));
 
 // Public routes (no authentication required)
@@ -96,6 +126,7 @@ router.use('/users', userRoutes);
 router.use('/vehicles', vehicleRoutes);
 router.use('/services', serviceRoutes);
 router.use('/bookings', bookingRoutes);
+router.use('/inspections', require('./inspections.routes'));
 router.use('/broadcasts', broadcastRoutes);
 router.use('/supplies', supplyRoutes);
 router.use('/invoices', invoiceRoutes);
@@ -122,6 +153,7 @@ router.use('/admin/settings', adminSettingsRoutes);
 router.use('/admin/feedback', feedbackAdminRoutes);
 router.use('/admin/employees', require('./admin/employees.routes'));
 router.use('/admin/banners', require('./admin/banners.routes'));
+router.use('/admin/akfeek-journey', require('./admin/akfeekJourney.admin.routes'));
 router.use('/dashboard', require('./dashboard.routes'));
 router.use('/admin/finance', require('./admin/finance.routes'));
 
