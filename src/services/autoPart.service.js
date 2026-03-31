@@ -2,6 +2,21 @@ const prisma = require('../utils/database/prisma');
 const { AppError } = require('../api/middlewares/error.middleware');
 const logger = require('../utils/logger/logger');
 
+const DEFAULT_PUBLIC_BASE_URL = 'https://akfeek-backend.developteam.site';
+const getPublicBaseUrl = () =>
+  (process.env.PUBLIC_BASE_URL || DEFAULT_PUBLIC_BASE_URL).replace(/\/+$/, '');
+
+const normalizeImageUrl = (url) => {
+  if (typeof url !== 'string') return url;
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  const baseUrl = getPublicBaseUrl();
+  if (!baseUrl) return trimmed;
+  return `${baseUrl}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+};
+
 /**
  * Auto Part Service
  * Handles CRUD operations for auto parts with role-based access control
@@ -514,7 +529,7 @@ class AutoPartService {
         images: images
           ? {
               create: images.map((img, index) => ({
-                url: img.url,
+                url: normalizeImageUrl(img.url),
                 altText: img.altText,
                 sortOrder: img.sortOrder !== undefined ? img.sortOrder : index,
                 isPrimary:
@@ -754,7 +769,7 @@ class AutoPartService {
     const createdImages = await prisma.autoPartImage.createMany({
       data: images.map((img, index) => ({
         partId,
-        url: img.url,
+        url: normalizeImageUrl(img.url),
         altText: img.altText,
         sortOrder: img.sortOrder !== undefined ? img.sortOrder : index,
         isPrimary: img.isPrimary !== undefined ? img.isPrimary : false,

@@ -1,5 +1,7 @@
 const autoPartService = require('../../services/autoPart.service');
 
+const DEFAULT_PUBLIC_BASE_URL = 'https://akfeek-backend.developteam.site';
+
 /**
  * Auto Part Controller
  * Handles requests for auto part management with role-based access
@@ -210,7 +212,8 @@ class AutoPartController {
           errorAr: 'لم يتم رفع أي ملف',
         });
       }
-      const urls = files.map((f) => '/uploads/auto-parts/' + f.filename);
+      const baseUrl = (process.env.PUBLIC_BASE_URL || DEFAULT_PUBLIC_BASE_URL).replace(/\/+$/, '');
+      const urls = files.map((f) => `${baseUrl}/uploads/auto-parts/${f.filename}`);
       res.json({
         success: true,
         data: urls.length === 1 ? urls[0] : urls,
