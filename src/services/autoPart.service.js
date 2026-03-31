@@ -7,6 +7,62 @@ const logger = require('../utils/logger/logger');
  * Handles CRUD operations for auto parts with role-based access control
  */
 class AutoPartService {
+  async getDescendantCategoryIds(rootCategoryId) {
+    if (!rootCategoryId) return [];
+    const root = await prisma.autoPartCategory.findUnique({
+      where: { id: rootCategoryId },
+      select: { id: true },
+    });
+    if (!root) return [];
+
+    const collected = new Set([root.id]);
+    let frontier = [root.id];
+    while (frontier.length) {
+      const children = await prisma.autoPartCategory.findMany({
+        where: { parentId: { in: frontier } },
+        select: { id: true },
+      });
+      const next = [];
+      for (const c of children) {
+        if (!collected.has(c.id)) {
+          collected.add(c.id);
+          next.push(c.id);
+        }
+      }
+      frontier = next;
+    }
+    return Array.from(collected);
+  }
+
+  async getCategoryIdsByVehicleType(vehicleType) {
+    const normalized = String(vehicleType || '').toUpperCase();
+    if (!['CAR', 'MOTORCYCLE'].includes(normalized)) return [];
+
+    const roots = await prisma.autoPartCategory.findMany({
+      where: { parentId: null, rootType: normalized },
+      select: { id: true },
+    });
+    if (!roots.length) return [];
+
+    const collected = new Set(roots.map((r) => r.id));
+    let frontier = roots.map((r) => r.id);
+    while (frontier.length) {
+      const children = await prisma.autoPartCategory.findMany({
+        where: { parentId: { in: frontier } },
+        select: { id: true },
+      });
+      const next = [];
+      for (const c of children) {
+        if (!collected.has(c.id)) {
+          collected.add(c.id);
+          next.push(c.id);
+        }
+      }
+      frontier = next;
+    }
+    return Array.from(collected);
+  }
+
   /**
    * Get all auto parts with filters and access control
    * @param {Object} filters - Filter options
@@ -14,10 +70,22 @@ class AutoPartService {
    * @returns {Array} List of parts
    */
   async getAllParts(filters = {}, requestingUser = null) {
-    const { category, vendor, vehicleModel, vehicleBrandId, search, isActive, isApproved, status } = filters;
+    const {
+      category,
+      categoryId,
+      vendor,
+      vehicleModel,
+      vehicleBrandId,
+      vehicleType,
+      search,
+      isActive,
+      isApproved,
+      status,
+    } = filters;
+
+    const selectedCategory = category || categoryId;
 
     const where = {
-      ...(category && { categoryId: category }),
       ...(vendor && { vendorId: vendor }),
       // Default: only active parts (exclude soft-deleted). Pass isActive=false to see inactive.
       ...(isActive === undefined && { isActive: true }),
@@ -101,6 +169,21 @@ class AutoPartService {
           },
         ];
       }
+    }
+
+    // Category filter should include subcategories, not only the selected node.
+    if (selectedCategory) {
+      const categoryIds = await this.getDescendantCategoryIds(selectedCategory);
+      where.categoryId = { in: categoryIds.length ? categoryIds : ['__none__'] };
+    }
+
+    // Vehicle type filter by root category type (CAR / MOTORCYCLE) + all descendants.
+    if (vehicleType) {
+      const categoryIdsByType = await this.getCategoryIdsByVehicleType(vehicleType);
+      where.AND = [
+        ...(where.AND || []),
+        { categoryId: { in: categoryIdsByType.length ? categoryIdsByType : ['__none__'] } },
+      ];
     }
 
     const parts = await prisma.autoPart.findMany({

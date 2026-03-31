@@ -10,6 +10,13 @@ const requireRole = require('../middlewares/role.middleware');
  *   get:
  *     summary: Get all categories
  *     tags: [Auto Part Categories]
+ *     parameters:
+ *       - name: vehicleType
+ *         in: query
+ *         description: CAR أو MOTORCYCLE لتصفية الفئات (الجذر + الفروع)
+ *         schema:
+ *           type: string
+ *           enum: [CAR, MOTORCYCLE]
  *     responses:
  *       200:
  *         description: List of categories

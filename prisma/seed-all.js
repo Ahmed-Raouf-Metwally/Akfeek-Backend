@@ -23,6 +23,7 @@ const seedGroups = [
     scripts: [
       'seed-18-vendors.js',
       'seed-24-vendors.js',
+      'seed-6-vendors-linked.js',
       'seed-comprehensive-care-vendor.js',
       'seed-18-vendors-correct-attachments.js'
     ]
@@ -53,6 +54,7 @@ const seedGroups = [
     scripts: [
       'seed-workshops-vendors-bookings.js',
       'seed-completed-bookings-for-vendors.js',
+      'seed-user-all-services-completed.js',
       'seed-5-users-10-bookings-paid.js',
       'seed-10-users-3-vendor-requests-7-bookings-paid.js',
       'seed_feedback.js'

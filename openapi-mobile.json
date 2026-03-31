@@ -581,7 +581,23 @@
     },
     {
       "name": "Akfeek Journey",
-      "description": "خدمة أكفيك — رحلة موجّهة: POST /api/akfeek-journey/start، GET /me، تخطي/ربط حجز، رفع وثائق. الخطوات: INSURANCE_TOW → INSURANCE_DOCS → TOW_TO_WORKSHOP → WORKSHOP_BOOKING → POST_REPAIR_TOW_HOME. السحب والورشة عبر الـ APIs الحالية. Admin: GET /api/admin/akfeek-journey."
+      "description": "**رحلة موجّهة للعميل (CUSTOMER)** — الخطوات: `INSURANCE_TOW` → `INSURANCE_DOCS` → `TOW_TO_WORKSHOP` → `WORKSHOP_BOOKING` → `POST_REPAIR_TOW_HOME`.\n\n### ترتيب اختبار E2E في Swagger (من البداية لحد العودة للبيت)\n\n1. **POST** `/api/auth/login` — توكن عميل (`CUSTOMER`).\n2. **POST** `/api/akfeek-journey/start` — Body: `vehicleId` (مستحسن لمسار السحب).\n3. **GET** `/api/akfeek-journey/me` — احفظ `journey.id` و `currentStep`.\n\n**أ) خطوة سحب التأمين `INSURANCE_TOW`**\n4. **POST** `/api/bookings/towing/request` → `bookingId`, `broadcastId`.\n5. **GET** `/api/bookings/towing/{broadcastId}` (اختياري).\n6. **GET** `/api/bookings/towing/{broadcastId}/offers`\n7. **POST** `/api/bookings/towing/{broadcastId}/offers/{offerId}/accept` → فاتورة.\n8. **PATCH** `/api/invoices/my/{invoiceId}/pay` — دفع العميل (أو أدمن: `/api/invoices/{id}/mark-paid`).\n9. **PATCH** `/api/akfeek-journey/{journeyId}/step/INSURANCE_TOW/link` — Body: `{ \"bookingId\" }`.\n   - بديل سريع: **PATCH** `.../step/INSURANCE_TOW/skip`.\n\n**ب) وثائق التأمين `INSURANCE_DOCS`**\n10. **POST** `/api/akfeek-journey/{journeyId}/documents` (multipart `files`) **أو** **PATCH** `.../step/INSURANCE_DOCS/complete` **أو** `.../skip`.\n11. **GET** `/api/akfeek-journey/me`.\n\n**ج) سحب للورشة `TOW_TO_WORKSHOP`**\n12. كرر فلو السحب (4–8) ثم **PATCH** `.../step/TOW_TO_WORKSHOP/link` — أو `skip`.\n\n**د) حجز الورشة `WORKSHOP_BOOKING`**\n13. **GET** `/api/workshops` — **GET** `/api/workshops/{workshopId}/services`.\n14. **POST** `/api/bookings` — `workshopId`, `deliveryMethod`, `workshopServiceIds` أو `serviceIds`, `scheduledDate`, …\n15. **PATCH** `/api/bookings/{bookingId}/confirm` — توكن **فيندور الورشة** (إن لزم).\n16. **PATCH** `/api/akfeek-journey/{journeyId}/step/WORKSHOP_BOOKING/link` — Body: `{ \"bookingId\" }`.\n17. **PATCH** `/api/invoices/my/{invoiceId}/pay` — حتى تصبح فاتورة الورشة مدفوعة (شرط إكمال الخطوة في الرحلة).\n18. **GET** `/api/akfeek-journey/me`.\n\n**هـ) العودة للمنزل `POST_REPAIR_TOW_HOME`**\n19. فلو سحب مرة أخرى ثم **PATCH** `.../step/POST_REPAIR_TOW_HOME/link` — أو **PATCH** `.../step/POST_REPAIR_TOW_HOME/skip` (رفض العودة بالسحب → إكمال الرحلة).\n\n20. **GET** `/api/akfeek-journey/me` — توقع `status: COMPLETED`.\n\n**أدمن (ليس للموبايل):** `GET /api/admin/akfeek-journey`, `GET .../{id}`, `GET .../documents/{documentId}/file`."
+    },
+    {
+      "name": "Inspections",
+      "description": "تقارير الفحص — قائمة (أدمن/فني) وتفاصيل (أدمن/فني/عميل لحجزه)."
+    },
+    {
+      "name": "Dashboard",
+      "description": "إحصائيات ولوحة تحكم للأدمن والفيندور — /api/dashboard/*"
+    },
+    {
+      "name": "Activity Logs",
+      "description": "سجل النشاط — أدمن فقط: GET/POST /api/activity"
+    },
+    {
+      "name": "Admin Employees",
+      "description": "موظفو أكفيك — إدارة وصلاحيات (أدمن فقط) — /api/admin/employees"
     },
     {
       "name": "1. Certified Workshops",
@@ -708,6 +724,14 @@
       "description": "Orders from marketplace (customer, vendor, admin)"
     },
     {
+      "name": "Reference",
+      "description": "بيانات مرجعية عامة للواجهات (بدون مصادقة حيث يُذكر ذلك)"
+    },
+    {
+      "name": "Admin Feedback",
+      "description": "Administrative operations for Managing complaints and suggestions"
+    },
+    {
       "name": "2. ورش الغسيل (Car Wash)",
       "description": "الفلو المعتمد: مثل العناية الشاملة — العميل يختار خدمة غسيل من الفيندور (GET /api/services?category=CLEANING أو vendorId)،\nيحجز بـ POST /api/bookings (vehicleId, scheduledDate, scheduledTime, serviceIds بدون workshopId)، يدفع الفاتورة، الفيندور يحدد مكتمل.\nالـ endpoints أدناه (request / offers / accept) اختيارية — لفلو البث مع الفني إن وُجد.\n"
     },
@@ -720,18 +744,1686 @@
       "description": "Real-time location tracking endpoints - نقاط تتبع الموقع اللحظي"
     },
     {
-      "name": "Admin Feedback",
-      "description": "Administrative operations for Managing complaints and suggestions"
-    },
-    {
       "name": "Vendor Onboarding",
       "description": "Vendor registration and approval workflow"
     }
   ],
   "paths": {
+    "/api/activity": {
+      "get": {
+        "summary": "List activity logs (admin)",
+        "tags": [
+          "Activity Logs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "userId",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated logs"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create activity log entry",
+        "description": "مسجل من الواجهة أو للاستخدام الداخلي — userId من التوكن",
+        "tags": [
+          "Activity Logs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "action"
+                ],
+                "properties": {
+                  "action": {
+                    "type": "string"
+                  },
+                  "entity": {
+                    "type": "string"
+                  },
+                  "entityId": {
+                    "type": "string"
+                  },
+                  "details": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/api/addresses": {
+      "get": {
+        "summary": "Get user addresses - جلب عناوين المستخدم",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user addresses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Address"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          }
+        },
+        "description": "Retrieve all addresses for the authenticated user"
+      },
+      "post": {
+        "summary": "Create address - إضافة عنوان جديد",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "See Address model (label, lat, lng, city, etc.)",
+                "$ref": "#/components/schemas/AddressInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Address created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageAr": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Address"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error - Missing required fields"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "description": "Create a new address for the authenticated user"
+      }
+    },
+    "/api/addresses/{id}": {
+      "get": {
+        "summary": "Get address by ID - جلب عنوان بالمعرف",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Address ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Address details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Address"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Address not found"
+          }
+        },
+        "description": "Retrieve a specific address by ID (must belong to authenticated user)"
+      },
+      "put": {
+        "summary": "Update address - تعديل عنوان",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Address ID"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "$ref": "#/components/schemas/AddressInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Address updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageAr": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Address"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Address not found"
+          }
+        },
+        "description": "Update an existing address (must belong to authenticated user)"
+      },
+      "delete": {
+        "summary": "Delete address - حذف عنوان",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Address ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Address deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageAr": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Address not found"
+          }
+        },
+        "description": "Delete an address (must belong to authenticated user)"
+      }
+    },
+    "/api/admin/akfeek-journey": {
+      "get": {
+        "summary": "List Akfeek journeys (admin)",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "COMPLETED",
+                "ABANDONED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "items[], total, page, limit"
+          }
+        }
+      }
+    },
+    "/api/admin/akfeek-journey/{id}/documents/{documentId}/file": {
+      "get": {
+        "summary": "Download / inline open journey document file (admin)",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "documentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary file (Content-Type from stored mime)"
+          },
+          "404": {
+            "description": "Journey or file not found"
+          }
+        }
+      }
+    },
+    "/api/admin/akfeek-journey/{id}": {
+      "get": {
+        "summary": "Journey detail for admin (steps breakdown, invoice, documents meta)",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "journey, steps[], workshopInvoice, workshopInvoicePaid"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/admin/banners": {
+      "get": {
+        "summary": "(Admin) List banners",
+        "tags": [
+          "Banners"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "position",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TOP",
+                "BOTTOM"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List banners"
+          }
+        }
+      },
+      "post": {
+        "summary": "(Admin) Create banner",
+        "tags": [
+          "Banners"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "position"
+                ],
+                "properties": {
+                  "position": {
+                    "type": "string",
+                    "enum": [
+                      "TOP",
+                      "BOTTOM"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "titleAr": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "default": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/api/admin/banners/{id}": {
+      "put": {
+        "summary": "(Admin) Update banner",
+        "tags": [
+          "Banners"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "position": {
+                    "type": "string",
+                    "enum": [
+                      "TOP",
+                      "BOTTOM"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "titleAr": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "(Admin) Delete banner",
+        "tags": [
+          "Banners"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/api/admin/banners/{id}/images": {
+      "post": {
+        "summary": "(Admin) Upload banner images (multiple)",
+        "description": "Upload one or many images for a banner.\nSupported field names: `images` (array) or `image` (single).\nMax file size per image: 10MB. Allowed: JPEG/PNG/WebP.\n",
+        "tags": [
+          "Banners"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "images": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Preferred field for multiple files"
+                  },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Alternative field name for single file"
+                  },
+                  "linkUrl": {
+                    "type": "string",
+                    "description": "Optional URL applied to uploaded images"
+                  }
+                }
+              },
+              "encoding": {
+                "images": {
+                  "style": "form"
+                },
+                "image": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "source": "curl -X POST \"http://localhost:3000/api/admin/banners/{id}/images\" \\\n  -H \"Authorization: Bearer <token>\" \\\n  -F \"images=@/path/banner-1.jpg\" \\\n  -F \"images=@/path/banner-2.png\" \\\n  -F \"linkUrl=https://example.com\"\n"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Uploaded"
+          },
+          "400": {
+            "description": "No images found in request / invalid file type"
+          },
+          "404": {
+            "description": "Banner not found"
+          }
+        }
+      }
+    },
+    "/api/admin/banners/{id}/images/{imageId}": {
+      "delete": {
+        "summary": "(Admin) Delete one banner image",
+        "tags": [
+          "Banners"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "imageId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/api/admin/employees/permission-keys": {
+      "get": {
+        "summary": "Available employee permission keys + labels (for admin UI)",
+        "tags": [
+          "Admin Employees"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "keys[], labels{}"
+          }
+        }
+      }
+    },
+    "/api/admin/employees": {
+      "get": {
+        "summary": "List Akfeek employees (paginated)",
+        "tags": [
+          "Admin Employees"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "vendorId",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create employee user",
+        "tags": [
+          "Admin Employees"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password",
+                  "firstName",
+                  "lastName"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  },
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "vendorId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/api/admin/employees/{id}/permissions": {
+      "get": {
+        "summary": "Get employee + permissions + allKeys/labels",
+        "tags": [
+          "Admin Employees"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not an employee"
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace employee permissions",
+        "tags": [
+          "Admin Employees"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "permissions"
+                ],
+                "properties": {
+                  "permissions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": [
+                      "bookings",
+                      "vendors"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated"
+          }
+        }
+      }
+    },
+    "/api/admin/feedback": {
+      "get": {
+        "summary": "List all feedbacks (Admin)",
+        "description": "Advanced filtering, search, and pagination for admin dashboard.",
+        "tags": [
+          "Admin Feedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status"
+          },
+          {
+            "in": "query",
+            "name": "type"
+          },
+          {
+            "in": "query",
+            "name": "priority"
+          },
+          {
+            "in": "query",
+            "name": "search"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated feedbacks"
+          }
+        }
+      }
+    },
+    "/api/admin/feedback/{id}/status": {
+      "patch": {
+        "summary": "Update feedback status",
+        "description": "Change status (e.g. to RESOLVED). Includes automatic HandledBy assignment.",
+        "tags": [
+          "Admin Feedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated"
+          }
+        }
+      }
+    },
+    "/api/admin/feedback/{id}/reply": {
+      "post": {
+        "summary": "Reply to a feedback",
+        "description": "Post a reply to the customer's complaint or suggestion.",
+        "tags": [
+          "Admin Feedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Reply created"
+          }
+        }
+      }
+    },
+    "/api/admin/feedback/{id}": {
+      "delete": {
+        "summary": "Soft delete feedback",
+        "description": "Mark feedback as deleted without removing from database.",
+        "tags": [
+          "Admin Feedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/wallets": {
+      "get": {
+        "summary": "Get all wallets with pagination and search",
+        "tags": [
+          "Wallets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Items per page"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by email, phone, or name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of wallets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "wallets": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "pages": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/finance/wallet/credit": {
+      "post": {
+        "summary": "Credit a user's wallet",
+        "tags": [
+          "Wallets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "amount"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wallet credited successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/wallet/debit": {
+      "post": {
+        "summary": "Debit a user's wallet",
+        "tags": [
+          "Wallets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "amount"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wallet debited successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/wallet/{walletId}/transactions": {
+      "get": {
+        "summary": "Get wallet transactions history",
+        "tags": [
+          "Wallets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "walletId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Wallet ID"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of transactions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "transactions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "pages": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/finance/points/audit": {
+      "get": {
+        "summary": "Get points audit log",
+        "tags": [
+          "Wallets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by User ID"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Points audit log"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/points/adjust": {
+      "post": {
+        "summary": "Adjust user points (Credit/Debit)",
+        "tags": [
+          "Wallets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "amount"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "integer",
+                    "description": "Positive to add, negative to subtract"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Points adjusted successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/points/settings": {
+      "get": {
+        "summary": "Get points conversion rate settings",
+        "tags": [
+          "Wallets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Points settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "points": {
+                          "type": "number"
+                        },
+                        "currency": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Update points conversion rate settings",
+        "tags": [
+          "Wallets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "points",
+                  "currency"
+                ],
+                "properties": {
+                  "points": {
+                    "type": "number",
+                    "description": "Number of points"
+                  },
+                  "currency": {
+                    "type": "number",
+                    "description": "Equivalent currency value"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settings updated successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/settings": {
+      "get": {
+        "summary": "Get all system settings",
+        "tags": [
+          "Admin Settings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/towing": {
+      "get": {
+        "summary": "Get towing service settings",
+        "tags": [
+          "Admin Settings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Towing settings retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "example": "TOWING_SEARCH_RADIUS"
+                          },
+                          "value": {
+                            "type": "string",
+                            "example": "10"
+                          },
+                          "type": {
+                            "type": "string",
+                            "example": "NUMBER"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "descriptionAr": {
+                            "type": "string"
+                          },
+                          "isEditable": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/{key}": {
+      "put": {
+        "summary": "Update a system setting",
+        "tags": [
+          "Admin Settings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "TOWING_SEARCH_RADIUS"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "value"
+                ],
+                "properties": {
+                  "value": {
+                    "type": "string",
+                    "example": "15",
+                    "description": "New value for the setting"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Setting updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageAr": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/akfeek-journey/start": {
       "post": {
-        "summary": "Start Akfeek journey",
+        "summary": "بدء رحلة أكفيك — Start journey",
+        "description": "عميل فقط. لا يُسمح بأكثر من رحلة ACTIVE لنفس العميل (409).\nبعدها استخدم GET /me ثم فلو السحب/الورشة حسب currentStep (انظر وصف تاج Akfeek Journey في أعلى الصفحة).\n",
         "tags": [
           "Akfeek Journey"
         ],
@@ -748,7 +2440,8 @@
                 "properties": {
                   "vehicleId": {
                     "type": "string",
-                    "format": "uuid"
+                    "format": "uuid",
+                    "description": "مُستحسن — نفس المركبة تُستخدم في طلبات السحب"
                   }
                 }
               }
@@ -757,17 +2450,24 @@
         },
         "responses": {
           "201": {
-            "description": "Journey created"
+            "description": "تم الإنشاء — data.journey"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "ليس عميلاً"
           },
           "409": {
-            "description": "Active journey already exists"
+            "description": "رحلة نشطة موجودة — JOURNEY_ACTIVE"
           }
         }
       }
     },
     "/api/akfeek-journey/me": {
       "get": {
-        "summary": "Current customer journey and step summary",
+        "summary": "رحلتي النشطة — Current journey + steps + فاتورة الورشة إن وُجدت",
+        "description": "يعيد journey، steps (resolved/pending)، workshopInvoice، workshopInvoicePaid.\nإن اكتملت الشروط قد يُحدَّث status إلى COMPLETED تلقائياً.\n",
         "tags": [
           "Akfeek Journey"
         ],
@@ -775,12 +2475,65 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "journey أو journey null إن لا يوجد نشط"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/akfeek-journey/{id}/documents/{documentId}/file": {
+      "get": {
+        "summary": "تنزيل ملف وثيقة رحلة (عميل)",
+        "description": "الملفات لا تُخدم من /uploads مباشرة — استخدم هذا المسار مع Bearer.",
+        "tags": [
+          "Akfeek Journey"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "documentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ملف ثنائي (mime من المستند)"
+          },
+          "403": {
+            "description": "ليست رحلة العميل"
+          },
+          "404": {
+            "description": "غير موجود"
+          }
+        }
       }
     },
     "/api/akfeek-journey/{id}/abandon": {
       "patch": {
-        "summary": "Abandon journey",
+        "summary": "إلغاء الرحلة — Abandon",
         "tags": [
           "Akfeek Journey"
         ],
@@ -788,12 +2541,35 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم التحديث"
+          },
+          "400": {
+            "description": "حالة غير صالحة"
+          },
+          "404": {
+            "description": "غير موجود"
+          }
+        }
       }
     },
     "/api/akfeek-journey/{id}/step/{stepKey}/skip": {
       "patch": {
-        "summary": "Skip current step",
+        "summary": "تخطي الخطوة الحالية فقط",
+        "description": "stepKey يجب أن يساوي currentStep. قيم مسموحة:\nINSURANCE_TOW, INSURANCE_DOCS, TOW_TO_WORKSHOP, WORKSHOP_BOOKING, POST_REPAIR_TOW_HOME.\nPOST_REPAIR_TOW_HOME + skip = رفض العودة بالسحب وإكمال الرحلة.\n",
         "tags": [
           "Akfeek Journey"
         ],
@@ -801,12 +2577,50 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "stepKey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INSURANCE_TOW",
+                "INSURANCE_DOCS",
+                "TOW_TO_WORKSHOP",
+                "WORKSHOP_BOOKING",
+                "POST_REPAIR_TOW_HOME"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "رحلة محدثة"
+          },
+          "400": {
+            "description": "WRONG_STEP أو INVALID_STATE"
+          },
+          "404": {
+            "description": "Journey not found"
+          }
+        }
       }
     },
     "/api/akfeek-journey/{id}/step/{stepKey}/complete": {
       "patch": {
-        "summary": "Mark insurance documents step done without new uploads (INSURANCE_DOCS only)",
+        "summary": "إكمال خطوة وثائق التأمين بدون رفع ملفات جديدة",
+        "description": "يُقبل فقط عندما stepKey = INSURANCE_DOCS وهي الخطوة الحالية.",
         "tags": [
           "Akfeek Journey"
         ],
@@ -814,18 +2628,74 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "stepKey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INSURANCE_DOCS"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "WRONG_STEP أو complete فقط لـ INSURANCE_DOCS"
+          }
+        }
       }
     },
     "/api/akfeek-journey/{id}/step/{stepKey}/link": {
       "patch": {
-        "summary": "Link a booking to this step (towing or workshop)",
+        "summary": "ربط حجز بالخطوة الحالية (سحب أو ورشة)",
+        "description": "**يجب أن تكون stepKey = currentStep.**\n- INSURANCE_TOW, TOW_TO_WORKSHOP, POST_REPAIR_TOW_HOME: حجز سحب له jobBroadcast — أنشئه عبر POST /api/bookings/towing/request ثم القبول والدفع.\n- WORKSHOP_BOOKING: حجز ورشة معتمدة (workshopId) عبر POST /api/bookings؛ ثم دفع فاتورة الورشة حتى تُعتبر الخطوة مكتملة في الرحلة.\nلا يدعم INSURANCE_DOCS (استخدم رفع الوثائق أو complete/skip).\nBody: { \"bookingId\": \"uuid\" }\n",
         "tags": [
           "Akfeek Journey"
         ],
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "stepKey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INSURANCE_TOW",
+                "TOW_TO_WORKSHOP",
+                "WORKSHOP_BOOKING",
+                "POST_REPAIR_TOW_HOME"
+              ]
+            }
           }
         ],
         "requestBody": {
@@ -846,12 +2716,24 @@
               }
             }
           }
+        },
+        "responses": {
+          "200": {
+            "description": "رحلة محدثة؛ قد تصبح COMPLETED عند آخر خطوة"
+          },
+          "400": {
+            "description": "WRONG_STEP أو INVALID_BOOKING (نوع الحجز لا يطابق الخطوة)"
+          },
+          "409": {
+            "description": "الحجز مربوط برحلة أخرى"
+          }
         }
       }
     },
     "/api/akfeek-journey/{id}/documents": {
       "post": {
-        "summary": "Upload insurance documents (multipart, field files[])",
+        "summary": "رفع وثائق التأمين — multipart",
+        "description": "فقط أثناء currentStep = INSURANCE_DOCS.\nالحقل: **files** (مصفوفة ملفات)، حتى 12 ملفاً؛ JPEG, PNG, WebP, PDF؛ حتى ~15MB لكل ملف.\nاختياري: labels (JSON array) يوازي ترتيب الملفات.\n",
         "tags": [
           "Akfeek Journey"
         ],
@@ -859,7 +2741,49 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  },
+                  "labels": {
+                    "type": "string",
+                    "description": "JSON array of strings أو عنصر واحد"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم الرفع — data.journey"
+          },
+          "400": {
+            "description": "WRONG_STEP أو لا ملفات أو نوع مرفوض"
+          }
+        }
       }
     },
     "/api/auth/register": {
@@ -1210,6 +3134,20 @@
         "tags": [
           "Auto Part Categories"
         ],
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "in": "query",
+            "description": "CAR أو MOTORCYCLE لتصفية الفئات (الجذر + الفروع)",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CAR",
+                "MOTORCYCLE"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of categories",
@@ -1479,7 +3417,8 @@
             "name": "categoryId",
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Category id (includes selected category + subcategories)"
           },
           {
             "in": "query",
@@ -1495,6 +3434,18 @@
               "type": "string"
             },
             "description": "Filter products by vehicle brand"
+          },
+          {
+            "in": "query",
+            "name": "vehicleType",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CAR",
+                "MOTORCYCLE"
+              ]
+            },
+            "description": "Filter products by root category type"
           },
           {
             "$ref": "#/components/parameters/PageParam"
@@ -2064,9 +4015,10 @@
       },
       "post": {
         "summary": "Create booking (الورش المعتمدة / العناية الشاملة)",
-        "description": "إنشاء حجز جديد. يُستخدم لنوعين من الخدمات:\n\n**1) الورش المعتمدة (Certified Workshop):** أرسل workshopId + deliveryMethod، ثم إما:\n- **workshopServiceIds** — مصفوفة معرفات خدمات الورشة (من GET /api/workshops/{id}/services)، أو\n- **serviceIds** — مصفوفة معرفات الخدمات من الكتالوج العام.\n\n**2) العناية الشاملة (Comprehensive Care):** أرسل serviceIds فقط (بدون workshopId). serviceIds = خدمات تابعة لفيندور عناية شاملة.\n\n**3) ورش الغسيل (Car Wash):** نفس (2) — أرسل serviceIds فقط (خدمات تابعة لفيندور غسيل، من GET /api/services?category=CLEANING أو vendorId).\n\nCreate a new booking. (1) Certified Workshop — workshopId + deliveryMethod + workshopServiceIds or serviceIds; (2) Comprehensive Care; (3) Car Wash — serviceIds only (like 2).\n",
+        "description": "إنشاء حجز جديد. يُستخدم لنوعين من الخدمات:\n\n**1) الورش المعتمدة (Certified Workshop):** أرسل workshopId + deliveryMethod، ثم إما:\n- **workshopServiceIds** — مصفوفة معرفات خدمات الورشة (من GET /api/workshops/{id}/services)، أو\n- **serviceIds** — مصفوفة معرفات الخدمات من الكتالوج العام.\n\n**2) العناية الشاملة (Comprehensive Care):** أرسل serviceIds فقط (بدون workshopId). serviceIds = خدمات تابعة لفيندور عناية شاملة.\n\n**3) ورش الغسيل (Car Wash):** نفس (2) — أرسل serviceIds فقط (خدمات تابعة لفيندور غسيل، من GET /api/services?category=CLEANING أو vendorId).\n\n**رحلة أكفيك:** بعد إنشاء حجز ورشة معتمدة، اربطه بالرحلة عبر `PATCH /api/akfeek-journey/{journeyId}/step/WORKSHOP_BOOKING/link` مع `{ \"bookingId\" }` ثم ادفع فاتورة الورشة.\n\nCreate a new booking. (1) Certified Workshop — workshopId + deliveryMethod + workshopServiceIds or serviceIds; (2) Comprehensive Care; (3) Car Wash — serviceIds only (like 2).\n",
         "tags": [
           "Bookings",
+          "Akfeek Journey",
           "1. الورش المعتمدة (Certified Workshops)",
           "2. ورش الغسيل (Car Wash)",
           "3. العناية الشاملة (Comprehensive Care)"
@@ -2436,7 +4388,7 @@
     "/api/bookings/{id}/inspection-report": {
       "get": {
         "summary": "Get inspection report for booking (customer / workshop vendor / admin)",
-        "description": "تقرير التقييم/الكشف للورشة المعتمدة مع البنود وتقدير التكلفة. يُحدَّث من الورشة عبر PUT /api/workshops/profile/me/bookings/{bookingId}/inspection.\nWhen status is COMPLETED/APPROVED, invoice gains INSPECTION_LINE / REPAIR_ESTIMATE rows (if unpaid).\n",
+        "description": "تقرير التقييم/الكشف للورشة المعتمدة مع البنود وتقدير التكلفة. يُحدَّث من الورشة عبر PUT /api/workshops/profile/me/bookings/{bookingId}/inspection.\nWhen status is COMPLETED/APPROVED: if unpaid, invoice gains INSPECTION_LINE / REPAIR_ESTIMATE; if already paid, report becomes PENDING_CUSTOMER until PATCH .../inspection-supplement/approve or reject.\n",
         "tags": [
           "Bookings",
           "1. الورش المعتمدة (Certified Workshops)"
@@ -2530,10 +4482,11 @@
     "/api/bookings/{id}/confirm": {
       "patch": {
         "summary": "Confirm booking (Vendor – Certified Workshop)",
-        "description": "فيندور الورشة المعتمدة يؤكد الحجز (PENDING → CONFIRMED).\nCertified workshop vendor confirms a pending booking for their workshop.\n",
+        "description": "فيندور الورشة المعتمدة يؤكد الحجز (PENDING → CONFIRMED).\nCertified workshop vendor confirms a pending booking for their workshop.\n**رحلة أكفيك:** قد يُنشأ/يُتاح دفع فاتورة الورشة بعد التأكيد — ثم `PATCH /api/invoices/my/{id}/pay` لإكمال خطوة WORKSHOP_BOOKING.\n",
         "tags": [
           "Bookings",
-          "1. الورش المعتمدة (Certified Workshops)"
+          "1. الورش المعتمدة (Certified Workshops)",
+          "Akfeek Journey"
         ],
         "security": [
           {
@@ -4016,6 +5969,68 @@
         }
       }
     },
+    "/api/dashboard/stats": {
+      "get": {
+        "summary": "Dashboard KPI stats",
+        "description": "أدمن أو فيندور — أرقام ملخصة للوحة التحكم",
+        "tags": [
+          "Dashboard"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/dashboard/analytics": {
+      "get": {
+        "summary": "Platform analytics (admin only)",
+        "tags": [
+          "Dashboard"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "403": {
+            "description": "Admin only"
+          }
+        }
+      }
+    },
+    "/api/dashboard/all-sub-services": {
+      "get": {
+        "summary": "All sub-services for dashboard filters / overview",
+        "description": "أدمن أو فيندور",
+        "tags": [
+          "Dashboard"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/feedback": {
       "post": {
         "summary": "Submit new complaint or suggestion",
@@ -4150,6 +6165,131 @@
           },
           "404": {
             "description": "Feedback not found"
+          }
+        }
+      }
+    },
+    "/api/role-labels": {
+      "get": {
+        "summary": "Human-readable role labels for UI (AR/EN map)",
+        "description": "تسميات الأدوار للعرض في الواجهة — عام بدون توكن",
+        "tags": [
+          "Reference"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Map of role key to { en, ar }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "en": {
+                            "type": "string"
+                          },
+                          "ar": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inspections": {
+      "get": {
+        "summary": "List inspection reports (paginated)",
+        "description": "أدمن أو فني — query page, limit, status",
+        "tags": [
+          "Inspections"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/inspections/{id}": {
+      "get": {
+        "summary": "Get inspection report by ID",
+        "description": "أدمن/فني؛ أو عميل إن كان التقرير لحجزه",
+        "tags": [
+          "Inspections"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
           }
         }
       }
@@ -4323,11 +6463,13 @@
     "/api/invoices/my/{id}/pay": {
       "patch": {
         "summary": "Pay my invoice (Customer) — دفع فاتورتي",
-        "description": "العميل يدفع فاتورته (method: CARD أو WALLET). يُستخدم في فلو العناية الشاملة وورش الغسيل بعد الحجز.\nCustomer pays their invoice. Used in Comprehensive Care and Car Wash flows after booking.\n",
+        "description": "العميل يدفع فاتورته (method: CARD أو WALLET).\n**الاستخدام:** العناية الشاملة، ورش الغسيل، **سحب الونش** (بعد قبول العرض)، **فاتورة الورشة المعتمدة** ضمن **رحلة أكفيك** (بعد PATCH .../WORKSHOP_BOOKING/link حتى تُكمَل خطوة الورشة).\n",
         "tags": [
           "Invoices",
+          "Akfeek Journey",
           "2. ورش الغسيل (Car Wash)",
-          "3. العناية الشاملة (Comprehensive Care)"
+          "3. العناية الشاملة (Comprehensive Care)",
+          "4. Towing"
         ],
         "security": [
           {
@@ -7026,6 +9168,85 @@
         }
       }
     },
+    "/api/payments": {
+      "get": {
+        "summary": "List payments",
+        "description": "عميل يرى مدفوعاته فقط. أدمن أو موظف بصلاحية payments يرى الكل.\nQuery page, limit, status (e.g. COMPLETED).\n",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated payments"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/payments/{id}": {
+      "get": {
+        "summary": "Get payment by ID",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
     "/api/ratings": {
       "get": {
         "summary": "List all ratings and reviews (Admin only)",
@@ -7360,6 +9581,57 @@
         "responses": {
           "200": {
             "description": "Service deleted"
+          }
+        }
+      }
+    },
+    "/api/supplies": {
+      "get": {
+        "summary": "List supply requests",
+        "description": "أدمن، مورد، أو فني — حسب منطق المتحكم",
+        "tags": [
+          "Supply Requests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/supplies/{id}": {
+      "get": {
+        "summary": "Get supply request by ID",
+        "tags": [
+          "Supply Requests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not found"
           }
         }
       }
@@ -8359,9 +10631,10 @@
     "/api/bookings/towing/request": {
       "post": {
         "summary": "1. إنشاء طلب سحب (ونش) — Create towing request",
-        "description": "العميل يحدد موقع الالتقاط (من أين) والجهة/الوجهة (إلى أين) مع إحداثيات كل منهما (latitude, longitude, address).\nالمسافة تُحسب من الإحداثيات، وعندما فيندور الوينش يوافق يُرد عليه السعر المحسوب من (basePrice + مسافة الرحلة × pricePerKm).\nيُنشأ الحجز والبث ويُرسل push للوينشات القريبة عبر Socket (winch:new_request). ثم GET offers ثم POST accept.\n",
+        "description": "العميل يحدد موقع الالتقاط (من أين) والجهة/الوجهة (إلى أين) مع إحداثيات كل منهما (latitude, longitude, address).\nالمسافة تُحسب من الإحداثيات، وعندما فيندور الوينش يوافق يُرد عليه السعر المحسوب من (basePrice + مسافة الرحلة × pricePerKm).\nيُنشأ الحجز والبث ويُرسل push للوينشات القريبة عبر Socket (winch:new_request). ثم GET offers ثم POST accept.\n**رحلة أكفيك:** بعد الدفع اربط `bookingId` بـ `PATCH /api/akfeek-journey/{journeyId}/step/{INSURANCE_TOW|TOW_TO_WORKSHOP|POST_REPAIR_TOW_HOME}/link`.\n",
         "tags": [
-          "4. Towing"
+          "4. Towing",
+          "Akfeek Journey"
         ],
         "security": [
           {
@@ -8779,7 +11052,7 @@
     "/api/bookings/towing/{broadcastId}/offers/{offerId}/accept": {
       "post": {
         "summary": "4. قبول عرض الوينش — Accept winch offer",
-        "description": "العميل يوافق على عرض فيندور الوينش. يُربط الحجز بفيندور الوينش ويُسجّل نسبة عمولة المنصة وقت الحجز، ويُنشأ فاتورة (PENDING).\nالدفع: PATCH /api/invoices/{id}/mark-paid — إيداع حصة الفيندور في محفظته وخصم عمولة المنصة (النسبة المسجلة وقت الحجز)، ثم يتفتح السوكت للتتبع. استخدم data.invoice.id.\n",
+        "description": "العميل يوافق على عرض فيندور الوينش. يُربط الحجز بفيندور الوينش ويُسجّل نسبة عمولة المنصة وقت الحجز، ويُنشأ فاتورة (PENDING).\n**دفع العميل:** `PATCH /api/invoices/my/{invoiceId}/pay` (method: CARD أو WALLET) — ثم يتفتح السوكت للتتبع. استخدم `data.invoice.id` من الاستجابة.\n**أدمن/صلاحية فواتير:** `PATCH /api/invoices/{id}/mark-paid`.\n**رحلة أكفيك:** بعد الدفع استخدم `PATCH /api/akfeek-journey/{journeyId}/step/INSURANCE_TOW|...|link` مع `bookingId` نفس حجز السحب.\n",
         "tags": [
           "4. Towing"
         ],
@@ -10378,6 +12651,27 @@
         }
       }
     },
+    "/api/wallets": {
+      "get": {
+        "summary": "Get my wallet (balance + recent context)",
+        "tags": [
+          "Wallets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet data for authenticated user"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
     "/api/winches/my": {
       "get": {
         "summary": "1. ونشي — Get my winch (Winch vendor)",
@@ -11225,9 +13519,10 @@
     "/api/workshops": {
       "get": {
         "summary": "Get all certified workshops",
-        "description": "Retrieve a list of active and verified workshops with optional filtering",
+        "description": "Retrieve a list of active and verified workshops with optional filtering.\n**رحلة أكفيك:** اختر ورشة ثم GET /api/workshops/{id}/services ثم POST /api/bookings لخطوة WORKSHOP_BOOKING.\n",
         "tags": [
-          "1. الورش المعتمدة (Certified Workshops)"
+          "1. الورش المعتمدة (Certified Workshops)",
+          "Akfeek Journey"
         ],
         "security": [
           {
@@ -11432,6 +13727,19 @@
             "description": "Not a certified workshop vendor"
           }
         }
+      }
+    },
+    "/api/workshops/profile/me/bookings/{bookingId}/akfeek-journey/documents": {
+      "get": {
+        "summary": "List Akfeek journey insurance documents for this workshop booking (vendor)",
+        "tags": [
+          "1. الورش المعتمدة (Certified Workshops)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/workshops/profile/me/bookings/{bookingId}/inspection": {
@@ -12388,10 +14696,11 @@
     "/api/workshops/{id}/services": {
       "get": {
         "summary": "Get workshop services (list for booking)",
-        "description": "Retrieve all active services offered by a certified workshop (id, name, price, duration).\nUse these IDs in POST /api/bookings with workshopId + workshopServiceIds to book workshop-specific services.\nقائمة خدمات الورشة المعتمدة (للعميل) — استخدم معرفات الخدمات في حجز ورشة مع workshopServiceIds.\n",
+        "description": "Retrieve all active services offered by a certified workshop (id, name, price, duration).\nUse these IDs in POST /api/bookings with workshopId + workshopServiceIds to book workshop-specific services.\nقائمة خدمات الورشة المعتمدة (للعميل) — استخدم معرفات الخدمات في حجز ورشة مع workshopServiceIds.\n**رحلة أكفيك:** خطوة WORKSHOP_BOOKING — بعد POST /api/bookings ثم PATCH .../link.\n",
         "tags": [
           "1. الورش المعتمدة (Certified Workshops)",
-          "Bookings"
+          "Bookings",
+          "Akfeek Journey"
         ],
         "security": [
           {
@@ -12483,1293 +14792,6 @@
           },
           "404": {
             "description": "Workshop not found"
-          }
-        }
-      }
-    },
-    "/api/admin/akfeek-journey": {
-      "get": {
-        "summary": "List Akfeek journeys (admin)",
-        "tags": [
-          "Akfeek Journey"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            }
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "COMPLETED",
-                "ABANDONED"
-              ]
-            }
-          }
-        ]
-      }
-    },
-    "/api/admin/banners": {
-      "get": {
-        "summary": "(Admin) List banners",
-        "tags": [
-          "Banners"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "position",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "TOP",
-                "BOTTOM"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List banners"
-          }
-        }
-      },
-      "post": {
-        "summary": "(Admin) Create banner",
-        "tags": [
-          "Banners"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "position"
-                ],
-                "properties": {
-                  "position": {
-                    "type": "string",
-                    "enum": [
-                      "TOP",
-                      "BOTTOM"
-                    ]
-                  },
-                  "title": {
-                    "type": "string",
-                    "nullable": true
-                  },
-                  "titleAr": {
-                    "type": "string",
-                    "nullable": true
-                  },
-                  "isActive": {
-                    "type": "boolean",
-                    "default": true
-                  },
-                  "sortOrder": {
-                    "type": "integer",
-                    "default": 0
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created"
-          }
-        }
-      }
-    },
-    "/api/admin/banners/{id}": {
-      "put": {
-        "summary": "(Admin) Update banner",
-        "tags": [
-          "Banners"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "position": {
-                    "type": "string",
-                    "enum": [
-                      "TOP",
-                      "BOTTOM"
-                    ]
-                  },
-                  "title": {
-                    "type": "string",
-                    "nullable": true
-                  },
-                  "titleAr": {
-                    "type": "string",
-                    "nullable": true
-                  },
-                  "isActive": {
-                    "type": "boolean"
-                  },
-                  "sortOrder": {
-                    "type": "integer"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Updated"
-          }
-        }
-      },
-      "delete": {
-        "summary": "(Admin) Delete banner",
-        "tags": [
-          "Banners"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Deleted"
-          }
-        }
-      }
-    },
-    "/api/admin/banners/{id}/images": {
-      "post": {
-        "summary": "(Admin) Upload banner images (multiple)",
-        "description": "Upload one or many images for a banner.\nSupported field names: `images` (array) or `image` (single).\nMax file size per image: 10MB. Allowed: JPEG/PNG/WebP.\n",
-        "tags": [
-          "Banners"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "images": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "binary"
-                    },
-                    "description": "Preferred field for multiple files"
-                  },
-                  "image": {
-                    "type": "string",
-                    "format": "binary",
-                    "description": "Alternative field name for single file"
-                  },
-                  "linkUrl": {
-                    "type": "string",
-                    "description": "Optional URL applied to uploaded images"
-                  }
-                }
-              },
-              "encoding": {
-                "images": {
-                  "style": "form"
-                },
-                "image": {
-                  "style": "form"
-                }
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "cURL",
-            "source": "curl -X POST \"http://localhost:3000/api/admin/banners/{id}/images\" \\\n  -H \"Authorization: Bearer <token>\" \\\n  -F \"images=@/path/banner-1.jpg\" \\\n  -F \"images=@/path/banner-2.png\" \\\n  -F \"linkUrl=https://example.com\"\n"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Uploaded"
-          },
-          "400": {
-            "description": "No images found in request / invalid file type"
-          },
-          "404": {
-            "description": "Banner not found"
-          }
-        }
-      }
-    },
-    "/api/admin/banners/{id}/images/{imageId}": {
-      "delete": {
-        "summary": "(Admin) Delete one banner image",
-        "tags": [
-          "Banners"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "in": "path",
-            "name": "imageId",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Deleted"
-          }
-        }
-      }
-    },
-    "/api/admin/feedback": {
-      "get": {
-        "summary": "List all feedbacks (Admin)",
-        "description": "Advanced filtering, search, and pagination for admin dashboard.",
-        "tags": [
-          "Admin Feedback"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "status"
-          },
-          {
-            "in": "query",
-            "name": "type"
-          },
-          {
-            "in": "query",
-            "name": "priority"
-          },
-          {
-            "in": "query",
-            "name": "search"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated feedbacks"
-          }
-        }
-      }
-    },
-    "/api/admin/feedback/{id}/status": {
-      "patch": {
-        "summary": "Update feedback status",
-        "description": "Change status (e.g. to RESOLVED). Includes automatic HandledBy assignment.",
-        "tags": [
-          "Admin Feedback"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Updated"
-          }
-        }
-      }
-    },
-    "/api/admin/feedback/{id}/reply": {
-      "post": {
-        "summary": "Reply to a feedback",
-        "description": "Post a reply to the customer's complaint or suggestion.",
-        "tags": [
-          "Admin Feedback"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Reply created"
-          }
-        }
-      }
-    },
-    "/api/admin/feedback/{id}": {
-      "delete": {
-        "summary": "Soft delete feedback",
-        "description": "Mark feedback as deleted without removing from database.",
-        "tags": [
-          "Admin Feedback"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Deleted"
-          }
-        }
-      }
-    },
-    "/api/admin/finance/wallets": {
-      "get": {
-        "summary": "Get all wallets with pagination and search",
-        "tags": [
-          "Wallets"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            },
-            "description": "Page number"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 10
-            },
-            "description": "Items per page"
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Search by email, phone, or name"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of wallets",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "wallets": {
-                          "type": "array",
-                          "items": {
-                            "type": "object"
-                          }
-                        },
-                        "total": {
-                          "type": "integer"
-                        },
-                        "pages": {
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/finance/wallet/credit": {
-      "post": {
-        "summary": "Credit a user's wallet",
-        "tags": [
-          "Wallets"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "userId",
-                  "amount"
-                ],
-                "properties": {
-                  "userId": {
-                    "type": "string"
-                  },
-                  "amount": {
-                    "type": "number"
-                  },
-                  "reason": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Wallet credited successfully"
-          }
-        }
-      }
-    },
-    "/api/admin/finance/wallet/debit": {
-      "post": {
-        "summary": "Debit a user's wallet",
-        "tags": [
-          "Wallets"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "userId",
-                  "amount"
-                ],
-                "properties": {
-                  "userId": {
-                    "type": "string"
-                  },
-                  "amount": {
-                    "type": "number"
-                  },
-                  "reason": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Wallet debited successfully"
-          }
-        }
-      }
-    },
-    "/api/admin/finance/wallet/{walletId}/transactions": {
-      "get": {
-        "summary": "Get wallet transactions history",
-        "tags": [
-          "Wallets"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "walletId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Wallet ID"
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            },
-            "description": "Page number"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 10
-            },
-            "description": "Items per page"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of transactions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "transactions": {
-                          "type": "array",
-                          "items": {
-                            "type": "object"
-                          }
-                        },
-                        "total": {
-                          "type": "integer"
-                        },
-                        "pages": {
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/finance/points/audit": {
-      "get": {
-        "summary": "Get points audit log",
-        "tags": [
-          "Wallets"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "userId",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Filter by User ID"
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            },
-            "description": "Page number"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            },
-            "description": "Items per page"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Points audit log"
-          }
-        }
-      }
-    },
-    "/api/admin/finance/points/adjust": {
-      "post": {
-        "summary": "Adjust user points (Credit/Debit)",
-        "tags": [
-          "Wallets"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "userId",
-                  "amount"
-                ],
-                "properties": {
-                  "userId": {
-                    "type": "string"
-                  },
-                  "amount": {
-                    "type": "integer",
-                    "description": "Positive to add, negative to subtract"
-                  },
-                  "reason": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Points adjusted successfully"
-          }
-        }
-      }
-    },
-    "/api/admin/finance/points/settings": {
-      "get": {
-        "summary": "Get points conversion rate settings",
-        "tags": [
-          "Wallets"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Points settings",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "points": {
-                          "type": "number"
-                        },
-                        "currency": {
-                          "type": "number"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Update points conversion rate settings",
-        "tags": [
-          "Wallets"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "points",
-                  "currency"
-                ],
-                "properties": {
-                  "points": {
-                    "type": "number",
-                    "description": "Number of points"
-                  },
-                  "currency": {
-                    "type": "number",
-                    "description": "Equivalent currency value"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Settings updated successfully"
-          }
-        }
-      }
-    },
-    "/api/admin/settings": {
-      "get": {
-        "summary": "Get all system settings",
-        "tags": [
-          "Admin Settings"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Settings retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "object",
-                      "additionalProperties": {
-                        "type": "array"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/settings/towing": {
-      "get": {
-        "summary": "Get towing service settings",
-        "tags": [
-          "Admin Settings"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Towing settings retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "key": {
-                            "type": "string",
-                            "example": "TOWING_SEARCH_RADIUS"
-                          },
-                          "value": {
-                            "type": "string",
-                            "example": "10"
-                          },
-                          "type": {
-                            "type": "string",
-                            "example": "NUMBER"
-                          },
-                          "description": {
-                            "type": "string"
-                          },
-                          "descriptionAr": {
-                            "type": "string"
-                          },
-                          "isEditable": {
-                            "type": "boolean"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/settings/{key}": {
-      "put": {
-        "summary": "Update a system setting",
-        "tags": [
-          "Admin Settings"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "key",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "TOWING_SEARCH_RADIUS"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "value"
-                ],
-                "properties": {
-                  "value": {
-                    "type": "string",
-                    "example": "15",
-                    "description": "New value for the setting"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Setting updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageAr": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "key": {
-                          "type": "string"
-                        },
-                        "value": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/addresses": {
-      "get": {
-        "summary": "Get user addresses - جلب عناوين المستخدم",
-        "description": "Retrieve all addresses for the authenticated user",
-        "tags": [
-          "Addresses"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of user addresses",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Address"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required"
-          }
-        }
-      },
-      "post": {
-        "summary": "Create address - إضافة عنوان جديد",
-        "description": "Create a new address for the authenticated user",
-        "tags": [
-          "Addresses"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddressInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Address created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageAr": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/Address"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error - Missing required fields"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/addresses/{id}": {
-      "get": {
-        "summary": "Get address by ID - جلب عنوان بالمعرف",
-        "description": "Retrieve a specific address by ID (must belong to authenticated user)",
-        "tags": [
-          "Addresses"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Address ID"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Address details",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/Address"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Address not found"
-          }
-        }
-      },
-      "put": {
-        "summary": "Update address - تعديل عنوان",
-        "description": "Update an existing address (must belong to authenticated user)",
-        "tags": [
-          "Addresses"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Address ID"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddressInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Address updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageAr": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/Address"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Address not found"
-          }
-        }
-      },
-      "delete": {
-        "summary": "Delete address - حذف عنوان",
-        "description": "Delete an address (must belong to authenticated user)",
-        "tags": [
-          "Addresses"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Address ID"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Address deleted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageAr": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "object"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Address not found"
           }
         }
       }

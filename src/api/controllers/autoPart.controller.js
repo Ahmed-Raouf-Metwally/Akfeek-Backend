@@ -11,9 +11,31 @@ class AutoPartController {
    */
   async getAllParts(req, res, next) {
     try {
-      const { category, vendor, vehicleModel, vehicleBrandId, search, isActive, isApproved, status } = req.query;
+      const {
+        category,
+        categoryId,
+        vendor,
+        vehicleModel,
+        vehicleBrandId,
+        vehicleType,
+        search,
+        isActive,
+        isApproved,
+        status,
+      } = req.query;
       const parts = await autoPartService.getAllParts(
-        { category, vendor, vehicleModel, vehicleBrandId, search, isActive, isApproved, status },
+        {
+          category,
+          categoryId,
+          vendor,
+          vehicleModel,
+          vehicleBrandId,
+          vehicleType,
+          search,
+          isActive,
+          isApproved,
+          status,
+        },
         req.user
       );
 

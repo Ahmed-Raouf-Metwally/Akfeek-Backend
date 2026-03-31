@@ -6,12 +6,44 @@ function addDays(days) {
   return d;
 }
 
+function couponTemplates(vendor) {
+  const key = String(vendor.vendorType || 'VENDOR').replace(/[^A-Z]/g, '').slice(0, 4) || 'VNDR';
+  const id4 = vendor.id.slice(0, 4).toUpperCase();
+  return [
+    {
+      code: `${key}NEW${id4}`, // New-customer style coupon
+      discountType: 'PERCENT',
+      discountValue: 10,
+      minOrderAmount: 100,
+      maxUses: 300,
+      validDays: 120,
+    },
+    {
+      code: `${key}SAVE${id4}`, // Normal seasonal coupon
+      discountType: 'PERCENT',
+      discountValue: 15,
+      minOrderAmount: 200,
+      maxUses: 200,
+      validDays: 90,
+    },
+    {
+      code: `${key}FIX${id4}`, // Fixed value coupon
+      discountType: 'FIXED',
+      discountValue: 50,
+      minOrderAmount: 300,
+      maxUses: 150,
+      validDays: 75,
+    },
+  ];
+}
+
 async function main() {
-  console.log('🎟️ Seeding coupons for vendors...');
+  console.log('🎟️ Seeding vendor-specific coupons...');
 
   const vendors = await prisma.vendorProfile.findMany({
     where: { status: 'ACTIVE' },
-    select: { id: true, vendorType: true, businessName: true },
+    select: { id: true, vendorType: true, businessName: true, businessNameAr: true },
+    orderBy: { createdAt: 'asc' },
   });
 
   if (!vendors.length) {
@@ -19,64 +51,42 @@ async function main() {
     return;
   }
 
-  let createdOrUpdated = 0;
+  let upserts = 0;
   for (const v of vendors) {
-    const code1 = `${String(v.vendorType).slice(0, 3)}10${v.id.slice(0, 4)}`.toUpperCase();
-    const code2 = `${String(v.vendorType).slice(0, 3)}50${v.id.slice(0, 4)}`.toUpperCase();
+    const templates = couponTemplates(v);
+    for (const tpl of templates) {
+      await prisma.coupon.upsert({
+        where: { vendorId_code: { vendorId: v.id, code: tpl.code } },
+        update: {
+          discountType: tpl.discountType,
+          discountValue: tpl.discountValue,
+          minOrderAmount: tpl.minOrderAmount,
+          validFrom: new Date(),
+          validUntil: addDays(tpl.validDays),
+          maxUses: tpl.maxUses,
+          isActive: true,
+        },
+        create: {
+          vendorId: v.id,
+          code: tpl.code,
+          discountType: tpl.discountType,
+          discountValue: tpl.discountValue,
+          minOrderAmount: tpl.minOrderAmount,
+          validFrom: new Date(),
+          validUntil: addDays(tpl.validDays),
+          maxUses: tpl.maxUses,
+          isActive: true,
+        },
+      });
+      upserts += 1;
+    }
 
-    await prisma.coupon.upsert({
-      where: { vendorId_code: { vendorId: v.id, code: code1 } },
-      update: {
-        discountType: 'PERCENT',
-        discountValue: 10,
-        minOrderAmount: 100,
-        validFrom: new Date(),
-        validUntil: addDays(120),
-        maxUses: 300,
-        isActive: true,
-      },
-      create: {
-        vendorId: v.id,
-        code: code1,
-        discountType: 'PERCENT',
-        discountValue: 10,
-        minOrderAmount: 100,
-        validFrom: new Date(),
-        validUntil: addDays(120),
-        maxUses: 300,
-        isActive: true,
-      },
-    });
-
-    await prisma.coupon.upsert({
-      where: { vendorId_code: { vendorId: v.id, code: code2 } },
-      update: {
-        discountType: 'FIXED',
-        discountValue: 50,
-        minOrderAmount: 250,
-        validFrom: new Date(),
-        validUntil: addDays(120),
-        maxUses: 200,
-        isActive: true,
-      },
-      create: {
-        vendorId: v.id,
-        code: code2,
-        discountType: 'FIXED',
-        discountValue: 50,
-        minOrderAmount: 250,
-        validFrom: new Date(),
-        validUntil: addDays(120),
-        maxUses: 200,
-        isActive: true,
-      },
-    });
-
-    createdOrUpdated += 2;
+    const vendorLabel = v.businessNameAr || v.businessName || v.id.slice(0, 8);
+    console.log(`   ✅ ${vendorLabel} (${v.vendorType}): ${templates.map((t) => t.code).join(', ')}`);
   }
 
   const total = await prisma.coupon.count();
-  console.log(`✅ Coupons seeded/updated: ${createdOrUpdated}, total coupons: ${total}`);
+  console.log(`\n✅ Coupons seeded/updated: ${upserts}, total coupons: ${total}`);
 }
 
 main()

@@ -7,18 +7,54 @@ const logger = require('../utils/logger/logger');
  * Handles CRUD operations for auto part categories
  */
 class AutoPartCategoryService {
+  async getCategoryIdsForVehicleType(vehicleType) {
+    const normalized = String(vehicleType || '').toUpperCase();
+    if (!['CAR', 'MOTORCYCLE'].includes(normalized)) return [];
+
+    const roots = await prisma.autoPartCategory.findMany({
+      where: { parentId: null, rootType: normalized },
+      select: { id: true },
+    });
+    if (!roots.length) return [];
+
+    const collected = new Set(roots.map((r) => r.id));
+    let frontier = roots.map((r) => r.id);
+
+    while (frontier.length) {
+      const children = await prisma.autoPartCategory.findMany({
+        where: { parentId: { in: frontier } },
+        select: { id: true },
+      });
+      const next = [];
+      for (const c of children) {
+        if (!collected.has(c.id)) {
+          collected.add(c.id);
+          next.push(c.id);
+        }
+      }
+      frontier = next;
+    }
+
+    return Array.from(collected);
+  }
+
   /**
    * Get all categories with optional filters
    * @param {Object} filters - Filter options
    * @returns {Array} List of categories
    */
   async getAllCategories(filters = {}) {
-    const { isActive, parentId } = filters;
+    const { isActive, parentId, vehicleType } = filters;
 
     const where = {
       ...(isActive !== undefined && { isActive: isActive === 'true' }),
       ...(parentId !== undefined && { parentId: parentId === 'null' ? null : parentId }),
     };
+
+    if (vehicleType) {
+      const ids = await this.getCategoryIdsForVehicleType(vehicleType);
+      where.id = { in: ids.length ? ids : ['__none__'] };
+    }
 
     const categories = await prisma.autoPartCategory.findMany({
       where,

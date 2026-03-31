@@ -20,6 +20,7 @@ const requireRole = require('../middlewares/role.middleware');
  *         name: categoryId
  *         schema:
  *           type: string
+ *         description: Category id (includes selected category + subcategories)
  *       - in: query
  *         name: vendorId
  *         schema:
@@ -29,6 +30,12 @@ const requireRole = require('../middlewares/role.middleware');
  *         schema:
  *           type: string
  *         description: Filter products by vehicle brand
+ *       - in: query
+ *         name: vehicleType
+ *         schema:
+ *           type: string
+ *           enum: [CAR, MOTORCYCLE]
+ *         description: Filter products by root category type
  *       - $ref: '#/components/parameters/PageParam'
  *       - $ref: '#/components/parameters/LimitParam'
  *     responses:
