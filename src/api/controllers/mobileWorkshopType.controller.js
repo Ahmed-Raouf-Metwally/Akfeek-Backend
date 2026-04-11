@@ -34,13 +34,14 @@ async function getTypeById(req, res, next) {
 
 async function createType(req, res, next) {
   try {
-    const { name, nameAr, description, serviceType, sortOrder, isActive } = req.body;
+    const { name, nameAr, description, serviceType, sortOrder, isActive, imageUrl } = req.body;
     if (!name) throw new AppError('name is required', 400, 'VALIDATION_ERROR');
     const type = await prisma.mobileWorkshopType.create({
       data: {
         name,
         nameAr: nameAr || null,
         description: description || null,
+        imageUrl: imageUrl || null,
         serviceType: serviceType ? String(serviceType).toUpperCase() : 'GENERAL',
         sortOrder: sortOrder != null ? parseInt(sortOrder) : 0,
         isActive: isActive !== false,
@@ -54,7 +55,7 @@ async function updateType(req, res, next) {
   try {
     const existing = await prisma.mobileWorkshopType.findUnique({ where: { id: req.params.id } });
     if (!existing) throw new AppError('Workshop type not found', 404, 'NOT_FOUND');
-    const { name, nameAr, description, serviceType, sortOrder, isActive } = req.body;
+    const { name, nameAr, description, serviceType, sortOrder, isActive, imageUrl } = req.body;
     const type = await prisma.mobileWorkshopType.update({
       where: { id: req.params.id },
       data: {
@@ -64,6 +65,7 @@ async function updateType(req, res, next) {
         ...(serviceType !== undefined && { serviceType: String(serviceType).toUpperCase() }),
         ...(sortOrder !== undefined && { sortOrder: parseInt(sortOrder) }),
         ...(isActive !== undefined && { isActive: Boolean(isActive) }),
+        ...(imageUrl !== undefined && { imageUrl }),
       },
     });
     res.json({ success: true, data: type });

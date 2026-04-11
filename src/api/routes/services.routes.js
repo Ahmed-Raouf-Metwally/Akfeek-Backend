@@ -21,7 +21,9 @@ router.post('/upload-image', requireRole(['ADMIN', 'VENDOR']), uploadServiceImag
  *       Retrieve a list of all available services with filtering.
  *       **ورش الغسيل (Car Wash):** استخدم category=CLEANING لخدمات الغسيل، أو vendorId={id} لخدمات فيندور غسيل معيّن.
  *       **العناية الشاملة:** استخدم category=COMPREHENSIVE_CARE أو vendorId=me (مع تسجيل دخول الفيندور).
- *     tags: [Services, 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
+ *       **الورش المعتمدة:** استخدم category=CERTIFIED_WORKSHOP
+ *       **الورش المتنقلة:** استخدم category=MAINTENANCE
+ *     tags: [Services, 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care), 4. الورش المعتمدة (Certified Workshop), 5. الورش المتنقلة (Mobile Workshop)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -50,6 +52,214 @@ router.post('/upload-image', requireRole(['ADMIN', 'VENDOR']), uploadServiceImag
  *         description: List of services retrieved
  */
 router.get('/', serviceController.getAllServices);
+
+const serviceCatalogService = require('../../services/service.service');
+
+/**
+ * @swagger
+ * /api/services/car-wash:
+ *   get:
+ *     summary: Get all car wash services
+ *     description: Returns all active services with category CLEANING (ورش الغسيل)
+ *     tags: [Services, 2. ورش الغسيل (Car Wash)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: vendorId
+ *         schema:
+ *           type: string
+ *         description: Optional filter by vendor ID, or 'all' for all vendors
+ *     responses:
+ *       200:
+ *         description: List of car wash services
+ */
+router.get('/car-wash', async (req, res, next) => {
+  try {
+    const { vendorId } = req.query;
+    const filters = { category: 'CLEANING' };
+    if (vendorId && vendorId !== 'all') filters.vendorId = vendorId;
+    const services = await serviceCatalogService.getAllServices(filters, req.user);
+    res.json({ success: true, data: services });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @swagger
+ * /api/services/car-wash/{vendorId}:
+ *   get:
+ *     summary: Get car wash services for specific vendor
+ *     description: Returns all active CLEANING services for a specific car wash vendor
+ *     tags: [Services, 2. ورش الغسيل (Car Wash)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: vendorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Vendor ID (UUID)
+ *     responses:
+ *       200:
+ *         description: List of car wash services for this vendor
+ */
+router.get('/car-wash/:vendorId', async (req, res, next) => {
+  try {
+    const services = await serviceCatalogService.getAllServices({ 
+      category: 'CLEANING', 
+      isActive: 'true',
+      vendorId: req.params.vendorId 
+    }, req.user);
+    res.json({ success: true, data: services });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @swagger
+ * /api/services/comprehensive-care:
+ *   get:
+ *     summary: Get all comprehensive care services
+ *     description: Returns all active services with category COMPREHENSIVE_CARE (العناية الشاملة)
+ *     tags: [Services, 3. العناية الشاملة (Comprehensive Care)]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of comprehensive care services
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 - id: "uuid"
+ *                   name: "Premium Polish"
+ *                   nameAr: "تلميع فاخر"
+ *                   category: "COMPREHENSIVE_CARE"
+ *                   type: "CATALOG"
+ *                   isActive: true
+ *                   estimatedDuration: 120
+ */
+router.get('/comprehensive-care', async (req, res, next) => {
+  try {
+    const { vendorId } = req.query;
+    const filters = { category: 'COMPREHENSIVE_CARE' };
+    if (vendorId && vendorId !== 'all') filters.vendorId = vendorId;
+    const services = await serviceCatalogService.getAllServices(filters, req.user);
+    res.json({ success: true, data: services });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @swagger
+ * /api/services/workshop:
+ *   get:
+ *     summary: Get all certified workshop services
+ *     description: Returns all active services with category CERTIFIED_WORKSHOP (الورش المعتمدة)
+ *     tags: [Services, 4. الورش المعتمدة (Certified Workshop)]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of certified workshop services
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 - id: "uuid"
+ *                   name: "Oil Change"
+ *                   nameAr: "تغيير زيت"
+ *                   category: "CERTIFIED_WORKSHOP"
+ *                   type: "CATALOG"
+ *                   isActive: true
+ *                   estimatedDuration: 30
+ */
+router.get('/workshop', async (req, res, next) => {
+  try {
+    const { vendorId } = req.query;
+    const filters = { category: 'CERTIFIED_WORKSHOP' };
+    if (vendorId && vendorId !== 'all') filters.vendorId = vendorId;
+    const services = await serviceCatalogService.getAllServices(filters, req.user);
+    res.json({ success: true, data: services });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @swagger
+ * /api/services/mobile-workshop:
+ *   get:
+ *     summary: Get all mobile workshop services
+ *     description: Returns all active services with category MAINTENANCE (الورش المتنقلة)
+ *     tags: [Services, 5. الورش المتنقلة (Mobile Workshop)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: vendorId
+ *         schema:
+ *           type: string
+ *         description: Optional filter by vendor ID
+ *     responses:
+ *       200:
+ *         description: List of mobile workshop services
+ */
+router.get('/mobile-workshop', async (req, res, next) => {
+  try {
+    const { vendorId } = req.query;
+    const filters = { category: 'MAINTENANCE' };
+    if (vendorId && vendorId !== 'all') filters.vendorId = vendorId;
+    const services = await serviceCatalogService.getAllServices(filters, req.user);
+    res.json({ success: true, data: services });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @swagger
+ * /api/services/mobile-workshop:
+ *   get:
+ *     summary: Get all mobile workshop services
+ *     description: Returns all active services with category MAINTENANCE (الورش المتنقلة)
+ *     tags: [Services, 5. الورش المتنقلة (Mobile Workshop)]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of mobile workshop services
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 - id: "uuid"
+ *                   name: "Mobile Oil Change"
+ *                   nameAr: "تغيير زيت متنقل"
+ *                   category: "MAINTENANCE"
+ *                   type: "MOBILE_CAR_SERVICE"
+ *                   isActive: true
+ *                   estimatedDuration: 45
+ */
+router.get('/mobile-workshop', async (req, res, next) => {
+  try {
+    const { vendorId } = req.query;
+    const filters = { category: 'MAINTENANCE', isActive: 'true' };
+    if (vendorId && vendorId !== 'all') filters.vendorId = vendorId;
+    const services = await serviceCatalogService.getAllServices(filters, req.user);
+    res.json({ success: true, data: services });
+  } catch (error) {
+    next(error);
+  }
+});
 
 /**
  * GET /api/services/:id/available-slots?date=YYYY-MM-DD

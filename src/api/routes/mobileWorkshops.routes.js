@@ -8,6 +8,7 @@ const role    = require('../middlewares/role.middleware');
 const ctrl    = require('../controllers/mobileWorkshop.controller');
 const reqCtrl = require('../controllers/mobileWorkshopRequest.controller');
 const prisma  = require('../../utils/database/prisma');
+const { getFullUrl } = require('../../utils/urlUtils');
 
 const mwUploadDir = path.join(__dirname, '../../../uploads/mobile-workshops');
 if (!fs.existsSync(mwUploadDir)) fs.mkdirSync(mwUploadDir, { recursive: true });
@@ -400,12 +401,13 @@ router.post(
       if (!workshop) return res.status(404).json({ success: false, error: 'Mobile workshop not found' });
       const type = (req.body?.type || 'logo').toLowerCase();
       const imageUrl = `/uploads/mobile-workshops/${req.params.id}/${req.file.filename}`;
-      const updateData = type === 'vehicle' ? { vehicleImageUrl: imageUrl } : { imageUrl };
+      const fullImageUrl = getFullUrl(imageUrl);
+      const updateData = type === 'vehicle' ? { vehicleImageUrl: fullImageUrl } : { imageUrl: fullImageUrl };
       await prisma.mobileWorkshop.update({
         where: { id: req.params.id },
         data: updateData,
       });
-      res.json({ success: true, imageUrl, field: type === 'vehicle' ? 'vehicleImageUrl' : 'imageUrl' });
+      res.json({ success: true, imageUrl: fullImageUrl, field: type === 'vehicle' ? 'vehicleImageUrl' : 'imageUrl' });
     } catch (err) {
       next(err);
     }

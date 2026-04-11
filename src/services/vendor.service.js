@@ -111,6 +111,9 @@ class VendorService {
         comprehensiveCareServices: {
           take: 20,
           orderBy: { createdAt: 'desc' },
+          where: {
+            category: { in: ['COMPREHENSIVE_CARE', 'CLEANING'] },
+          },
           select: {
             id: true,
             name: true,
@@ -305,6 +308,8 @@ class VendorService {
       businessNameAr,
       description,
       descriptionAr,
+      termsAndConditions,
+      termsAndConditionsAr,
       commercialLicense,
       taxNumber,
       contactPhone,
@@ -334,6 +339,8 @@ class VendorService {
         ...(businessNameAr !== undefined && { businessNameAr }),
         ...(description !== undefined && { description }),
         ...(descriptionAr !== undefined && { descriptionAr }),
+        ...(termsAndConditions !== undefined && { termsAndConditions }),
+        ...(termsAndConditionsAr !== undefined && { termsAndConditionsAr }),
         ...(commercialLicense !== undefined && { commercialLicense }),
         ...(taxNumber !== undefined && { taxNumber }),
         ...(contactPhone !== undefined && { contactPhone }),

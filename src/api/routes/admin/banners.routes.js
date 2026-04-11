@@ -64,7 +64,7 @@ router.use(role('ADMIN'));
  *         required: false
  *         schema:
  *           type: string
- *           enum: [TOP, BOTTOM]
+ *           enum: [TOP, BOTTOM, AUTO_PARTS]
  *     responses:
  *       200:
  *         description: List banners
@@ -86,7 +86,7 @@ router.get('/', ctrl.adminList);
  *             type: object
  *             required: [position]
  *             properties:
- *               position: { type: string, enum: [TOP, BOTTOM] }
+ *               position: { type: string, enum: [TOP, BOTTOM, AUTO_PARTS] }
  *               title: { type: string, nullable: true }
  *               titleAr: { type: string, nullable: true }
  *               isActive: { type: boolean, default: true }
@@ -115,7 +115,7 @@ router.post('/', ctrl.adminCreate);
  *           schema:
  *             type: object
  *             properties:
- *               position: { type: string, enum: [TOP, BOTTOM] }
+ *               position: { type: string, enum: [TOP, BOTTOM, AUTO_PARTS] }
  *               title: { type: string, nullable: true }
  *               titleAr: { type: string, nullable: true }
  *               isActive: { type: boolean }

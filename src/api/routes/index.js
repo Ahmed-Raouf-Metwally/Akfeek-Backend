@@ -162,4 +162,7 @@ router.use('/vendors', vendorRoutes);
 router.use('/auto-part-categories', autoPartCategoryRoutes);
 router.use('/auto-parts', autoPartRoutes);
 
+// Packages routes
+router.use('/packages', require('./packages.routes'));
+
 module.exports = router;

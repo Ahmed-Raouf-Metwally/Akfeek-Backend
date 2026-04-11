@@ -110,11 +110,21 @@ class ServiceCatalogService {
 
     let vendorIdToSet = bodyVendorId || null;
     if (user?.role === 'VENDOR') {
-      if (category !== 'COMPREHENSIVE_CARE') {
-        throw new AppError('Vendors can only create Comprehensive Care services', 403, 'FORBIDDEN');
+      if (category !== 'COMPREHENSIVE_CARE' && category !== 'CLEANING') {
+        throw new AppError(
+          'Vendors can only create Comprehensive Care or Car Wash services',
+          403,
+          'VENDOR_CATEGORY_RESTRICTED'
+        );
       }
       const profile = await prisma.vendorProfile.findUnique({ where: { userId: user.id } });
-      if (!profile) throw new AppError('Vendor profile not found', 404, 'VENDOR_PROFILE_NOT_FOUND');
+      if (!profile) {
+        throw new AppError(
+          'Vendor profile not found. Please complete your vendor profile setup.',
+          404,
+          'VENDOR_PROFILE_NOT_FOUND'
+        );
+      }
       vendorIdToSet = profile.id;
     }
 

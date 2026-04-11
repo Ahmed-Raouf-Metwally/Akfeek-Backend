@@ -123,6 +123,9 @@ model User {
   // خدمة أكفيك — رحلة موجّهة (تأمين / ورشة / سحب)
   akfeekJourneys AkfeekJourney[]
 
+  // Packages
+  userPackages UserPackage[]
+
   @@index([email])
   @@index([phone])
   @@index([role, status])
@@ -247,6 +250,7 @@ model VehicleModel {
   // Relations
   userVehicles        UserVehicle[]
   compatibleAutoParts AutoPartCompatibility[]
+  autoParts           AutoPart[] // القطع المرتبطة بهذا الموديل
 
   @@unique([brandId, name, year])
   @@index([brandId])
@@ -363,6 +367,9 @@ model Service {
   parentAddOns     ServiceAddOn[]    @relation("ParentService")
   autoPartServices AutoPartService[]
 
+  // Package relations
+  packageServices PackageService[]
+
   @@index([type, isActive])
   @@index([category])
   @@index([parentServiceId])
@@ -432,6 +439,10 @@ model VendorProfile {
   businessNameAr String?
   description    String? @db.Text
   descriptionAr  String? @db.Text
+
+  // الشروط والأحكام
+  termsAndConditions    String? @db.Text // English terms
+  termsAndConditionsAr  String? @db.Text // Arabic terms
 
   // Registration Documents
   commercialLicense String?
@@ -623,6 +634,10 @@ model AutoPart {
   category   AutoPartCategory @relation(fields: [categoryId], references: [id])
 
   brand      String
+  brandId    String? // علاقة بالماركة
+  vehicleModelId String? // علاقة بالموديل
+  vehicleModel VehicleModel? @relation(fields: [vehicleModelId], references: [id])
+  year       Int? // سنة التصنيع
   partNumber String?
   oemNumber  String?
 
@@ -953,6 +968,7 @@ model MobileWorkshopType {
   name        String
   nameAr      String?
   description String? @db.Text
+  imageUrl    String? // صورة نوع الورشة
   serviceType String  @default("GENERAL") // OIL_CHANGE, TIRE, BATTERY, BRAKE, AC, ...
   sortOrder   Int     @default(0)
   isActive    Boolean @default(true)
@@ -2513,6 +2529,7 @@ model AkfeekJourneyDocument {
 enum BannerPosition {
   TOP
   BOTTOM
+  AUTO_PARTS
 }
 
 model Banner {
@@ -2540,4 +2557,72 @@ model BannerImage {
   createdAt DateTime @default(now())
 
   @@index([bannerId, sortOrder])
+}
+
+// ================================================================================================
+// PACKAGES SYSTEM - Subscription/Package Management
+// ================================================================================================
+
+model Package {
+  id            String   @id @default(uuid())
+  name          String
+  nameAr        String?
+  description   String?  @db.Text
+  descriptionAr String?  @db.Text
+  price         Decimal  @db.Decimal(10, 2)
+  usageCount    Int?     // null = unlimited
+  validityDays  Int      // days until expiry
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  imageUrl      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  services    PackageService[]
+  userPackages UserPackage[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model PackageService {
+  id        String  @id @default(uuid())
+  packageId String
+  package   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, serviceId])
+  @@index([packageId])
+  @@index([serviceId])
+}
+
+model UserPackage {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageId   String
+  package     Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  purchasedAt DateTime  @default(now())
+  expiresAt   DateTime
+  isActive    Boolean   @default(true)
+  
+  usages      UserPackageServiceUsage[]
+
+  @@unique([userId, packageId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([isActive])
+}
+
+model UserPackageServiceUsage {
+  id            String        @id @default(uuid())
+  userPackageId String
+  userPackage   UserPackage   @relation(fields: [userPackageId], references: [id], onDelete: Cascade)
+  serviceId     String
+  usedCount     Int           @default(0)
+  lastUsedAt    DateTime?
+
+  @@unique([userPackageId, serviceId])
+  @@index([userPackageId])
 }

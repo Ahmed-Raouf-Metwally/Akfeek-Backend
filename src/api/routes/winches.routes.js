@@ -7,6 +7,7 @@ const auth    = require('../middlewares/auth.middleware');
 const role    = require('../middlewares/role.middleware');
 const ctrl    = require('../controllers/winch.controller');
 const prisma  = require('../../utils/database/prisma');
+const { getFullUrl } = require('../../utils/urlUtils');
 
 const winchUploadDir = path.join(__dirname, '../../../uploads/winches');
 if (!fs.existsSync(winchUploadDir)) fs.mkdirSync(winchUploadDir, { recursive: true });
@@ -560,11 +561,12 @@ router.post(
       const winch = await prisma.winch.findUnique({ where: { id: req.params.id } });
       if (!winch) return res.status(404).json({ success: false, error: 'Winch not found' });
       const imageUrl = `/uploads/winches/${req.params.id}/${req.file.filename}`;
+      const fullImageUrl = getFullUrl(imageUrl);
       await prisma.winch.update({
         where: { id: req.params.id },
-        data: { imageUrl },
+        data: { imageUrl: fullImageUrl },
       });
-      res.json({ success: true, imageUrl });
+      res.json({ success: true, imageUrl: fullImageUrl });
     } catch (err) {
       next(err);
     }

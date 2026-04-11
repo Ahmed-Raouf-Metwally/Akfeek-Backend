@@ -1,18 +1,9 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "AutoService API",
+    "title": "Akfeek API",
     "version": "1.0.0",
-    "description": "\n# AutoService API Documentation\n\nComprehensive car services platform supporting 4 service models:\n1. **Direct Booking** (Fixed Services) - Car Wash, Polishing\n2. **E-Commerce** (Catalog Services) - Oil Change, Filter Replacement\n3. **Indrive/Broadcast** (Emergency Services) - Roadside Assistance\n4. **Ekfik Lifecycle** - Valet & Comprehensive Repair\n\n## Features\n\n- Real-time updates via Socket.io\n- Multiple payment gateways\n- Supply chain integration\n- Geolocation-based services\n\n## Postman\n\n- Import spec: File -> Import -> `http://localhost:3000/api-docs.json` or `openapi.json` (after `npm run openapi`)\n- Auth: Authorization tab, Bearer Token, JWT from `POST /api/auth/login`\n\n## Authentication\n\nAll protected endpoints require Bearer token:\n\n```\nAuthorization: Bearer <your_jwt_token>\n```\n      ",
-    "contact": {
-      "name": "AutoService API Support",
-      "email": "support@autoservice.com",
-      "url": "https://autoservice.com/support"
-    },
-    "license": {
-      "name": "MIT",
-      "url": "https://opensource.org/licenses/MIT"
-    }
+    "description": "AutoService (أكفيك) - Comprehensive car services platform API"
   },
   "servers": [
     {
@@ -29,245 +20,10 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "JWT Authorization header using Bearer scheme - رمز التفويض باستخدام JWT"
+        "bearerFormat": "JWT"
       }
     },
     "schemas": {
-      "Error": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": false
-          },
-          "error": {
-            "type": "string",
-            "example": "Error message"
-          },
-          "code": {
-            "type": "string",
-            "example": "VALIDATION_ERROR"
-          },
-          "details": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        }
-      },
-      "Success": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
-          },
-          "message": {
-            "type": "string",
-            "example": "Operation successful"
-          }
-        }
-      },
-      "Pagination": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "example": 1,
-            "description": "Current page number"
-          },
-          "limit": {
-            "type": "integer",
-            "example": 10,
-            "description": "Items per page"
-          },
-          "total": {
-            "type": "integer",
-            "example": 100,
-            "description": "Total number of items"
-          },
-          "totalPages": {
-            "type": "integer",
-            "example": 10,
-            "description": "Total number of pages"
-          }
-        }
-      },
-      "Address": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Address ID"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User ID"
-          },
-          "label": {
-            "type": "string",
-            "description": "Address label (e.g., Home, Work)",
-            "example": "Home"
-          },
-          "labelAr": {
-            "type": "string",
-            "nullable": true,
-            "description": "Arabic label",
-            "example": "المنزل"
-          },
-          "street": {
-            "type": "string",
-            "description": "Street address",
-            "example": "King Fahd Road"
-          },
-          "streetAr": {
-            "type": "string",
-            "nullable": true,
-            "description": "Arabic street name",
-            "example": "طريق الملك فهد"
-          },
-          "city": {
-            "type": "string",
-            "description": "City",
-            "example": "Riyadh"
-          },
-          "cityAr": {
-            "type": "string",
-            "nullable": true,
-            "description": "Arabic city name",
-            "example": "الرياض"
-          },
-          "state": {
-            "type": "string",
-            "nullable": true,
-            "description": "State/Province"
-          },
-          "stateAr": {
-            "type": "string",
-            "nullable": true,
-            "description": "Arabic state name"
-          },
-          "postalCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Postal code",
-            "example": "12345"
-          },
-          "country": {
-            "type": "string",
-            "description": "Country code",
-            "example": "SA",
-            "default": "SA"
-          },
-          "latitude": {
-            "type": "number",
-            "format": "double",
-            "description": "GPS latitude",
-            "example": 24.7136
-          },
-          "longitude": {
-            "type": "number",
-            "format": "double",
-            "description": "GPS longitude",
-            "example": 46.6753
-          },
-          "isDefault": {
-            "type": "boolean",
-            "description": "Is this the default address?",
-            "example": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Creation timestamp"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Last update timestamp"
-          }
-        }
-      },
-      "AddressInput": {
-        "type": "object",
-        "required": [
-          "label",
-          "street",
-          "city",
-          "latitude",
-          "longitude"
-        ],
-        "properties": {
-          "label": {
-            "type": "string",
-            "description": "Address label (e.g., Home, Work)",
-            "example": "Home"
-          },
-          "labelAr": {
-            "type": "string",
-            "description": "Arabic label",
-            "example": "المنزل"
-          },
-          "street": {
-            "type": "string",
-            "description": "Street address",
-            "example": "King Fahd Road"
-          },
-          "streetAr": {
-            "type": "string",
-            "description": "Arabic street name",
-            "example": "طريق الملك فهد"
-          },
-          "city": {
-            "type": "string",
-            "description": "City",
-            "example": "Riyadh"
-          },
-          "cityAr": {
-            "type": "string",
-            "description": "Arabic city name",
-            "example": "الرياض"
-          },
-          "state": {
-            "type": "string",
-            "description": "State/Province"
-          },
-          "stateAr": {
-            "type": "string",
-            "description": "Arabic state name"
-          },
-          "postalCode": {
-            "type": "string",
-            "description": "Postal code",
-            "example": "12345"
-          },
-          "country": {
-            "type": "string",
-            "description": "Country code",
-            "example": "SA",
-            "default": "SA"
-          },
-          "latitude": {
-            "type": "number",
-            "format": "double",
-            "description": "GPS latitude",
-            "example": 24.7136
-          },
-          "longitude": {
-            "type": "number",
-            "format": "double",
-            "description": "GPS longitude",
-            "example": 46.6753
-          },
-          "isDefault": {
-            "type": "boolean",
-            "description": "Set as default address?",
-            "example": false
-          }
-        }
-      },
       "Feedback": {
         "type": "object",
         "properties": {
@@ -302,450 +58,12 @@
             "type": "boolean"
           }
         }
-      },
-      "VendorProfile": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "businessName": {
-            "type": "string"
-          },
-          "businessNameAr": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "descriptionAr": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "PENDING_APPROVAL",
-              "ACTIVE",
-              "SUSPENDED",
-              "REJECTED"
-            ]
-          },
-          "isActive": {
-            "type": "boolean"
-          },
-          "logo": {
-            "type": "string"
-          },
-          "contactEmail": {
-            "type": "string"
-          },
-          "contactPhone": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "AutoPartCategory": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "nameAr": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "parentId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "icon": {
-            "type": "string"
-          },
-          "isActive": {
-            "type": "boolean"
-          }
-        }
-      },
-      "AutoPart": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "nameAr": {
-            "type": "string"
-          },
-          "sku": {
-            "type": "string"
-          },
-          "brand": {
-            "type": "string"
-          },
-          "categoryId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "vendorId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "price": {
-            "type": "number"
-          },
-          "stockQuantity": {
-            "type": "integer"
-          },
-          "isApproved": {
-            "type": "boolean"
-          },
-          "isActive": {
-            "type": "boolean"
-          },
-          "images": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AutoPartImage"
-            }
-          }
-        }
-      },
-      "AutoPartImage": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "url": {
-            "type": "string"
-          },
-          "isPrimary": {
-            "type": "boolean"
-          }
-        }
-      },
-      "AutoPartCompatibility": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "autoPartId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "vehicleModelId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "yearRange": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "parameters": {
-      "LanguageHeader": {
-        "name": "Accept-Language",
-        "in": "header",
-        "description": "Preferred language (ar or en) - اللغة المفضلة",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "ar",
-            "en"
-          ],
-          "default": "ar"
-        }
-      },
-      "PageParam": {
-        "name": "page",
-        "in": "query",
-        "description": "Page number - رقم الصفحة",
-        "schema": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 1
-        }
-      },
-      "LimitParam": {
-        "name": "limit",
-        "in": "query",
-        "description": "Items per page - عدد العناصر في الصفحة",
-        "schema": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 100,
-          "default": 10
-        }
-      }
-    },
-    "responses": {
-      "UnauthorizedError": {
-        "description": "Authentication required - مطلوب مصادقة",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            },
-            "example": {
-              "success": false,
-              "error": "Authentication required",
-              "code": "UNAUTHORIZED"
-            }
-          }
-        }
-      },
-      "ForbiddenError": {
-        "description": "Access denied",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            },
-            "example": {
-              "success": false,
-              "error": "Access denied",
-              "code": "FORBIDDEN"
-            }
-          }
-        }
-      },
-      "NotFoundError": {
-        "description": "Resource not found",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            },
-            "example": {
-              "success": false,
-              "error": "Resource not found",
-              "code": "NOT_FOUND"
-            }
-          }
-        }
-      },
-      "ValidationError": {
-        "description": "Validation error",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            },
-            "example": {
-              "success": false,
-              "error": "Validation failed",
-              "code": "VALIDATION_ERROR",
-              "details": {
-                "email": "Invalid email format",
-                "password": "Password must be at least 8 characters"
-              }
-            }
-          }
-        }
       }
     }
   },
   "security": [
     {
       "bearerAuth": []
-    }
-  ],
-  "tags": [
-    {
-      "name": "Banners",
-      "description": "Top/Bottom banners for the mobile app. Public: GET /api/banners. Admin: /api/admin/banners."
-    },
-    {
-      "name": "Akfeek Journey",
-      "description": "**رحلة موجّهة للعميل (CUSTOMER)** — الخطوات: `INSURANCE_TOW` → `INSURANCE_DOCS` → `TOW_TO_WORKSHOP` → `WORKSHOP_BOOKING` → `POST_REPAIR_TOW_HOME`.\n\n### ترتيب اختبار E2E في Swagger (من البداية لحد العودة للبيت)\n\n1. **POST** `/api/auth/login` — توكن عميل (`CUSTOMER`).\n2. **POST** `/api/akfeek-journey/start` — Body: `vehicleId` (مستحسن لمسار السحب).\n3. **GET** `/api/akfeek-journey/me` — احفظ `journey.id` و `currentStep`.\n\n**أ) خطوة سحب التأمين `INSURANCE_TOW`**\n4. **POST** `/api/bookings/towing/request` → `bookingId`, `broadcastId`.\n5. **GET** `/api/bookings/towing/{broadcastId}` (اختياري).\n6. **GET** `/api/bookings/towing/{broadcastId}/offers`\n7. **POST** `/api/bookings/towing/{broadcastId}/offers/{offerId}/accept` → فاتورة.\n8. **PATCH** `/api/invoices/my/{invoiceId}/pay` — دفع العميل (أو أدمن: `/api/invoices/{id}/mark-paid`).\n9. **PATCH** `/api/akfeek-journey/{journeyId}/step/INSURANCE_TOW/link` — Body: `{ \"bookingId\" }`.\n   - بديل سريع: **PATCH** `.../step/INSURANCE_TOW/skip`.\n\n**ب) وثائق التأمين `INSURANCE_DOCS`**\n10. **POST** `/api/akfeek-journey/{journeyId}/documents` (multipart `files`) **أو** **PATCH** `.../step/INSURANCE_DOCS/complete` **أو** `.../skip`.\n11. **GET** `/api/akfeek-journey/me`.\n\n**ج) سحب للورشة `TOW_TO_WORKSHOP`**\n12. كرر فلو السحب (4–8) ثم **PATCH** `.../step/TOW_TO_WORKSHOP/link` — أو `skip`.\n\n**د) حجز الورشة `WORKSHOP_BOOKING`**\n13. **GET** `/api/workshops` — **GET** `/api/workshops/{workshopId}/services`.\n14. **POST** `/api/bookings` — `workshopId`, `deliveryMethod`, `workshopServiceIds` أو `serviceIds`, `scheduledDate`, …\n15. **PATCH** `/api/bookings/{bookingId}/confirm` — توكن **فيندور الورشة** (إن لزم).\n16. **PATCH** `/api/akfeek-journey/{journeyId}/step/WORKSHOP_BOOKING/link` — Body: `{ \"bookingId\" }`.\n17. **PATCH** `/api/invoices/my/{invoiceId}/pay` — حتى تصبح فاتورة الورشة مدفوعة (شرط إكمال الخطوة في الرحلة).\n18. **GET** `/api/akfeek-journey/me`.\n\n**هـ) العودة للمنزل `POST_REPAIR_TOW_HOME`**\n19. فلو سحب مرة أخرى ثم **PATCH** `.../step/POST_REPAIR_TOW_HOME/link` — أو **PATCH** `.../step/POST_REPAIR_TOW_HOME/skip` (رفض العودة بالسحب → إكمال الرحلة).\n\n20. **GET** `/api/akfeek-journey/me` — توقع `status: COMPLETED`.\n\n**أدمن (ليس للموبايل):** `GET /api/admin/akfeek-journey`, `GET .../{id}`, `GET .../documents/{documentId}/file`."
-    },
-    {
-      "name": "Inspections",
-      "description": "تقارير الفحص — قائمة (أدمن/فني) وتفاصيل (أدمن/فني/عميل لحجزه)."
-    },
-    {
-      "name": "Dashboard",
-      "description": "إحصائيات ولوحة تحكم للأدمن والفيندور — /api/dashboard/*"
-    },
-    {
-      "name": "Activity Logs",
-      "description": "سجل النشاط — أدمن فقط: GET/POST /api/activity"
-    },
-    {
-      "name": "Admin Employees",
-      "description": "موظفو أكفيك — إدارة وصلاحيات (أدمن فقط) — /api/admin/employees"
-    },
-    {
-      "name": "1. Certified Workshops",
-      "description": "Certified workshops CRUD + booking (POST /api/bookings with workshopId)."
-    },
-    {
-      "name": "2. Car Wash",
-      "description": "Car wash flow: customer books cleaning service, pays invoice, vendor marks complete. GET /api/services?category=CLEANING, POST /api/bookings, PATCH /api/invoices/my/{id}/pay, PATCH /api/bookings/{id}/complete."
-    },
-    {
-      "name": "3. Comprehensive Care",
-      "description": "Comprehensive care flow: GET /api/services?category=COMPREHENSIVE_CARE, POST /api/bookings, PATCH /api/invoices/my/{id}/pay, PATCH /api/bookings/{id}/complete."
-    },
-    {
-      "name": "4. Towing",
-      "description": "Towing flow: POST /api/bookings/towing/request, GET /api/winches/my/broadcasts, POST .../offer, GET/POST offers/accept, PATCH /api/invoices/{id}/mark-paid, GET/PATCH /api/winches/my/jobs. Socket: customer:join_booking, driver:join_booking, driver:location, booking:message."
-    },
-    {
-      "name": "5. الورش المتنقلة (Mobile Workshop)",
-      "description": "**الورش المتنقلة — جميع الاند بوينت**\n\n---\n\n**1. أنواع الورش — /api/mobile-workshop-types**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| GET | /api/mobile-workshop-types | قائمة أنواع الورش + خدمات كل نوع | عام |\n| GET | /api/mobile-workshop-types/:typeId/services | خدمات نوع معيّن | عام |\n| GET | /api/mobile-workshop-types/:id | تفاصيل نوع ورشة | عام |\n| POST | /api/mobile-workshop-types | إضافة نوع ورشة | أدمن |\n| PUT | /api/mobile-workshop-types/:id | تحديث نوع ورشة | أدمن |\n| DELETE | /api/mobile-workshop-types/:id | حذف نوع ورشة | أدمن |\n| POST | /api/mobile-workshop-types/:typeId/services | إضافة خدمة للنوع | أدمن |\n| PUT | /api/mobile-workshop-types/:typeId/services/:serviceId | تحديث خدمة النوع | أدمن |\n| DELETE | /api/mobile-workshop-types/:typeId/services/:serviceId | حذف خدمة من النوع | أدمن |\n\n**2. طلبات العميل — /api/mobile-workshop-requests**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| POST | /api/mobile-workshop-requests | إنشاء طلب (vehicleId, workshopTypeId, موقع، searchRadiusKm?) | عميل |\n| GET | /api/mobile-workshop-requests | طلباتي (status, page, limit) | عميل |\n| GET | /api/mobile-workshop-requests/:id | تفاصيل طلب مع العروض | عميل |\n| POST | /api/mobile-workshop-requests/:requestId/select-offer | اختيار عرض → حجز + فاتورة | عميل |\n\n**3. الورش المتنقلة — /api/mobile-workshops**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| GET | /api/mobile-workshops | قائمة كل الورش | مصادق |\n| GET | /api/mobile-workshops/my | ورشتي المتنقلة | فيندور |\n| POST | /api/mobile-workshops/my | إنشاء ورشتي المتنقلة | فيندور |\n| PUT | /api/mobile-workshops/my | تحديث بيانات ورشتي | فيندور |\n| DELETE | /api/mobile-workshops/my | حذف ورشتي | فيندور |\n| POST | /api/mobile-workshops/my/upload-image | رفع صورة لورشتي | فيندور |\n| GET | /api/mobile-workshops/my/requests | طلبات ورشتي | فيندور |\n| POST | /api/mobile-workshops/:workshopId/requests/:requestId/offer | إرسال عرض أو موافقة | فيندور |\n| POST | /api/mobile-workshops/:workshopId/requests/:requestId/reject | رفض الطلب | فيندور |\n| GET | /api/mobile-workshops/:id | تفاصيل ورشة | مصادق |\n| POST | /api/mobile-workshops | إضافة ورشة | أدمن |\n| PUT | /api/mobile-workshops/:id | تحديث ورشة | أدمن |\n| DELETE | /api/mobile-workshops/:id | حذف ورشة | أدمن |\n| POST | /api/mobile-workshops/:id/upload-image | رفع صورة (لأدمن) | أدمن |\n| POST | /api/mobile-workshops/:id/services | إضافة خدمة لورشة | أدمن |\n| PUT | /api/mobile-workshops/:id/services/:svcId | تحديث خدمة | أدمن |\n| DELETE | /api/mobile-workshops/:id/services/:svcId | حذف خدمة | أدمن |\n\n**4. تنفيذ الحجز بعد قبول العرض — /api/bookings**\n| Method | Path | الوصف | صلاحية |\n|--------|------|--------|--------|\n| PATCH | /api/bookings/:id/mobile-workshop-status | تحديث حالة التنفيذ (TECHNICIAN_EN_ROUTE -> ARRIVED -> IN_PROGRESS -> COMPLETED) | فيندور ورشة متنقلة |\n| GET | /api/bookings/:bookingId/chat/messages | جلب رسائل شات الحجز | عميل/فيندور الورشة |\n| POST | /api/bookings/:bookingId/chat/messages | إرسال رسالة شات | عميل/فيندور الورشة |\n| GET | /api/bookings/:bookingId/track | بيانات التتبع الحالية | عميل صاحب الحجز |\n| GET | /api/bookings/:bookingId/location-history | سجل المواقع للتتبع | عميل |\n\n**5. دفع الفاتورة بعد اختيار العرض:**\n- Customer: `PATCH /api/invoices/my/:id/pay` (يفتح الشات والتتبع مباشرة)\n- Admin fallback: `PATCH /api/invoices/:id/mark-paid`\n\n**6. Socket events بعد الدفع (Realtime):**\n- `invoice:paid`\n- `booking:ready`\n- `customer:join_booking`, `driver:join_booking`\n- `booking:message`\n- `driver:location`, `technician:location_update`"
-    },
-    {
-      "name": "Authentication",
-      "description": "User authentication endpoints",
-      "externalDocs": {
-        "description": "Authentication Guide",
-        "url": "https://docs.autoservice.com/authentication"
-      }
-    },
-    {
-      "name": "Vehicle Brands",
-      "description": "Vehicle brand management (Toyota, BMW, etc.)"
-    },
-    {
-      "name": "Vehicle Models",
-      "description": "Vehicle model management (Camry, X5, etc.)"
-    },
-    {
-      "name": "Users",
-      "description": "User profile management"
-    },
-    {
-      "name": "Vendors",
-      "description": "Vendor CRUD: list (GET), create (POST), get (GET :id), update (PUT :id), delete (DELETE :id), status (PUT :id/status)."
-    },
-    {
-      "name": "Vehicles",
-      "description": "Vehicle management"
-    },
-    {
-      "name": "Services",
-      "description": "Service catalog"
-    },
-    {
-      "name": "Bookings",
-      "description": "Booking list and status (GET/PATCH). See sections 1-5 for flow details."
-    },
-    {
-      "name": "Broadcasts",
-      "description": "Job broadcasts (towing + mobile workshop). GET /api/broadcasts?type=towing|mobile-workshop|all."
-    },
-    {
-      "name": "Mobile Workshop Requests",
-      "description": "Mobile workshop requests: POST, GET, GET :id, POST :requestId/select-offer. Then PATCH /api/invoices/my/:id/pay."
-    },
-    {
-      "name": "Supply Requests",
-      "description": "Spare parts supply chain"
-    },
-    {
-      "name": "Invoices",
-      "description": "Invoice management. vendorSummary for invoice owner. GET /api/invoices/my/{id}, PATCH .../pay."
-    },
-    {
-      "name": "Payments",
-      "description": "Payment processing"
-    },
-    {
-      "name": "Wallets",
-      "description": "Wallet and transactions"
-    },
-    {
-      "name": "Ratings",
-      "description": "Reviews and ratings"
-    },
-    {
-      "name": "Notifications",
-      "description": "Push notifications"
-    },
-    {
-      "name": "Addresses",
-      "description": "Address management"
-    },
-    {
-      "name": "Towing Service",
-      "description": "Emergency towing service"
-    },
-    {
-      "name": "Technician Towing",
-      "description": "Technician towing endpoints"
-    },
-    {
-      "name": "Technician Car Wash",
-      "description": "Technician car wash broadcast endpoints (legacy)."
-    },
-    {
-      "name": "Admin Settings",
-      "description": "System settings for administrators"
-    },
-    {
-      "name": "Auto Part Categories",
-      "description": "Auto part category management"
-    },
-    {
-      "name": "Auto Parts",
-      "description": "Auto parts catalog management"
-    },
-    {
-      "name": "Cart",
-      "description": "Customer cart and checkout"
-    },
-    {
-      "name": "Marketplace Orders",
-      "description": "Orders from marketplace (customer, vendor, admin)"
-    },
-    {
-      "name": "Reference",
-      "description": "بيانات مرجعية عامة للواجهات (بدون مصادقة حيث يُذكر ذلك)"
-    },
-    {
-      "name": "Admin Feedback",
-      "description": "Administrative operations for Managing complaints and suggestions"
-    },
-    {
-      "name": "2. ورش الغسيل (Car Wash)",
-      "description": "الفلو المعتمد: مثل العناية الشاملة — العميل يختار خدمة غسيل من الفيندور (GET /api/services?category=CLEANING أو vendorId)،\nيحجز بـ POST /api/bookings (vehicleId, scheduledDate, scheduledTime, serviceIds بدون workshopId)، يدفع الفاتورة، الفيندور يحدد مكتمل.\nالـ endpoints أدناه (request / offers / accept) اختيارية — لفلو البث مع الفني إن وُجد.\n"
-    },
-    {
-      "name": "Feedback",
-      "description": "Customer Complaints and Suggestions management (نظام الشكاوى والمقترحات)"
-    },
-    {
-      "name": "Tracking",
-      "description": "Real-time location tracking endpoints - نقاط تتبع الموقع اللحظي"
-    },
-    {
-      "name": "Vendor Onboarding",
-      "description": "Vendor registration and approval workflow"
     }
   ],
   "paths": {
@@ -1262,7 +580,8 @@
               "type": "string",
               "enum": [
                 "TOP",
-                "BOTTOM"
+                "BOTTOM",
+                "AUTO_PARTS"
               ]
             }
           }
@@ -1297,7 +616,8 @@
                     "type": "string",
                     "enum": [
                       "TOP",
-                      "BOTTOM"
+                      "BOTTOM",
+                      "AUTO_PARTS"
                     ]
                   },
                   "title": {
@@ -1360,7 +680,8 @@
                     "type": "string",
                     "enum": [
                       "TOP",
-                      "BOTTOM"
+                      "BOTTOM",
+                      "AUTO_PARTS"
                     ]
                   },
                   "title": {
@@ -3861,8 +3182,8 @@
     },
     "/api/banners": {
       "get": {
-        "summary": "بنرات التطبيق (أعلى/أسفل) — Public banners for mobile app",
-        "description": "- بدون `position`: يعيد `{ top: Banner[], bottom: Banner[] }`\n- مع `position=TOP|BOTTOM`: يعيد `Banner[]` لمكان معيّن\n",
+        "summary": "بنرات التطبيق (أعلى/أسفل/قطع غيار) — Public banners for mobile app",
+        "description": "- بدون `position`: يعيد `{ top: Banner[], bottom: Banner[], autoParts: Banner[] }`\n- مع `position=TOP|BOTTOM|AUTO_PARTS`: يعيد `Banner[]` لمكان معيّن\n",
         "tags": [
           "Banners"
         ],
@@ -3875,14 +3196,15 @@
               "type": "string",
               "enum": [
                 "TOP",
-                "BOTTOM"
+                "BOTTOM",
+                "AUTO_PARTS"
               ]
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "- If `position` is provided: returns array `Banner[]`\n- If `position` is omitted: returns object `{ top: Banner[], bottom: Banner[] }`\n"
+            "description": "- If `position` is provided: returns array `Banner[]`\n- If `position` is omitted: returns object `{ top: Banner[], bottom: Banner[], autoParts: Banner[] }`\n"
           }
         }
       }
@@ -9168,6 +8490,391 @@
         }
       }
     },
+    "/api/packages": {
+      "get": {
+        "summary": "Get all active packages",
+        "description": "Retrieve all active packages with their associated services",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of packages"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new package (Admin only)",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "nameAr": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "usageCount": {
+                    "type": "integer"
+                  },
+                  "validityDays": {
+                    "type": "integer"
+                  },
+                  "serviceIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Package created"
+          }
+        }
+      }
+    },
+    "/api/packages/services": {
+      "get": {
+        "summary": "Get all available services for package selection",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of services"
+          }
+        }
+      }
+    },
+    "/api/packages/eligible": {
+      "get": {
+        "summary": "Get packages eligible for specific services",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "serviceIds",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated service IDs"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of eligible packages"
+          }
+        }
+      }
+    },
+    "/api/packages/{id}": {
+      "get": {
+        "summary": "Get package by ID",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Package details"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a package (Admin only)",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Package updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a package (Admin only)",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Package deleted"
+          }
+        }
+      }
+    },
+    "/api/user-packages": {
+      "get": {
+        "summary": "Get current user's packages",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user's packages"
+          }
+        }
+      }
+    },
+    "/api/user-packages/eligible": {
+      "get": {
+        "summary": "Get user's eligible packages for specific services",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "serviceIds",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user's eligible packages"
+          }
+        }
+      }
+    },
+    "/api/user-packages/{id}": {
+      "get": {
+        "summary": "Get specific user package by ID",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Package details"
+          }
+        }
+      }
+    },
+    "/api/user-packages/purchase": {
+      "post": {
+        "summary": "Purchase a package",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "packageId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Package purchased"
+          }
+        }
+      }
+    },
+    "/api/bookings/apply-package": {
+      "post": {
+        "summary": "Apply a package to a booking",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bookingId": {
+                    "type": "string"
+                  },
+                  "userPackageId": {
+                    "type": "string"
+                  },
+                  "serviceId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Package applied successfully"
+          }
+        }
+      }
+    },
+    "/api/packages/admin/subscriptions": {
+      "get": {
+        "summary": "Get all user package subscriptions (Admin only)",
+        "tags": [
+          "Packages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "packageId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by package ID (optional)"
+          },
+          {
+            "in": "query",
+            "name": "isActive",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by active/inactive subscriptions"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by username or email"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of subscriptions with usage details"
+          }
+        }
+      }
+    },
     "/api/payments": {
       "get": {
         "summary": "List payments",
@@ -9357,11 +9064,13 @@
     "/api/services": {
       "get": {
         "summary": "Get all services",
-        "description": "Retrieve a list of all available services with filtering.\n**ورش الغسيل (Car Wash):** استخدم category=CLEANING لخدمات الغسيل، أو vendorId={id} لخدمات فيندور غسيل معيّن.\n**العناية الشاملة:** استخدم category=COMPREHENSIVE_CARE أو vendorId=me (مع تسجيل دخول الفيندور).\n",
+        "description": "Retrieve a list of all available services with filtering.\n**ورش الغسيل (Car Wash):** استخدم category=CLEANING لخدمات الغسيل، أو vendorId={id} لخدمات فيندور غسيل معيّن.\n**العناية الشاملة:** استخدم category=COMPREHENSIVE_CARE أو vendorId=me (مع تسجيل دخول الفيندور).\n**الورش المعتمدة:** استخدم category=CERTIFIED_WORKSHOP\n**الورش المتنقلة:** استخدم category=MAINTENANCE\n",
         "tags": [
           "Services",
           "2. ورش الغسيل (Car Wash)",
-          "3. العناية الشاملة (Comprehensive Care)"
+          "3. العناية الشاملة (Comprehensive Care)",
+          "4. الورش المعتمدة (Certified Workshop)",
+          "5. الورش المتنقلة (Mobile Workshop)"
         ],
         "security": [
           {
@@ -9481,6 +9190,191 @@
         "responses": {
           "201": {
             "description": "Service created"
+          }
+        }
+      }
+    },
+    "/api/services/car-wash": {
+      "get": {
+        "summary": "Get all car wash services",
+        "description": "Returns all active services with category CLEANING (ورش الغسيل)",
+        "tags": [
+          "Services",
+          "2. ورش الغسيل (Car Wash)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "vendorId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional filter by vendor ID, or 'all' for all vendors"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of car wash services"
+          }
+        }
+      }
+    },
+    "/api/services/car-wash/{vendorId}": {
+      "get": {
+        "summary": "Get car wash services for specific vendor",
+        "description": "Returns all active CLEANING services for a specific car wash vendor",
+        "tags": [
+          "Services",
+          "2. ورش الغسيل (Car Wash)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vendorId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Vendor ID (UUID)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of car wash services for this vendor"
+          }
+        }
+      }
+    },
+    "/api/services/comprehensive-care": {
+      "get": {
+        "summary": "Get all comprehensive care services",
+        "description": "Returns all active services with category COMPREHENSIVE_CARE (العناية الشاملة)",
+        "tags": [
+          "Services",
+          "3. العناية الشاملة (Comprehensive Care)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of comprehensive care services",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": "uuid",
+                      "name": "Premium Polish",
+                      "nameAr": "تلميع فاخر",
+                      "category": "COMPREHENSIVE_CARE",
+                      "type": "CATALOG",
+                      "isActive": true,
+                      "estimatedDuration": 120
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/workshop": {
+      "get": {
+        "summary": "Get all certified workshop services",
+        "description": "Returns all active services with category CERTIFIED_WORKSHOP (الورش المعتمدة)",
+        "tags": [
+          "Services",
+          "4. الورش المعتمدة (Certified Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of certified workshop services",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": "uuid",
+                      "name": "Oil Change",
+                      "nameAr": "تغيير زيت",
+                      "category": "CERTIFIED_WORKSHOP",
+                      "type": "CATALOG",
+                      "isActive": true,
+                      "estimatedDuration": 30
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/mobile-workshop": {
+      "get": {
+        "summary": "Get all mobile workshop services",
+        "description": "Returns all active services with category MAINTENANCE (الورش المتنقلة)",
+        "tags": [
+          "Services",
+          "5. الورش المتنقلة (Mobile Workshop)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "vendorId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional filter by vendor ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of mobile workshop services",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": "uuid",
+                      "name": "Mobile Oil Change",
+                      "nameAr": "تغيير زيت متنقل",
+                      "category": "MAINTENANCE",
+                      "type": "MOBILE_CAR_SERVICE",
+                      "isActive": true,
+                      "estimatedDuration": 45
+                    }
+                  ]
+                }
+              }
+            }
           }
         }
       }
@@ -12220,9 +12114,10 @@
     },
     "/api/vendors": {
       "get": {
-        "summary": "قائمة الفيندورات (أدمن) — List all vendors (Admin only) [CRUD - Read List]",
+        "summary": "Get all vendors (Admin only)",
+        "description": "Returns a paginated list of all vendors in the system",
         "tags": [
-          "Vendors (الفيندور)"
+          "Vendors"
         ],
         "security": [
           {
@@ -12232,47 +12127,19 @@
         "parameters": [
           {
             "in": "query",
-            "name": "status",
+            "name": "page",
             "schema": {
-              "type": "string",
-              "enum": [
-                "PENDING_APPROVAL",
-                "ACTIVE",
-                "SUSPENDED",
-                "REJECTED"
-              ]
-            },
-            "description": "Filter by vendor status"
+              "type": "integer",
+              "default": 1
+            }
           },
           {
             "in": "query",
-            "name": "search",
+            "name": "limit",
             "schema": {
-              "type": "string"
-            },
-            "description": "Search by business name"
-          },
-          {
-            "in": "query",
-            "name": "isVerified",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "Filter by verification"
-          },
-          {
-            "in": "query",
-            "name": "vendorType",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Filter by vendor type"
-          },
-          {
-            "$ref": "#/components/parameters/PageParam"
-          },
-          {
-            "$ref": "#/components/parameters/LimitParam"
+              "type": "integer",
+              "default": 10
+            }
           }
         ],
         "responses": {
@@ -12280,21 +12147,13 @@
             "description": "List of vendors",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/VendorProfile"
-                      }
-                    },
-                    "pagination": {
-                      "$ref": "#/components/schemas/Pagination"
-                    }
+                "example": {
+                  "success": true,
+                  "data": [
+                    "..."
+                  ],
+                  "pagination": {
+                    "$ref": "#/components/schemas/Pagination"
                   }
                 }
               }
@@ -12647,6 +12506,92 @@
         "responses": {
           "200": {
             "description": "Status updated"
+          }
+        }
+      }
+    },
+    "/api/vendors/{id}/services": {
+      "get": {
+        "summary": "Get all services for a vendor",
+        "description": "Returns all services (all categories) for a specific vendor",
+        "tags": [
+          "Vendors"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Vendor ID (UUID)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of services for this vendor",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": "uuid",
+                      "name": "External Wash",
+                      "nameAr": "غسيل خارجي",
+                      "category": "CLEANING",
+                      "type": "FIXED",
+                      "isActive": true,
+                      "estimatedDuration": 30,
+                      "pricing": [
+                        {
+                          "id": "uuid",
+                          "vehicleType": "SEDAN",
+                          "basePrice": 50,
+                          "discountedPrice": 45,
+                          "isActive": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/vendors/{id}/car-wash-services": {
+      "get": {
+        "summary": "Get car wash services for a vendor",
+        "description": "Returns all CLEANING category services for a specific car wash vendor",
+        "tags": [
+          "Vendors"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of car wash services for this vendor"
           }
         }
       }
@@ -15102,5 +15047,51 @@
         }
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Admin Feedback",
+      "description": "Administrative operations for Managing complaints and suggestions"
+    },
+    {
+      "name": "Admin Settings",
+      "description": "System settings management for admin"
+    },
+    {
+      "name": "Bookings",
+      "description": "حجز الخدمات — الورش المعتمدة، العناية الشاملة، وورش الغسيل عبر POST /api/bookings (بدون workshopId = حجز خدمة من الفيندور مباشرة).\nالوينشات والورش المتنقلة لها اند بوينتات منفصلة (Towing, Mobile Workshop).\n"
+    },
+    {
+      "name": "Broadcasts",
+      "description": "بث الوظائف — بث السحب (تويينج) + طلبات الورش المتنقلة. قائمة موحدة للمسؤول.\nJob broadcasts (towing) and mobile workshop requests. Admin list.\n"
+    },
+    {
+      "name": "2. ورش الغسيل (Car Wash)",
+      "description": "الفلو المعتمد: مثل العناية الشاملة — العميل يختار خدمة غسيل من الفيندور (GET /api/services?category=CLEANING أو vendorId)،\nيحجز بـ POST /api/bookings (vehicleId, scheduledDate, scheduledTime, serviceIds بدون workshopId)، يدفع الفاتورة، الفيندور يحدد مكتمل.\nالـ endpoints أدناه (request / offers / accept) اختيارية — لفلو البث مع الفني إن وُجد.\n"
+    },
+    {
+      "name": "Feedback",
+      "description": "Customer Complaints and Suggestions management (نظام الشكاوى والمقترحات)"
+    },
+    {
+      "name": "5. الورش المتنقلة (Mobile Workshop)",
+      "description": "CRUD الورش المتنقلة + حجز الصيانة المتنقلة."
+    },
+    {
+      "name": "Technician Towing",
+      "description": "للفنيين فقط (TECHNICIAN). سائق الوينش = فيندور الوينش يستخدم /api/winches/my/jobs و /api/winches/my/jobs/:jobId/status."
+    },
+    {
+      "name": "4. Towing",
+      "description": "فلو السحب — فيندور الوينش هو المتحكم. العميل يطلب من أين إلى أين، الفيندور يرسل عرضاً، العميل يوافق ويدفع (إيداع حصة الفيندور وخصم عمولة المنصة) ثم يتفتح السوكت للتتبع."
+    },
+    {
+      "name": "Tracking",
+      "description": "Real-time location tracking endpoints - نقاط تتبع الموقع اللحظي"
+    },
+    {
+      "name": "Vendor Onboarding",
+      "description": "Vendor registration and approval workflow"
+    }
+  ]
 }

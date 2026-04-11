@@ -1,5 +1,6 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const { getFullUrl } = require('../../utils/urlUtils');
 
 const SELECT = {
   id: true, name: true, nameAr: true, description: true,
@@ -220,9 +221,10 @@ async function uploadMyImage(req, res, next) {
     const wid = vendor.mobileWorkshop.id;
     const type = (req.body?.type || 'logo').toLowerCase();
     const imageUrl = `/uploads/mobile-workshops/${wid}/${req.file.filename}`;
-    const updateData = type === 'vehicle' ? { vehicleImageUrl: imageUrl } : { imageUrl };
+    const fullImageUrl = getFullUrl(imageUrl);
+    const updateData = type === 'vehicle' ? { vehicleImageUrl: fullImageUrl } : { imageUrl: fullImageUrl };
     await prisma.mobileWorkshop.update({ where: { id: wid }, data: updateData });
-    res.json({ success: true, imageUrl, field: type === 'vehicle' ? 'vehicleImageUrl' : 'imageUrl' });
+    res.json({ success: true, imageUrl: fullImageUrl, field: type === 'vehicle' ? 'vehicleImageUrl' : 'imageUrl' });
   } catch (err) { next(err); }
 }
 

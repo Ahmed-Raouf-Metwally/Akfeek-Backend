@@ -1,10 +1,11 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const { getFullUrl } = require('../../utils/urlUtils');
 
 function normalizePosition(pos) {
   if (!pos) return null;
   const p = String(pos).trim().toUpperCase();
-  if (p !== 'TOP' && p !== 'BOTTOM') return null;
+  if (p !== 'TOP' && p !== 'BOTTOM' && p !== 'AUTO_PARTS') return null;
   return p;
 }
 
@@ -84,7 +85,7 @@ async function adminList(req, res, next) {
 async function adminCreate(req, res, next) {
   try {
     const position = normalizePosition(req.body.position);
-    if (!position) throw new AppError('position is required (TOP/BOTTOM)', 400, 'VALIDATION_ERROR');
+    if (!position) throw new AppError('position is required (TOP/BOTTOM/AUTO_PARTS)', 400, 'VALIDATION_ERROR');
 
     const { title, titleAr, isActive, sortOrder } = req.body;
 
@@ -112,7 +113,7 @@ async function adminUpdate(req, res, next) {
     if (!existing) throw new AppError('Banner not found', 404, 'NOT_FOUND');
 
     const position = req.body.position !== undefined ? normalizePosition(req.body.position) : undefined;
-    if (position === null) throw new AppError('Invalid position (TOP/BOTTOM)', 400, 'VALIDATION_ERROR');
+    if (position === null) throw new AppError('Invalid position (TOP/BOTTOM/AUTO_PARTS)', 400, 'VALIDATION_ERROR');
 
     const { title, titleAr, isActive, sortOrder } = req.body;
 
@@ -188,9 +189,10 @@ async function adminUploadImages(req, res, next) {
 
     const imagesData = files.map((f) => {
       const imageUrl = `/uploads/banners/${bannerId}/${f.filename}`;
+      const fullImageUrl = getFullUrl(imageUrl);
       const row = {
         bannerId,
-        imageUrl,
+        imageUrl: fullImageUrl,
         linkUrl,
         sortOrder: nextOrder,
       };

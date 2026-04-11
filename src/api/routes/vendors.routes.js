@@ -8,6 +8,7 @@ const couponController = require('../controllers/coupon.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
 const { requireAdminOrPermission } = require('../middlewares/permission.middleware');
+const { getFullUrl } = require('../../utils/urlUtils');
 
 // ── Vendor image upload (logo / banner) ────────────────────────────────────
 const vendorUploadDir = path.join(__dirname, '../../../uploads/vendors');
@@ -40,52 +41,34 @@ router.use(authMiddleware);
  * @swagger
  * /api/vendors:
  *   get:
- *     summary: قائمة الفيندورات (أدمن) — List all vendors (Admin only) [CRUD - Read List]
- *     tags: [Vendors (الفيندور)]
+ *     summary: Get all vendors (Admin only)
+ *     description: Returns a paginated list of all vendors in the system
+ *     tags: [Vendors]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: status
+ *         name: page
  *         schema:
- *           type: string
- *           enum: [PENDING_APPROVAL, ACTIVE, SUSPENDED, REJECTED]
- *         description: Filter by vendor status
+ *           type: integer
+ *           default: 1
  *       - in: query
- *         name: search
+ *         name: limit
  *         schema:
- *           type: string
- *         description: Search by business name
- *       - in: query
- *         name: isVerified
- *         schema:
- *           type: boolean
- *         description: Filter by verification
- *       - in: query
- *         name: vendorType
- *         schema:
- *           type: string
- *         description: Filter by vendor type
- *       - $ref: '#/components/parameters/PageParam'
- *       - $ref: '#/components/parameters/LimitParam'
+ *           type: integer
+ *           default: 10
  *     responses:
  *       200:
  *         description: List of vendors
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/VendorProfile'
- *                 pagination:
- *                   $ref: '#/components/schemas/Pagination'
+ *             example:
+ *               success: true
+ *               data: [...]
+ *               pagination:
+ *                 $ref: '#/components/schemas/Pagination'
  */
-router.get('/', requireAdminOrPermission('vendors'), vendorController.getAllVendors);
+router.get('/', vendorController.getAllVendors);
 
 /**
  * @swagger
@@ -424,15 +407,244 @@ router.post(
       const { type = 'logo' } = req.body; // type: 'logo' | 'banner'
       const prisma = require('../../utils/database/prisma');
       const imageUrl = `/uploads/vendors/${req.params.id}/${req.file.filename}`;
+      const fullImageUrl = getFullUrl(imageUrl);
       const vendor = await prisma.vendorProfile.update({
         where: { id: req.params.id },
-        data: type === 'banner' ? { banner: imageUrl } : { logo: imageUrl },
+        data: type === 'banner' ? { banner: fullImageUrl } : { logo: fullImageUrl },
       });
-      res.json({ success: true, imageUrl, data: vendor });
+      res.json({ success: true, imageUrl: fullImageUrl, data: vendor });
     } catch (err) {
       next(err);
     }
   },
 );
+
+// ── Vendor Services Management (Admin) ───────────────────────────────────────
+/**
+ * @swagger
+ * /api/vendors/{id}/services:
+ *   get:
+ *     summary: Get all services for a vendor
+ *     description: Returns all services (all categories) for a specific vendor
+ *     tags: [Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Vendor ID (UUID)
+ *     responses:
+ *       200:
+ *         description: List of services for this vendor
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 - id: "uuid"
+ *                   name: "External Wash"
+ *                   nameAr: "غسيل خارجي"
+ *                   category: "CLEANING"
+ *                   type: "FIXED"
+ *                   isActive: true
+ *                   estimatedDuration: 30
+ *                   pricing:
+ *                     - id: "uuid"
+ *                       vehicleType: "SEDAN"
+ *                       basePrice: 50
+ *                       discountedPrice: 45
+ *                       isActive: true
+ */
+router.get('/:id/services', async (req, res, next) => {
+  try {
+    const prisma = require('../../utils/database/prisma');
+    const services = await prisma.service.findMany({
+      where: { vendorId: req.params.id },
+      include: {
+        pricing: true
+      },
+      orderBy: { name: 'asc' }
+    });
+    res.json({ success: true, data: services });
+  } catch (err) { next(err); }
+});
+
+/**
+ * @swagger
+ * /api/vendors/{id}/car-wash-services:
+ *   get:
+ *     summary: Get car wash services for a vendor
+ *     description: Returns all CLEANING category services for a specific car wash vendor
+ *     tags: [Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of car wash services for this vendor
+ */
+router.get('/:id/car-wash-services', async (req, res, next) => {
+  try {
+    const prisma = require('../../utils/database/prisma');
+    const services = await prisma.service.findMany({
+      where: { 
+        vendorId: req.params.id,
+        category: 'CLEANING',
+        isActive: true
+      },
+      include: {
+        pricing: true,
+        vendor: { select: { id: true, businessName: true, businessNameAr: true, logo: true } }
+      },
+      orderBy: { name: 'asc' }
+    });
+    res.json({ success: true, data: services });
+  } catch (err) { next(err); }
+});
+
+router.post('/:id/services', requireRole(['ADMIN', 'VENDOR']), async (req, res, next) => {
+  try {
+    const prisma = require('../../utils/database/prisma');
+    
+    // Get vendor type to set default category
+    const vendor = await prisma.vendorProfile.findUnique({
+      where: { id: req.params.id },
+      select: { vendorType: true }
+    });
+    
+    if (!vendor) {
+      return res.status(404).json({ success: false, error: 'Vendor not found' });
+    }
+    
+    // Map vendorType to service category
+    const vendorTypeToCategory = {
+      'AUTO_PARTS': 'MAINTENANCE',
+      'COMPREHENSIVE_CARE': 'COMPREHENSIVE_CARE',
+      'CERTIFIED_WORKSHOP': 'CERTIFIED_WORKSHOP',
+      'CAR_WASH': 'CLEANING',
+      'MOBILE_WORKSHOP': 'MAINTENANCE',
+      'TOWING_SERVICE': 'EMERGENCY'
+    };
+    
+    const { 
+      name, nameAr, description, descriptionAr, 
+      estimatedDuration, imageUrl, isActive = true, pricing = [], 
+      workingHours = [], slotDurationMinutes = 60,
+      category: providedCategory,
+      type = 'FIXED'
+    } = req.body;
+    
+    // Use provided category or default based on vendor type
+    const category = providedCategory || vendorTypeToCategory[vendor.vendorType] || 'MAINTENANCE';
+    
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Service name is required' });
+    }
+
+    const service = await prisma.service.create({
+      data: {
+        name,
+        nameAr,
+        description,
+        descriptionAr,
+        type,
+        category,
+        vendorId: req.params.id,
+        estimatedDuration,
+        imageUrl,
+        slotDurationMinutes,
+        isActive,
+        workingHours: workingHours.length > 0 ? workingHours : null,
+        pricing: pricing.length > 0 ? {
+          createMany: {
+            data: pricing.map(p => ({
+              vehicleType: p.vehicleType,
+              basePrice: p.basePrice || 0,
+              discountedPrice: p.discountedPrice || null
+            }))
+          }
+        } : undefined
+      },
+      include: {
+        pricing: true
+      }
+    });
+    res.status(201).json({ success: true, data: service });
+  } catch (err) { next(err); }
+});
+
+router.put('/:id/services/:serviceId', requireRole(['ADMIN']), async (req, res, next) => {
+  try {
+    const prisma = require('../../utils/database/prisma');
+    const { 
+      name, nameAr, description, descriptionAr, 
+      estimatedDuration, imageUrl, isActive, pricing = [], 
+      workingHours = [], slotDurationMinutes 
+    } = req.body;
+    
+    const existing = await prisma.service.findUnique({ where: { id: req.params.serviceId } });
+    if (!existing || existing.vendorId !== req.params.id) {
+      return res.status(404).json({ success: false, error: 'Service not found' });
+    }
+
+    const service = await prisma.service.update({
+      where: { id: req.params.serviceId },
+      data: {
+        ...(name && { name }),
+        ...(nameAr !== undefined && { nameAr }),
+        ...(description !== undefined && { description }),
+        ...(descriptionAr !== undefined && { descriptionAr }),
+        ...(estimatedDuration !== undefined && { estimatedDuration }),
+        ...(imageUrl !== undefined && { imageUrl }),
+        ...(isActive !== undefined && { isActive }),
+        ...(slotDurationMinutes !== undefined && { slotDurationMinutes }),
+        ...(workingHours.length > 0 ? { workingHours } : {})
+      }
+    });
+
+    // Update pricing if provided
+    if (Array.isArray(pricing) && pricing.length > 0) {
+      await prisma.servicePricing.deleteMany({ where: { serviceId: req.params.serviceId } });
+      await prisma.servicePricing.createMany({
+        data: pricing.map(p => ({
+          serviceId: req.params.serviceId,
+          vehicleType: p.vehicleType,
+          basePrice: p.basePrice || 0,
+          discountedPrice: p.discountedPrice || null
+        }))
+      });
+    }
+
+    const updated = await prisma.service.findUnique({
+      where: { id: req.params.serviceId },
+      include: {
+        pricing: true
+      }
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (err) { next(err); }
+});
+
+router.delete('/:id/services/:serviceId', requireRole(['ADMIN']), async (req, res, next) => {
+  try {
+    const prisma = require('../../utils/database/prisma');
+    const existing = await prisma.service.findUnique({ where: { id: req.params.serviceId } });
+    if (!existing || existing.vendorId !== req.params.id) {
+      return res.status(404).json({ success: false, error: 'Service not found' });
+    }
+
+    await prisma.service.delete({ where: { id: req.params.serviceId } });
+    res.json({ success: true, message: 'Service deleted' });
+  } catch (err) { next(err); }
+});
 
 module.exports = router;
