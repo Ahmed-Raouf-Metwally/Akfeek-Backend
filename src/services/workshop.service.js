@@ -327,9 +327,17 @@ class WorkshopService {
         // Check if workshop exists
         await this.getWorkshopById(id);
 
+        // Filter out undefined values
+        const filteredData = {};
+        for (const [key, value] of Object.entries(data)) {
+            if (value !== undefined) {
+                filteredData[key] = value;
+            }
+        }
+
         const workshop = await prisma.certifiedWorkshop.update({
             where: { id },
-            data
+            data: filteredData
         });
 
         return workshop;

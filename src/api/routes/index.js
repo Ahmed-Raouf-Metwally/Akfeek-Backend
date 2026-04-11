@@ -163,6 +163,8 @@ router.use('/auto-part-categories', autoPartCategoryRoutes);
 router.use('/auto-parts', autoPartRoutes);
 
 // Packages routes
-router.use('/packages', require('./packages.routes'));
+const packagesRoutes = require('./packages.routes');
+router.use('/packages', packagesRoutes.defaultRouter);
+router.use('/user-packages', packagesRoutes.userPackagesRouter);
 
 module.exports = router;

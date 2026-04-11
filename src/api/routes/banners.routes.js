@@ -6,10 +6,10 @@ const ctrl = require('../controllers/banner.controller');
  * @swagger
  * /api/banners:
  *   get:
- *     summary: بنرات التطبيق (أعلى/أسفل/قطع غيار) — Public banners for mobile app
+ *     summary: بنرات التطبيق (أعلى/أسفل/قطع غيار/غسيلCars) — Public banners for mobile app
  *     description: |
- *       - بدون `position`: يعيد `{ top: Banner[], bottom: Banner[], autoParts: Banner[] }`
- *       - مع `position=TOP|BOTTOM|AUTO_PARTS`: يعيد `Banner[]` لمكان معيّن
+ *       - بدون `position`: يعيد `{ top: Banner[], bottom: Banner[], autoParts: Banner[], carWash: Banner[] }`
+ *       - مع `position=TOP|BOTTOM|AUTO_PARTS|CAR_WASH`: يعيد `Banner[]` لمكان معيّن
  *     tags: [Banners]
  *     parameters:
  *       - in: query
@@ -17,12 +17,12 @@ const ctrl = require('../controllers/banner.controller');
  *         required: false
  *         schema:
  *           type: string
- *           enum: [TOP, BOTTOM, AUTO_PARTS]
+ *           enum: [TOP, BOTTOM, AUTO_PARTS, CAR_WASH]
  *     responses:
  *       200:
  *         description: |
  *           - If `position` is provided: returns array `Banner[]`
- *           - If `position` is omitted: returns object `{ top: Banner[], bottom: Banner[], autoParts: Banner[] }`
+ *           - If `position` is omitted: returns object `{ top: Banner[], bottom: Banner[], autoParts: Banner[], carWash: Banner[] }`
  */
 router.get('/', ctrl.getPublic);
 

@@ -76,10 +76,11 @@ const deleteFile = (filePath) => {
  * @param {string} filePath - Relative file path
  * @returns {string} Full URL
  */
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
+
 const getFileUrl = (filePath) => {
-    // In production, this would be your CDN URL
-    // For now, return relative path that will be served by Express static
-    return `/uploads/workshops/${filePath}`;
+    // Return full URL with domain
+    return `${PUBLIC_BASE_URL}/uploads/workshops/${filePath}`;
 };
 
 /**

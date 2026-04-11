@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, OrderStatus } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 
 const prisma = new PrismaClient();
@@ -733,7 +733,8 @@ async function main() {
   const banners = [
     { position: 'TOP', title: 'خصم 20% على الغسيل', titleAr: 'خصم 20% على الغسيل', sortOrder: 1 },
     { position: 'AUTO_PARTS', title: 'قطع غيار بأفضل الأسعار', titleAr: 'قطع غيار بأفضل الأسعار', sortOrder: 2 },
-    { position: 'BOTTOM', title: 'احجز الآن ورشة متنقلة', titleAr: 'احجز الآن ورشة متنقلة', sortOrder: 3 },
+    { position: 'CAR_WASH', title: 'غسيل سياراتVIP', titleAr: 'غسيل سيارات VIP بأفضل الأسعار', sortOrder: 3 },
+    { position: 'BOTTOM', title: 'احجز الآن ورشة متنقلة', titleAr: 'احجز الآن ورشة متنقلة', sortOrder: 4 },
   ];
 
   for (const b of banners) {
@@ -754,6 +755,128 @@ async function main() {
     });
   }
   console.log('✅ Created banners');
+
+  // 17. Create Workshop Reviews
+  const workshops = await prisma.certifiedWorkshop.findMany({ take: 3 });
+  const workshopReviews = [
+    { rating: 5, comment: 'Excellent service, very professional!', commentAr: 'خدمة ممتازة، احترافي جداً!', isApproved: true, isVerified: true },
+    { rating: 4, comment: 'Good work, timely delivery', commentAr: 'عمل جيد، تسليم في الوقت', isApproved: true, isVerified: true },
+    { rating: 5, comment: 'Highly recommended!', commentAr: 'موصى به بشدة!', isApproved: true, isVerified: true },
+    { rating: 3, comment: 'Average service', commentAr: 'خدمة متوسطة', isApproved: true, isVerified: false },
+  ];
+
+  for (let i = 0; i < workshops.length; i++) {
+    const workshop = workshops[i];
+    for (let j = 0; j < 2; j++) {
+      const userIdx = (i + j) % users.length;
+      const review = workshopReviews[(i * 2 + j) % workshopReviews.length];
+      await prisma.workshopReview.upsert({
+        where: { id: `review-${workshop.id}-${userIdx}` },
+        update: {},
+        create: {
+          id: `review-${workshop.id}-${userIdx}`,
+          workshopId: workshop.id,
+          userId: users[userIdx].id,
+          rating: review.rating,
+          comment: review.comment,
+          commentAr: review.commentAr,
+          isApproved: review.isApproved,
+          isVerified: review.isVerified,
+          createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+  }
+  console.log('✅ Created workshop reviews');
+
+  // 18. Create Vendor Reviews
+  const vendors = await prisma.vendorProfile.findMany({ take: 3 });
+  const vendorReviews = [
+    { rating: 5, comment: 'Great quality parts!' },
+    { rating: 4, comment: 'Fast delivery' },
+    { rating: 5, comment: 'Best prices in town' },
+  ];
+
+  for (let i = 0; i < vendors.length; i++) {
+    const vendor = vendors[i];
+    for (let j = 0; j < 2; j++) {
+      const userIdx = (i + j) % users.length;
+      const review = vendorReviews[(i * 2 + j) % vendorReviews.length];
+      await prisma.vendorReview.upsert({
+        where: { id: `vreview-${vendor.id}-${userIdx}` },
+        update: {},
+        create: {
+          id: `vreview-${vendor.id}-${userIdx}`,
+          vendorId: vendor.id,
+          userId: users[userIdx].id,
+          rating: review.rating,
+          comment: review.comment,
+          createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+  }
+  console.log('✅ Created vendor reviews');
+
+  // 19. Create Auto Parts Orders
+  const parts = await prisma.autoPart.findMany({ take: 5 });
+  
+  for (let i = 0; i < 5; i++) {
+    const part = parts[i % parts.length];
+    const userIdx = i % users.length;
+    const statusKey = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'][i % 5];
+    
+    await prisma.marketplaceOrder.upsert({
+      where: { id: `order-${i}` },
+      update: {},
+      create: {
+        id: `order-${i}`,
+        orderNumber: `ORD-2026-${String(1000 + i).padStart(4, '0')}`,
+        customerId: users[userIdx].id,
+        status: OrderStatus[statusKey],
+        subtotal: part.price,
+        tax: 0,
+        shippingCost: 20,
+        totalAmount: Number(part.price) + 20,
+        shippingAddress: 'Riyadh, Saudi Arabia',
+        shippingCountry: 'SA',
+        createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
+        items: {
+          create: [{
+            autoPartId: part.id,
+            vendorId: part.vendorId,
+            quantity: 1,
+            unitPrice: part.price,
+            totalPrice: part.price,
+          }],
+        },
+      },
+    });
+  }
+  console.log('✅ Created auto parts orders');
+
+  // 20. Create User Package Subscriptions
+  const dbPackages = await prisma.package.findMany({ take: 2 });
+  for (let i = 0; i < 3; i++) {
+    const pkg = dbPackages[i % dbPackages.length];
+    const userIdx = i % users.length;
+    const purchasedAt = new Date(Date.now() - Math.random() * 15 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(purchasedAt.getTime() + pkg.validityDays * 24 * 60 * 60 * 1000);
+    
+    await prisma.userPackage.upsert({
+      where: { id: `userpkg-${i}` },
+      update: {},
+      create: {
+        id: `userpkg-${i}`,
+        userId: users[userIdx].id,
+        packageId: pkg.id,
+        purchasedAt,
+        expiresAt,
+        isActive: expiresAt > new Date(),
+      },
+    });
+  }
+  console.log('✅ Created user package subscriptions');
 
   console.log('🎉 Seed extended successfully!');
 }

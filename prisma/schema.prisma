@@ -426,6 +426,7 @@ enum VendorType {
   CAR_WASH // فيندور خدمة الغسيل
   MOBILE_WORKSHOP // مقدم خدمة الورش المتنقلة
   TOWING_SERVICE // مقدم خدمة السحب والونش
+  ADHMN_AKFEEK // أكفيك - أكymen
 }
 
 model VendorProfile {
@@ -823,6 +824,9 @@ model CertifiedWorkshop {
   // Media
   logo   String?
   images Json? // Array of image URLs
+
+  // Warranty
+  warrantyMonths Int? // Warranty period in months (e.g., 6)
 
   // Status
   isActive   Boolean   @default(true)
@@ -2530,6 +2534,7 @@ enum BannerPosition {
   TOP
   BOTTOM
   AUTO_PARTS
+  CAR_WASH
 }
 
 model Banner {

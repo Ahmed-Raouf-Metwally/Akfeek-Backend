@@ -262,7 +262,7 @@ class VendorService {
     const vendor = await prisma.vendorProfile.create({
       data: {
         userId,
-        ...(vendorType && { vendorType: ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'MOBILE_WORKSHOP', 'TOWING_SERVICE'].includes(vendorType) ? vendorType : 'AUTO_PARTS' }),
+        ...(vendorType && { vendorType: ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'MOBILE_WORKSHOP', 'TOWING_SERVICE', 'ADHMN_AKFEEK'].includes(vendorType) ? vendorType : 'AUTO_PARTS' }),
         businessName,
         businessNameAr,
         description,
@@ -331,7 +331,7 @@ class VendorService {
       }
     }
 
-    const validVendorTypes = ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'MOBILE_WORKSHOP', 'TOWING_SERVICE'];
+    const validVendorTypes = ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'MOBILE_WORKSHOP', 'TOWING_SERVICE', 'ADHMN_AKFEEK'];
     const vendor = await prisma.vendorProfile.update({
       where: { id },
       data: {

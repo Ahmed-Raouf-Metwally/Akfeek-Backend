@@ -411,8 +411,8 @@ class PackageService {
 
     if (search) {
       where.OR = [
-        { user: { firstName: { contains: search, mode: 'insensitive' } } },
-        { user: { lastName: { contains: search, mode: 'insensitive' } } },
+        { user: { profile: { firstName: { contains: search, mode: 'insensitive' } } } },
+        { user: { profile: { lastName: { contains: search, mode: 'insensitive' } } } },
         { user: { email: { contains: search, mode: 'insensitive' } } }
       ];
     }
@@ -423,8 +423,12 @@ class PackageService {
         user: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true
+              }
+            },
             email: true,
             phone: true
           }
@@ -458,7 +462,9 @@ class PackageService {
       userId: sub.userId,
       user: {
         ...sub.user,
-        fullName: `${sub.user.firstName || ''} ${sub.user.lastName || ''}`.trim()
+        firstName: sub.user.profile?.firstName,
+        lastName: sub.user.profile?.lastName,
+        fullName: `${sub.user.profile?.firstName || ''} ${sub.user.profile?.lastName || ''}`.trim()
       },
       package: sub.package,
       purchasedAt: sub.purchasedAt,

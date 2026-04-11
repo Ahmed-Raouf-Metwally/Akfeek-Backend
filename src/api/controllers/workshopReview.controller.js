@@ -53,36 +53,15 @@ class WorkshopReviewController {
 
             res.json({
                 success: true,
-                data: result.reviews,
+                data: result.reviews || [],
                 pagination: result.pagination
             });
         } catch (error) {
-            next(error);
-        }
-    }
-
-    /**
-     * Get workshop reviews (admin)
-     * GET /api/workshops/admin/:id/reviews
-     */
-    async getWorkshopReviewsAdmin(req, res, next) {
-        try {
-            const { id: workshopId } = req.params;
-            const { page, limit, isApproved } = req.query;
-
-            const result = await workshopReviewService.getWorkshopReviewsAdmin(workshopId, {
-                page,
-                limit,
-                isApproved
+            console.error('getWorkshopReviews error:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message || 'Failed to fetch reviews'
             });
-
-            res.json({
-                success: true,
-                data: result.reviews,
-                pagination: result.pagination
-            });
-        } catch (error) {
-            next(error);
         }
     }
 
@@ -150,6 +129,35 @@ class WorkshopReviewController {
             });
         } catch (error) {
             next(error);
+        }
+    }
+
+    /**
+     * Get workshop reviews (admin)
+     * GET /api/workshops/admin/:id/reviews
+     */
+    async getWorkshopReviewsAdmin(req, res, next) {
+        try {
+            const { id: workshopId } = req.params;
+            const { page, limit, isApproved } = req.query;
+
+            const result = await workshopReviewService.getWorkshopReviewsAdmin(workshopId, {
+                page,
+                limit,
+                isApproved
+            });
+
+            res.json({
+                success: true,
+                data: result.reviews || [],
+                pagination: result.pagination
+            });
+        } catch (error) {
+            console.error('getWorkshopReviewsAdmin error:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message || 'Failed to fetch reviews'
+            });
         }
     }
 

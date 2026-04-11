@@ -18,6 +18,21 @@ router.use(authMiddleware);
  *     responses:
  *       200:
  *         description: List of packages
+ *         content:
+ *           application/json:
+ *             example:
+ *               - id: "pkg-123"
+ *                 name: "Basic Package"
+ *                 nameAr: "الباقة الأساسية"
+ *                 description: "包括基本服务"
+ *                 price: 300
+ *                 usageCount: null
+ *                 validityDays: 30
+ *                 isActive: true
+ *                 services:
+ *                   - id: "svc-1"
+ *                     name: "Oil Change"
+ *                     nameAr: "تغيير الزيت"
  */
 router.get('/', packagesController.getAllPackages);
 
@@ -154,7 +169,7 @@ router.delete('/:id', requireRole(['ADMIN']), packagesController.deletePackage);
 
 /**
  * @swagger
- * /api/user-packages:
+ * /api/packages/user-packages/my-packages:
  *   get:
  *     summary: Get current user's packages
  *     tags: [Packages]
@@ -162,13 +177,34 @@ router.delete('/:id', requireRole(['ADMIN']), packagesController.deletePackage);
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of user's packages
+ *         description: List of user's active packages
+ *         content:
+ *           application/json:
+ *             example:
+ *               - id: "userpkg-123"
+ *                 userId: "user-123"
+ *                 packageId: "pkg-123"
+ *                 package:
+ *                   name: "Basic Package"
+ *                   nameAr: "الباقة الأساسية"
+ *                   price: 300
+ *                   validityDays: 30
+ *                   services:
+ *                     - name: "Oil Change"
+ *                       nameAr: "تغيير الزيت"
+ *                 purchasedAt: "2026-04-11T10:00:00.000Z"
+ *                 expiresAt: "2026-05-11T10:00:00.000Z"
+ *                 isActive: true
+ *                 remainingServices:
+ *                   - serviceId: "svc-1"
+ *                     serviceName: "Oil Change"
+ *                     usedCount: 0
  */
 router.get('/user-packages/my-packages', packagesController.getUserPackages);
 
 /**
  * @swagger
- * /api/user-packages/eligible:
+ * /api/packages/user-packages/eligible:
  *   get:
  *     summary: Get user's eligible packages for specific services
  *     tags: [Packages]
@@ -180,6 +216,7 @@ router.get('/user-packages/my-packages', packagesController.getUserPackages);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Comma-separated service IDs
  *     responses:
  *       200:
  *         description: List of user's eligible packages
@@ -188,7 +225,7 @@ router.get('/user-packages/eligible', packagesController.getUserEligiblePackages
 
 /**
  * @swagger
- * /api/user-packages/{id}:
+ * /api/packages/user-packages/{id}:
  *   get:
  *     summary: Get specific user package by ID
  *     tags: [Packages]
@@ -200,9 +237,10 @@ router.get('/user-packages/eligible', packagesController.getUserEligiblePackages
  *         required: true
  *         schema:
  *           type: string
+ *         description: User package ID
  *     responses:
  *       200:
- *         description: Package details
+ *         description: Package details with usage
  */
 router.get('/user-packages/:id', packagesController.getUserPackageById);
 
@@ -215,44 +253,41 @@ router.get('/user-packages/:id', packagesController.getUserPackageById);
  *     security:
  *       - bearerAuth: []
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - packageId
  *             properties:
  *               packageId:
  *                 type: string
+ *                 description: The ID of the package to purchase
+ *           example:
+ *             packageId: "pkg-123"
  *     responses:
  *       201:
- *         description: Package purchased
+ *         description: Package purchased successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               message: "Package purchased successfully"
+ *               data:
+ *                 id: "userpkg-123"
+ *                 userId: "user-123"
+ *                 packageId: "pkg-123"
+ *                 package:
+ *                   name: "Basic Package"
+ *                   nameAr: "الباقة الأساسية"
+ *                   price: 300
+ *                   validityDays: 30
+ *                 purchasedAt: "2026-04-11T10:00:00.000Z"
+ *                 expiresAt: "2026-05-11T10:00:00.000Z"
+ *                 isActive: true
  */
 router.post('/user-packages/purchase', packagesController.purchasePackage);
-
-/**
- * @swagger
- * /api/bookings/apply-package:
- *   post:
- *     summary: Apply a package to a booking
- *     tags: [Packages]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               bookingId:
- *                 type: string
- *               userPackageId:
- *                 type: string
- *               serviceId:
- *                 type: string
- *     responses:
- *       200:
- *         description: Package applied successfully
- */
-router.post('/bookings/apply-package', packagesController.applyPackageToBooking);
 
 /**
  * @swagger
@@ -284,4 +319,89 @@ router.post('/bookings/apply-package', packagesController.applyPackageToBooking)
  */
 router.get('/admin/subscriptions', requireRole(['ADMIN']), packagesController.getAllSubscriptions);
 
-module.exports = router;
+// ========================================================================
+// Separate router for /api/user-packages/* endpoints (no prefix)
+// ========================================================================
+const userPackagesRouter = express.Router();
+userPackagesRouter.use(authMiddleware);
+
+/**
+ * @swagger
+ * /api/user-packages/my-packages:
+ *   get:
+ *     summary: Get current user's packages
+ *     tags: [User Packages]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user's active packages
+ */
+userPackagesRouter.get('/my-packages', packagesController.getUserPackages);
+
+/**
+ * @swagger
+ * /api/user-packages/eligible:
+ *   get:
+ *     summary: Get user's eligible packages for specific services
+ *     tags: [User Packages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: serviceIds
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of user's eligible packages
+ */
+userPackagesRouter.get('/eligible', packagesController.getUserEligiblePackages);
+
+/**
+ * @swagger
+ * /api/user-packages/{id}:
+ *   get:
+ *     summary: Get specific user package by ID
+ *     tags: [User Packages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Package details with usage
+ */
+userPackagesRouter.get('/:id', packagesController.getUserPackageById);
+
+/**
+ * @swagger
+ * /api/user-packages/purchase:
+ *   post:
+ *     summary: Purchase a package
+ *     tags: [User Packages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - packageId
+ *             properties:
+ *               packageId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Package purchased successfully
+ */
+userPackagesRouter.post('/purchase', packagesController.purchasePackage);
+
+module.exports = { defaultRouter: router, userPackagesRouter };

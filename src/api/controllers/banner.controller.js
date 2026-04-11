@@ -5,7 +5,8 @@ const { getFullUrl } = require('../../utils/urlUtils');
 function normalizePosition(pos) {
   if (!pos) return null;
   const p = String(pos).trim().toUpperCase();
-  if (p !== 'TOP' && p !== 'BOTTOM' && p !== 'AUTO_PARTS') return null;
+  const validPositions = ['TOP', 'BOTTOM', 'AUTO_PARTS', 'CAR_WASH'];
+  if (!validPositions.includes(p)) return null;
   return p;
 }
 
@@ -45,7 +46,7 @@ async function getPublic(req, res, next) {
       return res.json({ success: true, data: items });
     }
 
-    const [top, bottom] = await Promise.all([
+    const [top, bottom, autoParts, carWash] = await Promise.all([
       prisma.banner.findMany({
         where: { ...whereBase, position: 'TOP' },
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
@@ -56,9 +57,19 @@ async function getPublic(req, res, next) {
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
         select: bannerSelect,
       }),
+      prisma.banner.findMany({
+        where: { ...whereBase, position: 'AUTO_PARTS' },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+        select: bannerSelect,
+      }),
+      prisma.banner.findMany({
+        where: { ...whereBase, position: 'CAR_WASH' },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+        select: bannerSelect,
+      }),
     ]);
 
-    res.json({ success: true, data: { top, bottom } });
+    res.json({ success: true, data: { top, bottom, autoParts, carWash } });
   } catch (err) {
     next(err);
   }
@@ -85,7 +96,7 @@ async function adminList(req, res, next) {
 async function adminCreate(req, res, next) {
   try {
     const position = normalizePosition(req.body.position);
-    if (!position) throw new AppError('position is required (TOP/BOTTOM/AUTO_PARTS)', 400, 'VALIDATION_ERROR');
+    if (!position) throw new AppError('position is required (TOP/BOTTOM/AUTO_PARTS/CAR_WASH)', 400, 'VALIDATION_ERROR');
 
     const { title, titleAr, isActive, sortOrder } = req.body;
 
@@ -113,7 +124,7 @@ async function adminUpdate(req, res, next) {
     if (!existing) throw new AppError('Banner not found', 404, 'NOT_FOUND');
 
     const position = req.body.position !== undefined ? normalizePosition(req.body.position) : undefined;
-    if (position === null) throw new AppError('Invalid position (TOP/BOTTOM/AUTO_PARTS)', 400, 'VALIDATION_ERROR');
+    if (position === null) throw new AppError('Invalid position (TOP/BOTTOM/AUTO_PARTS/CAR_WASH)', 400, 'VALIDATION_ERROR');
 
     const { title, titleAr, isActive, sortOrder } = req.body;
 

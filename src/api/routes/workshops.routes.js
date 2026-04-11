@@ -6,10 +6,10 @@ const workshopReviewController = require('../controllers/workshopReview.controll
 const workshopImageController = require('../controllers/workshopImage.controller');
 const workshopServiceController = require('../controllers/workshopService.controller');
 const { upload } = require('../../utils/imageUpload');
-const authMiddleware = require('../middlewares/auth.middleware');
+const { optionalAuth, authMiddleware } = require('../middlewares/auth.middleware');
 const requireRole = require('../middlewares/role.middleware');
 
-router.use(authMiddleware);
+router.use(optionalAuth);
 
 // Customer endpoints
 /**

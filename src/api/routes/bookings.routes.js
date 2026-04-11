@@ -308,6 +308,7 @@ router.get('/:id', bookingController.getBookingById);
  *                 scheduledDate: "2026-03-15T00:00:00.000Z"
  *                 scheduledTime: "10:00"
  *                 serviceIds: ["uuid-خدمة-غسيل-من-فيندور-غسيل"]
+ *                 addressId: "uuid-العنوان"
  *                 notes: "غسيل خارجي"
  *     responses:
  *       201:

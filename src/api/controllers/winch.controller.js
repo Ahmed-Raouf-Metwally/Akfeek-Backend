@@ -1,6 +1,7 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
 const winchTowingService = require('../../services/winchTowing.service');
+const { getFullUrl } = require('../../utils/urlUtils');
 
 const WINCH_SELECT = {
   id: true, name: true, nameAr: true, plateNumber: true,
@@ -276,8 +277,9 @@ async function uploadMyWinchImage(req, res, next) {
     if (!req.file) return res.status(400).json({ success: false, error: 'No image uploaded' });
     const winchId = vendor.winch.id;
     const imageUrl = `/uploads/winches/${winchId}/${req.file.filename}`;
-    await prisma.winch.update({ where: { id: winchId }, data: { imageUrl } });
-    res.json({ success: true, imageUrl });
+    const fullImageUrl = getFullUrl(imageUrl);
+    await prisma.winch.update({ where: { id: winchId }, data: { imageUrl: fullImageUrl } });
+    res.json({ success: true, imageUrl: fullImageUrl });
   } catch (err) { next(err); }
 }
 

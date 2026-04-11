@@ -40,7 +40,8 @@ class ServiceController {
           errorAr: 'لم يتم رفع أي صورة',
         });
       }
-      const url = '/uploads/services/' + file.filename;
+      const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
+      const url = `${baseUrl}/uploads/services/${file.filename}`;
       res.json({ success: true, data: url });
     } catch (error) {
       next(error);

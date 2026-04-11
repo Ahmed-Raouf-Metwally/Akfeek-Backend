@@ -115,55 +115,72 @@ class WorkshopReviewService {
      * @returns {Promise<Array>} List of reviews
      */
     async getWorkshopReviews(workshopId, filters = {}) {
-        const { page = 1, limit = 10, rating, isVerified } = filters;
+        const page = parseInt(filters.page) || 1;
+        const limit = parseInt(filters.limit) || 10;
+        const { rating, isVerified } = filters;
         const skip = (page - 1) * limit;
 
-        const where = {
-            workshopId,
-            isApproved: true // Only show approved reviews to public
-        };
+        try {
+            // First verify workshop exists
+            const workshop = await prisma.certifiedWorkshop.findUnique({
+                where: { id: workshopId },
+                select: { id: true }
+            });
+            
+            if (!workshop) {
+                throw new Error('Workshop not found');
+            }
 
-        if (rating) {
-            where.rating = parseInt(rating);
-        }
+            const where = {
+                workshopId,
+                isApproved: true // Only show approved reviews to public
+            };
 
-        if (isVerified !== undefined) {
-            where.isVerified = isVerified === 'true';
-        }
+            if (rating) {
+                where.rating = parseInt(rating);
+            }
 
-        const [reviews, total] = await Promise.all([
-            prisma.workshopReview.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            profile: {
-                                select: {
-                                    firstName: true,
-                                    lastName: true,
-                                    avatar: true
+            if (isVerified !== undefined) {
+                where.isVerified = isVerified === 'true';
+            }
+
+            const [reviews, total] = await Promise.all([
+                prisma.workshopReview.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                profile: {
+                                    select: {
+                                        firstName: true,
+                                        lastName: true,
+                                        avatar: true
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            }),
-            prisma.workshopReview.count({ where })
-        ]);
+                }),
+                prisma.workshopReview.count({ where })
+            ]);
 
-        return {
-            reviews,
-            pagination: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit)
-            }
-        };
+            return {
+                reviews,
+                pagination: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit)
+                }
+            };
+        } catch (error) {
+            console.error('Error in getWorkshopReviews:', error);
+            throw error;
+        }
     }
 
     /**
