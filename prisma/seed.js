@@ -265,12 +265,19 @@ async function main() {
         year: part.year,
         price: part.price,
         stockQuantity: 50,
+        badges: ['Original', 'Warranty'],
         isApproved: true,
         isActive: true,
       },
     });
   }
   console.log('✅ Created auto parts for car parts vendor');
+
+  // Ensure all auto parts have badges (backfill old rows seeded previously)
+  await prisma.autoPart.updateMany({
+    where: { badges: null },
+    data: { badges: ['Original'] },
+  });
 
   // 8. Create Services for Car Wash (vendor index 2)
   const carWashServices = [

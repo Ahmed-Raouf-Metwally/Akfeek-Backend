@@ -244,6 +244,7 @@ class AutoPartService {
 
     return parts.map((p) => ({
       ...p,
+      badges: Array.isArray(p.badges) ? p.badges : (p.badges ?? []),
       primaryImageUrl: p.images?.[0]?.url ? normalizeImageUrl(p.images[0].url) : null,
       brandLogoUrl: p.brandRef?.logo ? normalizeImageUrl(p.brandRef.logo) : null,
     }));
@@ -321,6 +322,7 @@ class AutoPartService {
 
     return {
       ...part,
+      badges: Array.isArray(part.badges) ? part.badges : (part.badges ?? []),
       primaryImageUrl: part.images?.find((i) => i.isPrimary)?.url
         ? normalizeImageUrl(part.images.find((i) => i.isPrimary).url)
         : (part.images?.[0]?.url ? normalizeImageUrl(part.images[0].url) : null),
@@ -351,6 +353,7 @@ class AutoPartService {
 
     return parts.map((p) => ({
       ...p,
+      badges: Array.isArray(p.badges) ? p.badges : (p.badges ?? []),
       primaryImageUrl: p.images?.[0]?.url ? normalizeImageUrl(p.images[0].url) : null,
       brandLogoUrl: p.brandRef?.logo ? normalizeImageUrl(p.brandRef.logo) : null,
     }));
@@ -395,6 +398,7 @@ class AutoPartService {
 
     return parts.map((p) => ({
       ...p,
+      badges: Array.isArray(p.badges) ? p.badges : (p.badges ?? []),
       primaryImageUrl: p.images?.[0]?.url ? normalizeImageUrl(p.images[0].url) : null,
       brandLogoUrl: p.brandRef?.logo ? normalizeImageUrl(p.brandRef.logo) : null,
     }));
@@ -453,6 +457,7 @@ class AutoPartService {
 
     return parts.map((p) => ({
       ...p,
+      badges: Array.isArray(p.badges) ? p.badges : (p.badges ?? []),
       primaryImageUrl: p.images?.[0]?.url ? normalizeImageUrl(p.images[0].url) : null,
       brandLogoUrl: p.brandRef?.logo ? normalizeImageUrl(p.brandRef.logo) : null,
     }));
@@ -487,6 +492,7 @@ class AutoPartService {
       weight,
       dimensions,
       specifications,
+      badges,
       isActive,
       isFeatured,
       images,
@@ -568,6 +574,7 @@ class AutoPartService {
         weight: weight ? parseFloat(weight) : null,
         dimensions,
         specifications,
+        badges: badges !== undefined ? badges : undefined,
         isActive: isActive !== undefined ? isActive : true,
         isFeatured: isFeatured !== undefined ? isFeatured : false,
         isApproved,
@@ -659,6 +666,7 @@ class AutoPartService {
       weight,
       dimensions,
       specifications,
+      badges,
       isActive,
       isFeatured,
       categoryId,
@@ -693,6 +701,7 @@ class AutoPartService {
       }),
       ...(dimensions !== undefined && { dimensions }),
       ...(specifications !== undefined && { specifications }),
+      ...(badges !== undefined && { badges }),
       ...(isActive !== undefined && { isActive }),
       ...(isFeatured !== undefined && { isFeatured }),
     };

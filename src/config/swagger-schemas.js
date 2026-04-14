@@ -88,6 +88,11 @@
  *           type: array
  *           items:
  *             $ref: '#/components/schemas/AutoPartImage'
+ *         badges:
+ *           type: array
+ *           items:
+ *             type: string
+ *           nullable: true
  * 
  *     AutoPartImage:
  *       type: object

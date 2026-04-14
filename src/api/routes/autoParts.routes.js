@@ -172,6 +172,11 @@ router.post('/upload-image', uploadAutoPartImage.array('files', 10), autoPartCon
  *                 type: number
  *               stockQuantity:
  *                 type: integer
+ *               badges:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: بادجات/Tags تظهر على القطعة (اختياري) — e.g. ["Original","Best Seller","Warranty"]
  *               categoryId:
  *                 type: string
  *               vendorId:
@@ -210,6 +215,10 @@ router.post('/', autoPartController.createPart);
  *                 type: number
  *               stockQuantity:
  *                 type: integer
+ *               badges:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
  *         description: Part updated

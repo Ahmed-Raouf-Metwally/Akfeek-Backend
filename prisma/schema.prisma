@@ -656,6 +656,9 @@ model AutoPart {
 
   specifications Json?
 
+  // UI badges/tags (e.g., "Original", "Best Seller", "Warranty")
+  badges Json?
+
   isActive   Boolean @default(true)
   isFeatured Boolean @default(false)
 
