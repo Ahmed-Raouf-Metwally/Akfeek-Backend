@@ -480,11 +480,8 @@ async function createBooking(req, res, next) {
     }
 
     const ids = serviceIds || (Array.isArray(servicesLegacy) ? servicesLegacy : []);
-    const hasWorkshopServiceIds = Array.isArray(workshopServiceIds) && workshopServiceIds.length > 0;
-    const useWorkshopServices = hasWorkshopServiceIds;
-    if (!useWorkshopServices && !ids.length) {
-      throw new AppError('At least one service is required (serviceIds or workshopServiceIds when workshopId is set)', 400, 'VALIDATION_ERROR');
-    }
+    let normalizedWorkshopServiceIds = Array.isArray(workshopServiceIds) ? workshopServiceIds.filter(Boolean) : [];
+    let useWorkshopServices = normalizedWorkshopServiceIds.length > 0;
 
     // If booking is created by serviceIds only, we can infer workshopId for CERTIFIED_WORKSHOP services (vendor-linked)
     // and decide whether vehicleId is actually required based on service.requiresVehicle.
@@ -495,12 +492,12 @@ async function createBooking(req, res, next) {
     // If workshopServiceIds are provided without workshopId, infer workshopId (all must belong to same workshop)
     if (useWorkshopServices && !workshopId) {
       const wss = await prisma.certifiedWorkshopService.findMany({
-        where: { id: { in: workshopServiceIds }, isActive: true },
+        where: { id: { in: normalizedWorkshopServiceIds }, isActive: true },
         select: { id: true, workshopId: true },
       });
-      if (wss.length !== workshopServiceIds.length) {
+      if (wss.length !== normalizedWorkshopServiceIds.length) {
         const found = new Set(wss.map((s) => s.id));
-        const missing = workshopServiceIds.filter((id) => !found.has(id));
+        const missing = normalizedWorkshopServiceIds.filter((id) => !found.has(id));
         throw new AppError(`Workshop service not found or inactive: ${missing[0]}`, 404, 'NOT_FOUND');
       }
       const wsIds = [...new Set(wss.map((s) => s.workshopId).filter(Boolean))];
@@ -546,6 +543,108 @@ async function createBooking(req, res, next) {
           }
         }
       }
+    }
+
+    // Default behavior: if user books a certified workshop without specifying any services,
+    // auto-add the workshop inspection service (serviceType = INSPECTION) if available.
+    if (!useWorkshopServices && !ids.length && workshopId) {
+      // Prefer inspection-like service; fallback to the first active workshop service.
+      const inspectionLike = await prisma.certifiedWorkshopService.findFirst({
+        where: {
+          workshopId,
+          isActive: true,
+          OR: [
+            { serviceType: 'INSPECTION' },
+            { serviceType: 'DIAGNOSIS' },
+            { serviceType: 'GENERAL_INSPECTION' },
+            { name: { contains: 'Inspection' } },
+            { nameAr: { contains: 'فحص' } },
+          ],
+        },
+        orderBy: [{ createdAt: 'asc' }],
+        select: { id: true },
+      });
+      const fallbackAny = inspectionLike
+        ? null
+        : await prisma.certifiedWorkshopService.findFirst({
+            where: { workshopId, isActive: true },
+            orderBy: [{ createdAt: 'asc' }],
+            select: { id: true },
+          });
+
+      const chosen = inspectionLike || fallbackAny;
+      if (!chosen) {
+        throw new AppError(
+          'No services found for this workshop. Please add workshop services first.',
+          400,
+          'VALIDATION_ERROR'
+        );
+      }
+
+      normalizedWorkshopServiceIds = [chosen.id];
+      useWorkshopServices = true;
+      deliveryMethod = deliveryMethod || 'SELF_DELIVERY';
+    }
+
+    // If this is a certified workshop booking AND services were provided (either catalog serviceIds or workshopServiceIds),
+    // also include the inspection-like workshop service by default (if available) unless already included.
+    let extraWorkshopInspectionServiceId = null;
+    if (workshopId && (useWorkshopServices || ids.length)) {
+      const alreadyHasInspectionLike =
+        (useWorkshopServices && normalizedWorkshopServiceIds.length > 0) &&
+        (await prisma.certifiedWorkshopService.count({
+          where: {
+            id: { in: normalizedWorkshopServiceIds },
+            workshopId,
+            isActive: true,
+            OR: [
+              { serviceType: 'INSPECTION' },
+              { serviceType: 'DIAGNOSIS' },
+              { serviceType: 'GENERAL_INSPECTION' },
+              { name: { contains: 'Inspection' } },
+              { nameAr: { contains: 'فحص' } },
+            ],
+          },
+        })) > 0;
+
+      if (!alreadyHasInspectionLike) {
+        const inspectionLike = await prisma.certifiedWorkshopService.findFirst({
+          where: {
+            workshopId,
+            isActive: true,
+            OR: [
+              { serviceType: 'INSPECTION' },
+              { serviceType: 'DIAGNOSIS' },
+              { serviceType: 'GENERAL_INSPECTION' },
+              { name: { contains: 'Inspection' } },
+              { nameAr: { contains: 'فحص' } },
+            ],
+          },
+          orderBy: [{ createdAt: 'asc' }],
+          select: { id: true },
+        });
+        if (inspectionLike?.id) {
+          if (useWorkshopServices) {
+            // Prepend inspection for workshop-service-based bookings
+            normalizedWorkshopServiceIds = [
+              inspectionLike.id,
+              ...normalizedWorkshopServiceIds.filter((x) => x !== inspectionLike.id),
+            ];
+          } else {
+            // For catalog serviceIds bookings, add an extra workshop service line
+            extraWorkshopInspectionServiceId = inspectionLike.id;
+          }
+          deliveryMethod = deliveryMethod || 'SELF_DELIVERY';
+        }
+      }
+    }
+
+    if (!useWorkshopServices && !ids.length) {
+      throw new AppError(
+        'At least one service is required (serviceIds or workshopServiceIds) unless booking a workshop with a default inspection service available',
+        400,
+        'VALIDATION_ERROR'
+      );
     }
 
     const scheduledDateObj = new Date(scheduledDate);
@@ -612,7 +711,7 @@ async function createBooking(req, res, next) {
     let subtotal = 0;
 
     if (useWorkshopServices) {
-      for (const wsId of workshopServiceIds) {
+      for (const wsId of normalizedWorkshopServiceIds) {
         const ws = await prisma.certifiedWorkshopService.findFirst({
           where: { id: wsId, workshopId, isActive: true }
         });
@@ -635,6 +734,28 @@ async function createBooking(req, res, next) {
         });
       }
     } else {
+      // Add default inspection workshop service line (if detected) for catalog-service bookings
+      if (extraWorkshopInspectionServiceId) {
+        const ws = await prisma.certifiedWorkshopService.findFirst({
+          where: { id: extraWorkshopInspectionServiceId, workshopId, isActive: true }
+        });
+        if (ws) {
+          const quantity = 1;
+          const unitPrice = Number(ws.price);
+          const totalPrice = unitPrice * quantity;
+          subtotal += totalPrice;
+          const estimatedMinutes = ws.estimatedDuration != null ? Number(ws.estimatedDuration) : null;
+          bookingServiceData.push({
+            serviceId: null,
+            workshopServiceId: ws.id,
+            quantity,
+            unitPrice,
+            totalPrice,
+            estimatedMinutes,
+            vendorId: null,
+          });
+        }
+      }
       for (const serviceId of ids) {
         const service = await prisma.service.findUnique({
           where: { id: serviceId, isActive: true },

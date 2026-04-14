@@ -334,6 +334,44 @@ class WorkshopService {
             data: createData
         });
 
+        // Create default inspection/diagnosis service (free) if not exists yet
+        // NOTE: CertifiedWorkshopService schema does NOT have descriptionAr; don't send unknown fields.
+        try {
+            const exists = await prisma.certifiedWorkshopService.findFirst({
+                where: {
+                    workshopId: workshop.id,
+                    isActive: true,
+                    OR: [
+                        { serviceType: 'DIAGNOSIS' },
+                        { name: { contains: 'Inspection' } },
+                        { nameAr: { contains: 'فحص' } }
+                    ]
+                },
+                select: { id: true }
+            });
+
+            if (!exists) {
+                await prisma.certifiedWorkshopService.create({
+                    data: {
+                        workshopId: workshop.id,
+                        serviceType: 'DIAGNOSIS',
+                        name: 'Inspection',
+                        nameAr: 'فحص وتشخيص',
+                        description: 'Default inspection service (free) — vendor can update price later.',
+                        price: 0,
+                        currency: 'SAR',
+                        estimatedDuration: 45,
+                        isActive: true
+                    }
+                });
+            }
+        } catch (e) {
+            // Non-blocking: workshop creation should succeed even if default service creation fails
+            // لكن نطبع السبب عشان ما تبقاش "اختفت" بصمت
+            // eslint-disable-next-line no-console
+            console.error('Failed to create default inspection service:', e?.message || e);
+        }
+
         return workshop;
     }
 

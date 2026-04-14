@@ -205,9 +205,12 @@ router.get('/:id', bookingController.getBookingById);
  *     description: |
  *       إنشاء حجز جديد. يُستخدم لنوعين من الخدمات:
  *
- *       **1) الورش المعتمدة (Certified Workshop):** أرسل workshopId + deliveryMethod، ثم إما:
- *       - **workshopServiceIds** — مصفوفة معرفات خدمات الورشة (من GET /api/workshops/{id}/services)، أو
- *       - **serviceIds** — مصفوفة معرفات الخدمات من الكتالوج العام.
+ *       **1) الورش المعتمدة (Certified Workshop):** يمكنك الحجز بإحدى الطرق:
+ *       - **workshopId فقط** (بدون services) → سيتم حجز خدمة الفحص/التشخيص تلقائياً (إن وُجدت للورشة، وإلا أول خدمة فعالة).
+ *       - **workshopServiceIds** — معرفات خدمات الورشة (من GET /api/workshops/{id}/services). يمكن عدم إرسال workshopId وسيتم استنتاجه إذا كانت كل الخدمات لنفس الورشة.
+ *       - **serviceIds** — معرفات خدمات من الكتالوج العام (category=CERTIFIED_WORKSHOP). يمكن عدم إرسال workshopId وسيتم استنتاجه إذا كانت كل الخدمات لنفس الورشة/الفيندور.
+ *       - **بدون خدمات:** إذا أرسلت workshopId فقط بدون serviceIds/workshopServiceIds، سيتم حجز خدمة الفحص/التشخيص تلقائياً إن وُجدت للورشة (وإلا أول خدمة فعالة).
+ *       - **مع خدمات:** إذا أرسلت serviceIds أو workshopServiceIds مع workshopId، سيتم أيضًا إضافة خدمة الفحص/التشخيص تلقائيًا (إن وُجدت) بجانب الخدمات المختارة.
  *
  *       **2) العناية الشاملة (Comprehensive Care):** أرسل serviceIds فقط (بدون workshopId). serviceIds = خدمات تابعة لفيندور عناية شاملة.
  *
@@ -228,9 +231,11 @@ router.get('/:id', bookingController.getBookingById);
  *             required: [scheduledDate]
  *             description: |
  *               ملاحظة: يجب إرسال واحد على الأقل من:
+ *               - workshopId (حجز ورشة معتمدة بدون اختيار خدمات — سيتم إضافة خدمة الفحص تلقائياً)
  *               - serviceIds (خدمات الكتالوج)
  *               - workshopServiceIds (خدمات الورشة المعتمدة من /api/workshops/{id}/services)
  *             oneOf:
+ *               - required: [scheduledDate, workshopId]
  *               - required: [scheduledDate, serviceIds]
  *               - required: [scheduledDate, workshopServiceIds]
  *             properties:
@@ -254,11 +259,17 @@ router.get('/:id', bookingController.getBookingById);
  *               workshopId:
  *                 type: string
  *                 format: uuid
- *                 description: للورش المعتمدة فقط (اختياري). إذا لم يُرسل، وكان serviceIds لخدمات category=CERTIFIED_WORKSHOP لنفس vendorId، سيتم استنتاج الورشة تلقائيًا. Certified workshop ID (optional; can be inferred from serviceIds).
+ *                 description: |
+ *                   للورش المعتمدة فقط (اختياري).
+ *                   - إذا لم يُرسل وكان `serviceIds` لخدمات `category=CERTIFIED_WORKSHOP` لنفس الورشة/الفيندور → سيتم استنتاجه تلقائيًا.
+ *                   - إذا لم يُرسل وكان `workshopServiceIds` كلها لنفس الورشة → سيتم استنتاجه تلقائيًا.
+ *                   Certified workshop ID (optional; can be inferred).
  *               deliveryMethod:
  *                 type: string
  *                 enum: [FLATBED, SELF_DELIVERY]
- *                 description: مطلوب عند إرسال/استنتاج workshopId. FLATBED = ونش، SELF_DELIVERY = إيصال ذاتي (افتراضي). Required when workshopId is provided/inferred (defaults to SELF_DELIVERY).
+ *                 description: |
+ *                   للورش المعتمدة فقط (اختياري). FLATBED = ونش، SELF_DELIVERY = إيصال ذاتي (افتراضي).
+ *                   Certified workshop only (optional; defaults to SELF_DELIVERY).
  *               serviceIds:
  *                 type: array
  *                 items:
@@ -295,6 +306,13 @@ router.get('/:id', bookingController.getBookingById);
  *                   - "00000000-0000-0000-0000-000000000001"
  *                   - "00000000-0000-0000-0000-000000000002"
  *                 notes: "ملاحظات اختيارية"
+ *             certifiedWorkshopNoServices:
+ *               summary: حجز ورشة معتمدة بدون اختيار خدمات (سيتم إضافة الفحص تلقائياً) — Certified Workshop (auto inspection)
+ *               value:
+ *                 workshopId: "00000000-0000-0000-0000-000000000099"
+ *                 scheduledDate: "2026-03-15T00:00:00.000Z"
+ *                 scheduledTime: "12:00"
+ *                 notes: "اختياري"
  *             certifiedWorkshop:
  *               summary: حجز ورشة معتمدة (خدمات الورشة) + addressId — Certified Workshop (workshop services)
  *               value:
@@ -305,6 +323,18 @@ router.get('/:id', bookingController.getBookingById);
  *                   - "00000000-0000-0000-0000-000000000012"
  *                 addressId: "00000000-0000-0000-0000-000000000021"
  *                 notes: "ملاحظات اختيارية"
+ *             certifiedWorkshopBoth:
+ *               summary: حجز ورشة معتمدة بخدمة + الفحص تلقائياً (الاتنين) — Certified Workshop (selected service + auto inspection)
+ *               description: |
+ *                 أرسل خدمة/خدمات من الورشة في workshopServiceIds.
+ *                 النظام سيضيف خدمة الفحص/التشخيص تلقائياً بجانبها (إذا لم تكن ضمن الاختيار).
+ *               value:
+ *                 workshopId: "00000000-0000-0000-0000-000000000099"
+ *                 scheduledDate: "2026-03-15T00:00:00.000Z"
+ *                 scheduledTime: "12:30"
+ *                 workshopServiceIds:
+ *                   - "00000000-0000-0000-0000-000000000012"
+ *                 notes: "عايز الفحص + تبديل زيت"
  *             comprehensiveCare:
  *               summary: حجز عناية شاملة — Comprehensive Care
  *               value:
