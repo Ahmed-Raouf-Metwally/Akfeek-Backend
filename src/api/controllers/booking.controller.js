@@ -461,8 +461,8 @@ async function createBooking(req, res, next) {
       scheduledDate,
       scheduledTime,
       workType: bodyWorkType,
-      workshopId,
-      deliveryMethod,
+      workshopId: bodyWorkshopId,
+      deliveryMethod: bodyDeliveryMethod,
       serviceIds,
       workshopServiceIds,
       services: servicesLegacy,
@@ -475,14 +475,77 @@ async function createBooking(req, res, next) {
     const isAdmin = req.user.role === 'ADMIN';
     const customerId = isAdmin && bodyCustomerId ? bodyCustomerId : req.user.id;
 
-    if (!vehicleId || !scheduledDate) {
-      throw new AppError('vehicleId and scheduledDate are required', 400, 'VALIDATION_ERROR');
+    if (!scheduledDate) {
+      throw new AppError('scheduledDate is required', 400, 'VALIDATION_ERROR');
     }
 
-    const useWorkshopServices = workshopId && Array.isArray(workshopServiceIds) && workshopServiceIds.length > 0;
     const ids = serviceIds || (Array.isArray(servicesLegacy) ? servicesLegacy : []);
+    const hasWorkshopServiceIds = Array.isArray(workshopServiceIds) && workshopServiceIds.length > 0;
+    const useWorkshopServices = hasWorkshopServiceIds;
     if (!useWorkshopServices && !ids.length) {
       throw new AppError('At least one service is required (serviceIds or workshopServiceIds when workshopId is set)', 400, 'VALIDATION_ERROR');
+    }
+
+    // If booking is created by serviceIds only, we can infer workshopId for CERTIFIED_WORKSHOP services (vendor-linked)
+    // and decide whether vehicleId is actually required based on service.requiresVehicle.
+    let inferredWorkshopId = null;
+    let workshopId = bodyWorkshopId || null;
+    let deliveryMethod = bodyDeliveryMethod || null;
+
+    // If workshopServiceIds are provided without workshopId, infer workshopId (all must belong to same workshop)
+    if (useWorkshopServices && !workshopId) {
+      const wss = await prisma.certifiedWorkshopService.findMany({
+        where: { id: { in: workshopServiceIds }, isActive: true },
+        select: { id: true, workshopId: true },
+      });
+      if (wss.length !== workshopServiceIds.length) {
+        const found = new Set(wss.map((s) => s.id));
+        const missing = workshopServiceIds.filter((id) => !found.has(id));
+        throw new AppError(`Workshop service not found or inactive: ${missing[0]}`, 404, 'NOT_FOUND');
+      }
+      const wsIds = [...new Set(wss.map((s) => s.workshopId).filter(Boolean))];
+      if (wsIds.length !== 1) {
+        throw new AppError('workshopServiceIds must belong to the same workshop', 400, 'VALIDATION_ERROR');
+      }
+      inferredWorkshopId = wsIds[0];
+      workshopId = wsIds[0];
+      deliveryMethod = deliveryMethod || 'SELF_DELIVERY';
+    }
+
+    let resolvedServicesForIds = [];
+    if (!useWorkshopServices && ids.length) {
+      resolvedServicesForIds = await prisma.service.findMany({
+        where: { id: { in: ids }, isActive: true },
+        select: { id: true, category: true, vendorId: true, requiresVehicle: true },
+      });
+      if (resolvedServicesForIds.length !== ids.length) {
+        const found = new Set(resolvedServicesForIds.map((s) => s.id));
+        const missing = ids.filter((id) => !found.has(id));
+        throw new AppError(`Service not found or inactive: ${missing[0]}`, 404, 'NOT_FOUND');
+      }
+
+      const requiresVehicleAny = resolvedServicesForIds.some((s) => s.requiresVehicle === true);
+      if (requiresVehicleAny && !vehicleId) {
+        throw new AppError('vehicleId is required for the selected service(s)', 400, 'VALIDATION_ERROR');
+      }
+
+      if (!workshopId) {
+        const allCertifiedWorkshop = resolvedServicesForIds.every((s) => s.category === 'CERTIFIED_WORKSHOP');
+        const vendorIds = [...new Set(resolvedServicesForIds.map((s) => s.vendorId).filter(Boolean))];
+        if (allCertifiedWorkshop && vendorIds.length === 1) {
+          const vendorId = vendorIds[0];
+          const ws = await prisma.certifiedWorkshop.findFirst({
+            where: { vendorId, isActive: true, isVerified: true },
+            select: { id: true },
+          });
+          if (ws?.id) {
+            inferredWorkshopId = ws.id;
+            workshopId = ws.id;
+            // deliveryMethod is only meaningful for certified workshop bookings; default to SELF_DELIVERY
+            deliveryMethod = deliveryMethod || 'SELF_DELIVERY';
+          }
+        }
+      }
     }
 
     const scheduledDateObj = new Date(scheduledDate);
@@ -490,7 +553,7 @@ async function createBooking(req, res, next) {
     dayStart.setUTCHours(0, 0, 0, 0);
     const dayEnd = new Date(scheduledDateObj);
     dayEnd.setUTCHours(23, 59, 59, 999);
-    if (scheduledTime && !useWorkshopServices && ids.length) {
+    if (scheduledTime && !useWorkshopServices && ids.length && !workshopId) {
       const conflicting = await prisma.booking.findFirst({
         where: {
           scheduledDate: { gte: dayStart, lte: dayEnd },
@@ -503,7 +566,7 @@ async function createBooking(req, res, next) {
         throw new AppError('This time slot is already booked for one of the selected services', 400, 'SLOT_NOT_AVAILABLE');
       }
     }
-    if (scheduledTime && useWorkshopServices) {
+    if (scheduledTime && workshopId) {
       const conflicting = await prisma.booking.findFirst({
         where: {
           workshopId,
@@ -517,18 +580,21 @@ async function createBooking(req, res, next) {
       }
     }
 
-    const vehicle = await prisma.userVehicle.findUnique({
-      where: { id: vehicleId },
-      include: { vehicleModel: { select: { type: true } } }
-    });
-    if (!vehicle) {
-      throw new AppError('Vehicle not found', 404, 'NOT_FOUND');
+    let vehicle = null;
+    let vehicleType = 'all';
+    if (vehicleId) {
+      vehicle = await prisma.userVehicle.findUnique({
+        where: { id: vehicleId },
+        include: { vehicleModel: { select: { type: true } } }
+      });
+      if (!vehicle) {
+        throw new AppError('Vehicle not found', 404, 'NOT_FOUND');
+      }
+      if (vehicle.userId !== customerId) {
+        throw new AppError('Vehicle does not belong to customer', 403, 'FORBIDDEN');
+      }
+      vehicleType = vehicle.vehicleModel?.type || 'SEDAN';
     }
-    if (vehicle.userId !== customerId) {
-      throw new AppError('Vehicle does not belong to customer', 403, 'FORBIDDEN');
-    }
-
-    const vehicleType = vehicle.vehicleModel?.type || 'SEDAN';
 
     let flatbedFee = 0;
     if (workshopId) {
@@ -639,14 +705,14 @@ async function createBooking(req, res, next) {
     const booking = await prisma.booking.create({
       data: {
         bookingNumber,
-        customerId,
-        vehicleId,
-        addressId: addressId || null,
+        customer: { connect: { id: customerId } },
+        ...(vehicleId ? { vehicle: { connect: { id: vehicleId } } } : {}),
+        ...(addressId ? { address: { connect: { id: addressId } } } : {}),
         scheduledDate: new Date(scheduledDate),
         scheduledTime: scheduledTime || null,
         workType,
         estimatedDuration: totalEstimatedMinutes || null,
-        workshopId: workshopId || null,
+        ...(workshopId ? { workshop: { connect: { id: workshopId } } } : {}),
         deliveryMethod: deliveryMethod || null,
         flatbedFee,
         status: 'PENDING',
@@ -666,12 +732,12 @@ async function createBooking(req, res, next) {
         },
         services: {
           create: bookingServiceData.map(({ serviceId, workshopServiceId, quantity, unitPrice, totalPrice: tp, estimatedMinutes: em }) => ({
-            serviceId: serviceId || undefined,
-            workshopServiceId: workshopServiceId || undefined,
+            ...(serviceId ? { service: { connect: { id: serviceId } } } : {}),
+            ...(workshopServiceId ? { workshopService: { connect: { id: workshopServiceId } } } : {}),
             quantity,
             unitPrice,
             totalPrice: tp,
-            estimatedMinutes: em ?? undefined
+            ...(em != null ? { estimatedMinutes: em } : {})
           }))
         }
       },

@@ -73,6 +73,24 @@ router.use(optionalAuth);
  *                         type: integer
  *                       isVerified:
  *                         type: boolean
+ *                       warrantyMonths:
+ *                         type: integer
+ *                         nullable: true
+ *                       workshopServices:
+ *                         type: array
+ *                         description: Active workshop services with pricing (CertifiedWorkshopService)
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id: { type: string, format: uuid }
+ *                             workshopId: { type: string, format: uuid }
+ *                             serviceType: { type: string }
+ *                             name: { type: string }
+ *                             nameAr: { type: string, nullable: true }
+ *                             description: { type: string, nullable: true }
+ *                             price: { type: number }
+ *                             currency: { type: string, example: SAR }
+ *                             estimatedDuration: { type: integer, nullable: true, description: Duration in minutes }
  */
 router.get('/', workshopController.getAllWorkshops);
 

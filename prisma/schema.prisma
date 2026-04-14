@@ -227,6 +227,7 @@ model VehicleBrand {
 
   // Relations
   models VehicleModel[]
+  autoParts AutoPart[] @relation("AutoPartBrand")
 
   @@index([name])
 }
@@ -636,6 +637,7 @@ model AutoPart {
 
   brand      String
   brandId    String? // علاقة بالماركة
+  brandRef   VehicleBrand? @relation("AutoPartBrand", fields: [brandId], references: [id])
   vehicleModelId String? // علاقة بالموديل
   vehicleModel VehicleModel? @relation(fields: [vehicleModelId], references: [id])
   year       Int? // سنة التصنيع
@@ -1263,8 +1265,8 @@ model Booking {
   technicianId String?
   technician   User?   @relation("TechnicianBookings", fields: [technicianId], references: [id])
 
-  vehicleId String
-  vehicle   UserVehicle @relation(fields: [vehicleId], references: [id])
+  vehicleId String?
+  vehicle   UserVehicle? @relation(fields: [vehicleId], references: [id])
 
   addressId String?
   address   Address? @relation(fields: [addressId], references: [id])

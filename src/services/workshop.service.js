@@ -56,7 +56,24 @@ class WorkshopService {
                 totalBookings: true,
                 logo: true,
                 images: true,
-                isVerified: true
+                warrantyMonths: true,
+                isVerified: true,
+                workshopServices: {
+                    where: { isActive: true },
+                    select: {
+                        id: true,
+                        workshopId: true,
+                        serviceType: true,
+                        name: true,
+                        nameAr: true,
+                        description: true,
+                        price: true,
+                        currency: true,
+                        estimatedDuration: true,
+                        isActive: true
+                    },
+                    orderBy: [{ serviceType: 'asc' }, { name: 'asc' }]
+                }
             }
         });
 

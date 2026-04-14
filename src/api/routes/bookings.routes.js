@@ -225,7 +225,14 @@ router.get('/:id', bookingController.getBookingById);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [vehicleId, scheduledDate]
+ *             required: [scheduledDate]
+ *             description: |
+ *               ملاحظة: يجب إرسال واحد على الأقل من:
+ *               - serviceIds (خدمات الكتالوج)
+ *               - workshopServiceIds (خدمات الورشة المعتمدة من /api/workshops/{id}/services)
+ *             oneOf:
+ *               - required: [scheduledDate, serviceIds]
+ *               - required: [scheduledDate, workshopServiceIds]
  *             properties:
  *               customerId:
  *                 type: string
@@ -234,7 +241,7 @@ router.get('/:id', bookingController.getBookingById);
  *               vehicleId:
  *                 type: string
  *                 format: uuid
- *                 description: معرف المركبة — Vehicle ID
+ *                 description: معرف المركبة (اختياري). يصبح مطلوبًا فقط إذا كانت أي خدمة مختارة requiresVehicle=true — Vehicle ID (optional, required only when service requires a vehicle)
  *               scheduledDate:
  *                 type: string
  *                 format: date-time
@@ -247,23 +254,30 @@ router.get('/:id', bookingController.getBookingById);
  *               workshopId:
  *                 type: string
  *                 format: uuid
- *                 description: للورش المعتمدة فقط. معرف الورشة المعتمدة. Certified workshop ID — required for certified workshop bookings.
+ *                 description: للورش المعتمدة فقط (اختياري). إذا لم يُرسل، وكان serviceIds لخدمات category=CERTIFIED_WORKSHOP لنفس vendorId، سيتم استنتاج الورشة تلقائيًا. Certified workshop ID (optional; can be inferred from serviceIds).
  *               deliveryMethod:
  *                 type: string
  *                 enum: [FLATBED, SELF_DELIVERY]
- *                 description: مطلوب عند إرسال workshopId. FLATBED = ونش، SELF_DELIVERY = إيصال ذاتي. Required when workshopId is provided.
+ *                 description: مطلوب عند إرسال/استنتاج workshopId. FLATBED = ونش، SELF_DELIVERY = إيصال ذاتي (افتراضي). Required when workshopId is provided/inferred (defaults to SELF_DELIVERY).
  *               serviceIds:
  *                 type: array
  *                 items:
  *                   type: string
  *                   format: uuid
- *                 description: مصفوفة معرفات الخدمات من الكتالوج (عناية شاملة أو ورشة). Array of catalog Service IDs.
+ *                 description: |
+ *                   مصفوفة معرفات الخدمات من الكتالوج العام (عناية شاملة / غسيل / ورشة معتمدة).
+ *                   - عند اختيار خدمات ورش معتمدة (category=CERTIFIED_WORKSHOP) لنفس vendorId يمكن الحجز بدون workshopId وسيتم استنتاجه تلقائيًا.
+ *                   - إذا أي خدمة requiresVehicle=true → vehicleId يصبح مطلوبًا.
+ *                   Array of catalog Service IDs.
  *               workshopServiceIds:
  *                 type: array
  *                 items:
  *                   type: string
  *                   format: uuid
- *                 description: للورش المعتمدة فقط. مصفوفة معرفات خدمات الورشة (CertifiedWorkshopService من GET /api/workshops/{id}/services). عند الإرسال مع workshopId يُستخدم سعر واسم الخدمة من الورشة. For certified workshop — IDs from GET /api/workshops/:id/services.
+ *                 description: |
+ *                   للورش المعتمدة فقط. مصفوفة معرفات خدمات الورشة (CertifiedWorkshopService من GET /api/workshops/{id}/services).
+ *                   إذا لم يُرسل workshopId، سيتم استنتاجه تلقائيًا بشرط أن كل workshopServiceIds تابعة لنفس الورشة.
+ *                   For certified workshop — IDs from GET /api/workshops/:id/services. workshopId can be inferred if all IDs belong to the same workshop.
  *               addressId:
  *                 type: string
  *                 format: uuid
@@ -272,30 +286,28 @@ router.get('/:id', bookingController.getBookingById);
  *                 type: string
  *                 description: ملاحظات (اختياري). Notes (optional).
  *           examples:
- *             certifiedWorkshopWithWorkshopServices:
- *               summary: حجز ورشة معتمدة (خدمات الورشة) — Certified Workshop (workshop services)
+ *             bookByServiceIds:
+ *               summary: حجز باستخدام serviceIds (Catalog services)
  *               value:
- *                 vehicleId: "uuid-المركبة"
  *                 scheduledDate: "2026-03-15T00:00:00.000Z"
  *                 scheduledTime: "10:00"
- *                 workshopId: "uuid-الورشة-المعتمدة"
- *                 deliveryMethod: "SELF_DELIVERY"
- *                 workshopServiceIds: ["uuid-خدمة-ورشة-1", "uuid-خدمة-ورشة-2"]
+ *                 serviceIds:
+ *                   - "00000000-0000-0000-0000-000000000001"
+ *                   - "00000000-0000-0000-0000-000000000002"
  *                 notes: "ملاحظات اختيارية"
- *             certifiedWorkshopWithCatalog:
- *               summary: حجز ورشة معتمدة (خدمات كتالوج) — Certified Workshop (catalog services)
+ *             certifiedWorkshop:
+ *               summary: حجز ورشة معتمدة (خدمات الورشة) + addressId — Certified Workshop (workshop services)
  *               value:
- *                 vehicleId: "uuid-المركبة"
  *                 scheduledDate: "2026-03-15T00:00:00.000Z"
  *                 scheduledTime: "10:00"
- *                 workshopId: "uuid-الورشة-المعتمدة"
- *                 deliveryMethod: "SELF_DELIVERY"
- *                 serviceIds: ["uuid-خدمة-1", "uuid-خدمة-2"]
+ *                 workshopServiceIds:
+ *                   - "00000000-0000-0000-0000-000000000011"
+ *                   - "00000000-0000-0000-0000-000000000012"
+ *                 addressId: "00000000-0000-0000-0000-000000000021"
  *                 notes: "ملاحظات اختيارية"
  *             comprehensiveCare:
  *               summary: حجز عناية شاملة — Comprehensive Care
  *               value:
- *                 vehicleId: "uuid-المركبة"
  *                 scheduledDate: "2026-03-15T00:00:00.000Z"
  *                 scheduledTime: "14:00"
  *                 serviceIds: ["uuid-خدمة-عناية-1", "uuid-خدمة-عناية-2"]
@@ -304,7 +316,6 @@ router.get('/:id', bookingController.getBookingById);
  *             carWash:
  *               summary: حجز ورش غسيل — Car Wash (مثل العناية الشاملة)
  *               value:
- *                 vehicleId: "uuid-المركبة"
  *                 scheduledDate: "2026-03-15T00:00:00.000Z"
  *                 scheduledTime: "10:00"
  *                 serviceIds: ["uuid-خدمة-غسيل-من-فيندور-غسيل"]

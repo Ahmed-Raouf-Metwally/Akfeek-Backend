@@ -211,6 +211,14 @@ class AutoPartService {
             nameAr: true,
           },
         },
+        brandRef: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            logo: true,
+          },
+        },
         vendor: {
           select: {
             id: true,
@@ -234,7 +242,11 @@ class AutoPartService {
       orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
     });
 
-    return parts;
+    return parts.map((p) => ({
+      ...p,
+      primaryImageUrl: p.images?.[0]?.url ? normalizeImageUrl(p.images[0].url) : null,
+      brandLogoUrl: p.brandRef?.logo ? normalizeImageUrl(p.brandRef.logo) : null,
+    }));
   }
 
   /**
@@ -249,6 +261,7 @@ class AutoPartService {
       include: {
         category: true,
         vehicleModel: true,
+        brandRef: true,
         vendor: {
           include: {
             user: {
@@ -306,7 +319,13 @@ class AutoPartService {
       }
     }
 
-    return part;
+    return {
+      ...part,
+      primaryImageUrl: part.images?.find((i) => i.isPrimary)?.url
+        ? normalizeImageUrl(part.images.find((i) => i.isPrimary).url)
+        : (part.images?.[0]?.url ? normalizeImageUrl(part.images[0].url) : null),
+      brandLogoUrl: part.brandRef?.logo ? normalizeImageUrl(part.brandRef.logo) : null,
+    };
   }
 
   /**
@@ -319,6 +338,9 @@ class AutoPartService {
       where: { vendorId },
       include: {
         category: true,
+        brandRef: {
+          select: { id: true, name: true, nameAr: true, logo: true },
+        },
         images: {
           where: { isPrimary: true },
           take: 1,
@@ -327,7 +349,11 @@ class AutoPartService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return parts;
+    return parts.map((p) => ({
+      ...p,
+      primaryImageUrl: p.images?.[0]?.url ? normalizeImageUrl(p.images[0].url) : null,
+      brandLogoUrl: p.brandRef?.logo ? normalizeImageUrl(p.brandRef.logo) : null,
+    }));
   }
 
   /**
@@ -348,6 +374,9 @@ class AutoPartService {
       },
       include: {
         category: true,
+        brandRef: {
+          select: { id: true, name: true, nameAr: true, logo: true },
+        },
         vendor: {
           select: {
             id: true,
@@ -364,7 +393,11 @@ class AutoPartService {
       orderBy: [{ isFeatured: 'desc' }, { name: 'asc' }],
     });
 
-    return parts;
+    return parts.map((p) => ({
+      ...p,
+      primaryImageUrl: p.images?.[0]?.url ? normalizeImageUrl(p.images[0].url) : null,
+      brandLogoUrl: p.brandRef?.logo ? normalizeImageUrl(p.brandRef.logo) : null,
+    }));
   }
 
   /**
@@ -399,6 +432,9 @@ class AutoPartService {
       },
       include: {
         category: true,
+        brandRef: {
+          select: { id: true, name: true, nameAr: true, logo: true },
+        },
         vendor: {
           select: {
             id: true,
@@ -415,7 +451,11 @@ class AutoPartService {
       orderBy: [{ isFeatured: 'desc' }, { name: 'asc' }],
     });
 
-    return parts;
+    return parts.map((p) => ({
+      ...p,
+      primaryImageUrl: p.images?.[0]?.url ? normalizeImageUrl(p.images[0].url) : null,
+      brandLogoUrl: p.brandRef?.logo ? normalizeImageUrl(p.brandRef.logo) : null,
+    }));
   }
 
   /**
