@@ -1,4 +1,5 @@
 const vehicleService = require('../../services/vehicle.service');
+const vehicleDocumentService = require('../../services/vehicleDocument.service');
 
 /**
  * Vehicle Controller
@@ -42,6 +43,123 @@ class VehicleController {
         success: true,
         data: vehicles
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get car profile UI data from provided mobile screens.
+   * GET /api/vehicles/car-profile-ui
+   */
+async getCarProfileUi(req, res, next) {
+    try {
+      res.json({
+        drivingLicense: {
+          status: 'expiring',
+          expiryDate: '2020-03-15',
+        },
+        insurance: {
+          status: 'expired',
+          expiryDate: '2020-03-15',
+        },
+        maintenanceRecords: [
+          {
+            date: '2025-05-10',
+            type: 'تغيير زيت + فلتر',
+            workshopName: 'اسم الورشة',
+            cost: 24,
+          },
+          {
+            date: '2025-05-10',
+            type: 'تغيير زيت + فلتر',
+            workshopName: 'اسم الورشة',
+            cost: 24,
+          },
+          {
+            date: '2025-05-10',
+            type: 'تغيير زيت + فلتر',
+            workshopName: 'اسم الورشة',
+            cost: 24,
+          },
+          {
+            date: '2025-05-10',
+            type: 'تغيير زيت + فلتر',
+            workshopName: 'اسم الورشة',
+            cost: 24,
+          },
+        ],
+        maintenanceForm: {
+          date: '2026-08-21',
+          type: 'تغيير زيت + فلتر',
+          notes: '',
+        },
+        car: {
+          brand: 'هونداي',
+          model: 'إلنترا',
+          year: 2012,
+          plateNumber: 'م ص ح 7/15',
+          mileage: 125200,
+          nextMaintenance: {
+            type: 'تغيير زيت + فلتر',
+            date: '2026-08-21',
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getVehicleDocuments(req, res, next) {
+    try {
+      const { vehicleId } = req.params;
+      const result = await vehicleDocumentService.list(vehicleId, req.user.id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async createVehicleDocument(req, res, next) {
+    try {
+      const { vehicleId } = req.params;
+      const result = await vehicleDocumentService.create(vehicleId, req.user.id, req.body);
+      res.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateVehicleDocument(req, res, next) {
+    try {
+      const { vehicleId, type } = req.params;
+      const result = await vehicleDocumentService.update(vehicleId, req.user.id, type, req.body);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteVehicleDocument(req, res, next) {
+    try {
+      const { vehicleId, type } = req.params;
+      const result = await vehicleDocumentService.remove(vehicleId, req.user.id, type);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async uploadVehicleDocument(req, res, next) {
+    try {
+      const { vehicleId, type } = req.params;
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: 'No file uploaded', code: 'VALIDATION_ERROR' });
+      }
+      const fileUrl = `/uploads/vehicle-documents/${req.file.filename}`;
+      const result = await vehicleDocumentService.upload(vehicleId, req.user.id, type, fileUrl);
+      res.status(201).json(result);
     } catch (error) {
       next(error);
     }

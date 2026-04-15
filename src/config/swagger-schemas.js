@@ -119,4 +119,142 @@
  *           format: uuid
  *         yearRange:
  *           type: string
+ *
+ *     MaintenanceRecord:
+ *       type: object
+ *       properties:
+ *         date:
+ *           type: string
+ *           format: date
+ *           example: '2025-05-10'
+ *         type:
+ *           type: string
+ *           enum:
+ *             - Oil Change
+ *             - Engine Repair
+ *             - Brakes
+ *             - Tires
+ *             - A/C
+ *             - Electrical
+ *             - Suspension
+ *             - Body Repair
+ *             - Painting
+ *             - Diagnosis
+ *             - Battery
+ *             - Transmission
+ *             - Detailing
+ *             - Glass
+ *             - General Maintenance
+ *             - Other
+ *           example: Oil Change
+ *         workshopName:
+ *           type: string
+ *           nullable: true
+ *           example: اسم الورشة
+ *         cost:
+ *           type: number
+ *           nullable: true
+ *           example: 24
+ *         note:
+ *           type: string
+ *           nullable: true
+ *           example: ''
+ *
+ *     MaintenanceRecordInput:
+ *       type: object
+ *       required:
+ *         - date
+ *         - type
+ *       properties:
+ *         date:
+ *           type: string
+ *           format: date
+ *           example: '2025-05-10'
+ *         type:
+ *           type: string
+ *           enum:
+ *             - Oil Change
+ *             - Engine Repair
+ *             - Brakes
+ *             - Tires
+ *             - A/C
+ *             - Electrical
+ *             - Suspension
+ *             - Body Repair
+ *             - Painting
+ *             - Diagnosis
+ *             - Battery
+ *             - Transmission
+ *             - Detailing
+ *             - Glass
+ *             - General Maintenance
+ *             - Other
+ *           example: Oil Change
+ *         workshopName:
+ *           type: string
+ *           nullable: true
+ *           example: اسم الورشة
+ *         cost:
+ *           type: number
+ *           nullable: true
+ *           example: 24
+ *         nextMaintenanceDate:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *           example: '2026-08-21'
+ *         notes:
+ *           type: string
+ *           example: ''
+ *
+ *     VehicleDocumentsResponse:
+ *       type: object
+ *       properties:
+ *         documents:
+ *           type: array
+ *           items:
+ *             type: object
+ *             additionalProperties: false
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [drivingLicense, registrationForm, insurance, inspectionReport]
+ *               status:
+ *                 type: string
+ *                 enum: [expired, expiring, renewalRequired, renewed]
+ *               expiryDate:
+ *                 type: string
+ *                 format: date
+ *                 nullable: true
+ *               fileUrl:
+ *                 type: string
+ *                 nullable: true
+ *         uploadOptions:
+ *           type: array
+ *           items:
+ *             type: string
+ *             enum: [drivingLicense, registrationForm, insurance, inspectionReport]
+ *       example:
+ *         documents:
+ *           - type: drivingLicense
+ *             status: renewed
+ *             expiryDate: '2027-06-15'
+ *             fileUrl: '/uploads/vehicle-documents/abc123.jpg'
+ *           - type: registrationForm
+ *             status: renewed
+ *             expiryDate: '2028-01-01'
+ *             fileUrl: null
+ *           - type: insurance
+ *             status: expiring
+ *             expiryDate: '2026-04-20'
+ *             fileUrl: '/uploads/vehicle-documents/def456.pdf'
+ *           - type: inspectionReport
+ *             status: renewalRequired
+ *             expiryDate: null
+ *             fileUrl: null
+ *         uploadOptions:
+ *           - drivingLicense
+ *           - registrationForm
+ *           - insurance
+ *           - inspectionReport
  */

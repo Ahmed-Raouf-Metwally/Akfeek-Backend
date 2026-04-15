@@ -1,4 +1,4 @@
-const { PrismaClient, OrderStatus } = require('@prisma/client');
+const { PrismaClient, OrderStatus, Prisma } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 
 const prisma = new PrismaClient();
@@ -275,7 +275,7 @@ async function main() {
 
   // Ensure all auto parts have badges (backfill old rows seeded previously)
   await prisma.autoPart.updateMany({
-    where: { badges: null },
+    where: { badges: { equals: Prisma.DbNull } },
     data: { badges: ['Original'] },
   });
 

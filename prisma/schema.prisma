@@ -17,12 +17,12 @@ datasource db {
 
 // أدوار المستخدمين المعتمدة للعرض: عميل، مسؤول، موظف، مورد، فني (SUPPLIER قديم — يُعرض "مورد")
 enum UserRole {
-  CUSTOMER   // عميل
-  ADMIN      // مسؤول
-  EMPLOYEE   // موظف (صلاحيات من لوحة الأدمن)
-  VENDOR     // مورد
+  CUSTOMER // عميل
+  ADMIN // مسؤول
+  EMPLOYEE // موظف (صلاحيات من لوحة الأدمن)
+  VENDOR // مورد
   TECHNICIAN // فني
-  SUPPLIER   // قديم — للتوافق مع بيانات موجودة، يُعرض كـ "مورد"
+  SUPPLIER // قديم — للتوافق مع بيانات موجودة، يُعرض كـ "مورد"
 }
 
 enum UserStatus {
@@ -226,8 +226,8 @@ model VehicleBrand {
   updatedAt DateTime @updatedAt
 
   // Relations
-  models VehicleModel[]
-  autoParts AutoPart[] @relation("AutoPartBrand")
+  models    VehicleModel[]
+  autoParts AutoPart[]     @relation("AutoPartBrand")
 
   @@index([name])
 }
@@ -292,11 +292,50 @@ model UserVehicle {
 
   // Relations
   bookings               Booking[]
-  mobileWorkshopRequests  MobileWorkshopRequest[]
+  mobileWorkshopRequests MobileWorkshopRequest[]
   akfeekJourneys         AkfeekJourney[]
+  maintenanceRecords     VehicleMaintenanceRecord[]
+  documents             UserVehicleDocument[]
 
   @@index([userId])
   @@index([vehicleModelId])
+}
+
+model VehicleMaintenanceRecord {
+  id                  String          @id @default(uuid())
+  vehicleId           String
+  vehicle             UserVehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date                DateTime
+  type                MaintenanceType
+  workshopName        String?
+  cost                Decimal?        @db.Decimal(10, 2)
+  nextMaintenanceDate DateTime?
+  notes               String?         @db.Text
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([vehicleId])
+  @@index([date])
+  @@index([nextMaintenanceDate])
+}
+
+enum MaintenanceType {
+  OIL_CHANGE
+  ENGINE_REPAIR
+  BRAKES
+  TIRES
+  AC
+  ELECTRICAL
+  SUSPENSION
+  BODY_REPAIR
+  PAINTING
+  DIAGNOSIS
+  BATTERY
+  TRANSMISSION
+  DETAILING
+  GLASS
+  GENERAL_MAINTENANCE
+  OTHER
 }
 
 // ================================================================================================
@@ -443,8 +482,8 @@ model VendorProfile {
   descriptionAr  String? @db.Text
 
   // الشروط والأحكام
-  termsAndConditions    String? @db.Text // English terms
-  termsAndConditionsAr  String? @db.Text // Arabic terms
+  termsAndConditions   String? @db.Text // English terms
+  termsAndConditionsAr String? @db.Text // Arabic terms
 
   // Registration Documents
   commercialLicense String?
@@ -635,14 +674,14 @@ model AutoPart {
   categoryId String
   category   AutoPartCategory @relation(fields: [categoryId], references: [id])
 
-  brand      String
-  brandId    String? // علاقة بالماركة
-  brandRef   VehicleBrand? @relation("AutoPartBrand", fields: [brandId], references: [id])
+  brand          String
+  brandId        String? // علاقة بالماركة
+  brandRef       VehicleBrand? @relation("AutoPartBrand", fields: [brandId], references: [id])
   vehicleModelId String? // علاقة بالموديل
-  vehicleModel VehicleModel? @relation(fields: [vehicleModelId], references: [id])
-  year       Int? // سنة التصنيع
-  partNumber String?
-  oemNumber  String?
+  vehicleModel   VehicleModel? @relation(fields: [vehicleModelId], references: [id])
+  year           Int? // سنة التصنيع
+  partNumber     String?
+  oemNumber      String?
 
   price          Decimal  @db.Decimal(10, 2)
   compareAtPrice Decimal? @db.Decimal(10, 2)
@@ -996,9 +1035,9 @@ model MobileWorkshopType {
 
 // خدمات نوع الورشة — يضيفها الأدمن داخل كل نوع (مثلاً نوع "تغيير زيت" له: تغيير زيت عادي، تغيير زيت كامل)
 model MobileWorkshopTypeService {
-  id               String             @id @default(uuid())
-  workshopTypeId   String
-  workshopType     MobileWorkshopType @relation(fields: [workshopTypeId], references: [id], onDelete: Cascade)
+  id             String             @id @default(uuid())
+  workshopTypeId String
+  workshopType   MobileWorkshopType @relation(fields: [workshopTypeId], references: [id], onDelete: Cascade)
 
   name        String
   nameAr      String?
@@ -1010,7 +1049,7 @@ model MobileWorkshopTypeService {
   updatedAt DateTime @updatedAt
 
   // خدمات الفيندور المرتبطة بهذا النوع (أو بدون نوع إذا workshopTypeServiceId = null)
-  vendorServices    MobileWorkshopService[]
+  vendorServices         MobileWorkshopService[]
   mobileWorkshopRequests MobileWorkshopRequest[]
 
   @@index([workshopTypeId])
@@ -1069,10 +1108,10 @@ model MobileWorkshop {
   vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
 
   // خدمات مفصّلة مع أسعار
-  services         MobileWorkshopService[]
-  offers           MobileWorkshopOffer[]
+  services          MobileWorkshopService[]
+  offers            MobileWorkshopOffer[]
   requestRejections MobileWorkshopRequestRejection[]
-  bookings        Booking[]
+  bookings          Booking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1105,7 +1144,7 @@ model MobileWorkshopService {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bookingServices     BookingService[]
+  bookingServices      BookingService[]
   mobileWorkshopOffers MobileWorkshopOffer[]
 
   @@index([mobileWorkshopId])
@@ -1115,9 +1154,9 @@ model MobileWorkshopService {
 
 // طلب العميل — بحث بنوع الورشة والخدمة، يُبث للورش المتاحة
 enum MobileWorkshopRequestStatus {
-  BROADCASTING   // ينتظر عروض الورش
+  BROADCASTING // ينتظر عروض الورش
   OFFERS_RECEIVED
-  ASSIGNED       // العميل اختار ورشة
+  ASSIGNED // العميل اختار ورشة
   CANCELLED
   EXPIRED
 }
@@ -1127,24 +1166,24 @@ model MobileWorkshopRequest {
   requestNumber String @unique // MW-REQ-20260123-001
 
   customerId String
-  customer   User   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer   User         @relation(fields: [customerId], references: [id], onDelete: Cascade)
   vehicleId  String?
   vehicle    UserVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   addressId  String?
-  address    Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  address    Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull)
 
-  latitude     Float?
-  longitude    Float?
-  addressText  String?  @db.Text
-  city         String?
+  latitude    Float?
+  longitude   Float?
+  addressText String? @db.Text
+  city        String?
 
-  workshopTypeId String
-  workshopType   MobileWorkshopType @relation(fields: [workshopTypeId], references: [id], onDelete: Cascade)
+  workshopTypeId        String
+  workshopType          MobileWorkshopType         @relation(fields: [workshopTypeId], references: [id], onDelete: Cascade)
   workshopTypeServiceId String? // الخدمة المحددة من نوع الورشة (مثلاً "تغيير زيت عادي")
   workshopTypeService   MobileWorkshopTypeService? @relation(fields: [workshopTypeServiceId], references: [id], onDelete: SetNull)
-  serviceType    String // للتوافق: GENERAL أو من النوع
+  serviceType           String // للتوافق: GENERAL أو من النوع
 
-  status   MobileWorkshopRequestStatus @default(BROADCASTING)
+  status    MobileWorkshopRequestStatus @default(BROADCASTING)
   expiresAt DateTime?
 
   createdAt DateTime @default(now())
@@ -1163,12 +1202,12 @@ model MobileWorkshopRequest {
 
 // رفض المورد للطلب — حتى لا يظهر الطلب again في قائمة طلباته
 model MobileWorkshopRequestRejection {
-  id               String   @id @default(uuid())
+  id               String                @id @default(uuid())
   requestId        String
   request          MobileWorkshopRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   mobileWorkshopId String
-  mobileWorkshop   MobileWorkshop @relation(fields: [mobileWorkshopId], references: [id], onDelete: Cascade)
-  createdAt        DateTime @default(now())
+  mobileWorkshop   MobileWorkshop        @relation(fields: [mobileWorkshopId], references: [id], onDelete: Cascade)
+  createdAt        DateTime              @default(now())
 
   @@unique([requestId, mobileWorkshopId])
   @@index([requestId])
@@ -1177,22 +1216,22 @@ model MobileWorkshopRequestRejection {
 
 enum MobileWorkshopOfferStatus {
   PENDING
-  ACCEPTED  // العميل اختار هذه الورشة
+  ACCEPTED // العميل اختار هذه الورشة
   REJECTED
 }
 
 model MobileWorkshopOffer {
-  id                  String  @id @default(uuid())
-  requestId           String
-  request             MobileWorkshopRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  mobileWorkshopId    String
-  mobileWorkshop      MobileWorkshop @relation(fields: [mobileWorkshopId], references: [id], onDelete: Cascade)
+  id                      String                 @id @default(uuid())
+  requestId               String
+  request                 MobileWorkshopRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  mobileWorkshopId        String
+  mobileWorkshop          MobileWorkshop         @relation(fields: [mobileWorkshopId], references: [id], onDelete: Cascade)
   mobileWorkshopServiceId String?
   mobileWorkshopService   MobileWorkshopService? @relation(fields: [mobileWorkshopServiceId], references: [id], onDelete: SetNull)
 
-  price    Decimal @db.Decimal(10, 2)
-  currency String  @default("SAR")
-  message  String? @db.Text
+  price            Decimal @db.Decimal(10, 2)
+  currency         String  @default("SAR")
+  message          String? @db.Text
   estimatedMinutes Int?
 
   status MobileWorkshopOfferStatus @default(PENDING)
@@ -1282,11 +1321,11 @@ model Booking {
 
   // Mobile Workshop (عند اختيار العميل لورشة من الطلب)
   mobileWorkshopId        String?
-  mobileWorkshop          MobileWorkshop?         @relation(fields: [mobileWorkshopId], references: [id])
-  mobileWorkshopRequestId String?                 @unique
-  mobileWorkshopRequest   MobileWorkshopRequest?  @relation(fields: [mobileWorkshopRequestId], references: [id])
-  mobileWorkshopOfferId   String?                 @unique
-  mobileWorkshopOffer     MobileWorkshopOffer?    @relation(fields: [mobileWorkshopOfferId], references: [id])
+  mobileWorkshop          MobileWorkshop?        @relation(fields: [mobileWorkshopId], references: [id])
+  mobileWorkshopRequestId String?                @unique
+  mobileWorkshopRequest   MobileWorkshopRequest? @relation(fields: [mobileWorkshopRequestId], references: [id])
+  mobileWorkshopOfferId   String?                @unique
+  mobileWorkshopOffer     MobileWorkshopOffer?   @relation(fields: [mobileWorkshopOfferId], references: [id])
 
   // Scheduling
   scheduledDate DateTime?
@@ -1303,13 +1342,13 @@ model Booking {
   destinationAddress String?
 
   // Pricing
-  subtotal    Decimal @default(0) @db.Decimal(10, 2)
-  laborFee    Decimal @default(0) @db.Decimal(10, 2)
-  deliveryFee Decimal @default(0) @db.Decimal(10, 2)
-  partsTotal  Decimal @default(0) @db.Decimal(10, 2)
-  discount    Decimal @default(0) @db.Decimal(10, 2)
-  tax         Decimal @default(0) @db.Decimal(10, 2)
-  totalPrice  Decimal @default(0) @db.Decimal(10, 2)
+  subtotal                  Decimal @default(0) @db.Decimal(10, 2)
+  laborFee                  Decimal @default(0) @db.Decimal(10, 2)
+  deliveryFee               Decimal @default(0) @db.Decimal(10, 2)
+  partsTotal                Decimal @default(0) @db.Decimal(10, 2)
+  discount                  Decimal @default(0) @db.Decimal(10, 2)
+  tax                       Decimal @default(0) @db.Decimal(10, 2)
+  totalPrice                Decimal @default(0) @db.Decimal(10, 2)
   // نسبة عمولة المنصة المسجلة وقت الحجز — تغيير النسبة لاحقاً يؤثر على الحجوزات القادمة فقط
   platformCommissionPercent Float?
 
@@ -1487,13 +1526,13 @@ model JobOffer {
 
   // من فني (User) أو من ونش (Vendor+Winch) — واحد منهما مطلوب
   technicianId String?
-  technician   User?  @relation(fields: [technicianId], references: [id], onDelete: SetNull)
+  technician   User?   @relation(fields: [technicianId], references: [id], onDelete: SetNull)
   winchId      String?
-  winch        Winch? @relation(fields: [winchId], references: [id], onDelete: SetNull)
+  winch        Winch?  @relation(fields: [winchId], references: [id], onDelete: SetNull)
 
   // Offer Details — السعر يظهر للعميل (من pricePerKm للونش أو bidAmount للفني)
   bidAmount        Decimal @db.Decimal(10, 2)
-  estimatedArrival Int     // minutes
+  estimatedArrival Int // minutes
   message          String? @db.Text
 
   status JobOfferStatus @default(PENDING)
@@ -1989,11 +2028,11 @@ model Notification {
 // ================================================================================================
 
 model ChatRoom {
-  id         String   @id @default(uuid())
-  bookingId  String   @unique
-  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(uuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   messages ChatMessage[]
 
@@ -2342,7 +2381,7 @@ model Vendor {
   supplierType String
 
   // Requested vendor type (used on approval to create VendorProfile)
-  vendorType   VendorType @default(AUTO_PARTS)
+  vendorType VendorType @default(AUTO_PARTS)
 
   // Address & Registration
   country           String
@@ -2480,33 +2519,33 @@ enum AkfeekJourneyStep {
 }
 
 model AkfeekJourney {
-  id         String              @id @default(uuid())
+  id         String       @id @default(uuid())
   customerId String
-  customer   User                @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer   User         @relation(fields: [customerId], references: [id], onDelete: Cascade)
   vehicleId  String?
-  vehicle    UserVehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  vehicle    UserVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
 
   status      AkfeekJourneyStatus @default(ACTIVE)
   currentStep AkfeekJourneyStep   @default(INSURANCE_TOW)
 
-  insuranceTowBookingId String? @unique
+  insuranceTowBookingId String?  @unique
   insuranceTowBooking   Booking? @relation("AkfeekJourneyInsuranceTow", fields: [insuranceTowBookingId], references: [id], onDelete: SetNull)
 
-  towToWorkshopBookingId String? @unique
+  towToWorkshopBookingId String?  @unique
   towToWorkshopBooking   Booking? @relation("AkfeekJourneyTowToWorkshop", fields: [towToWorkshopBookingId], references: [id], onDelete: SetNull)
 
-  workshopBookingId String? @unique
+  workshopBookingId String?  @unique
   workshopBooking   Booking? @relation("AkfeekJourneyWorkshop", fields: [workshopBookingId], references: [id], onDelete: SetNull)
 
-  returnHomeBookingId String? @unique
+  returnHomeBookingId String?  @unique
   returnHomeBooking   Booking? @relation("AkfeekJourneyReturnHome", fields: [returnHomeBookingId], references: [id], onDelete: SetNull)
 
-  insuranceTowSkipped  Boolean @default(false)
-  insuranceDocsSkipped Boolean @default(false)
+  insuranceTowSkipped    Boolean @default(false)
+  insuranceDocsSkipped   Boolean @default(false)
   insuranceDocsCompleted Boolean @default(false)
-  towToWorkshopSkipped Boolean @default(false)
-  workshopSkipped      Boolean @default(false)
-  returnHomeDeclined   Boolean @default(false)
+  towToWorkshopSkipped   Boolean @default(false)
+  workshopSkipped        Boolean @default(false)
+  returnHomeDeclined     Boolean @default(false)
 
   documents AkfeekJourneyDocument[]
 
@@ -2521,10 +2560,10 @@ model AkfeekJourneyDocument {
   journeyId String
   journey   AkfeekJourney @relation(fields: [journeyId], references: [id], onDelete: Cascade)
 
-  label          String // repair_auth, najm, traffic_report, other
-  fileUrl        String
-  mimeType       String?
-  originalName   String?
+  label        String // repair_auth, najm, traffic_report, other
+  fileUrl      String
+  mimeType     String?
+  originalName String?
 
   createdAt DateTime @default(now())
 
@@ -2580,15 +2619,15 @@ model Package {
   description   String?  @db.Text
   descriptionAr String?  @db.Text
   price         Decimal  @db.Decimal(10, 2)
-  usageCount    Int?     // null = unlimited
-  validityDays  Int      // days until expiry
+  usageCount    Int? // null = unlimited
+  validityDays  Int // days until expiry
   isActive      Boolean  @default(true)
   sortOrder     Int      @default(0)
   imageUrl      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  services    PackageService[]
+  services     PackageService[]
   userPackages UserPackage[]
 
   @@index([isActive])
@@ -2608,16 +2647,16 @@ model PackageService {
 }
 
 model UserPackage {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   packageId   String
-  package     Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  purchasedAt DateTime  @default(now())
+  package     Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  purchasedAt DateTime @default(now())
   expiresAt   DateTime
-  isActive    Boolean   @default(true)
-  
-  usages      UserPackageServiceUsage[]
+  isActive    Boolean  @default(true)
+
+  usages UserPackageServiceUsage[]
 
   @@unique([userId, packageId])
   @@index([userId])
@@ -2626,13 +2665,28 @@ model UserPackage {
 }
 
 model UserPackageServiceUsage {
-  id            String        @id @default(uuid())
+  id            String      @id @default(uuid())
   userPackageId String
-  userPackage   UserPackage   @relation(fields: [userPackageId], references: [id], onDelete: Cascade)
+  userPackage   UserPackage @relation(fields: [userPackageId], references: [id], onDelete: Cascade)
   serviceId     String
-  usedCount     Int           @default(0)
+  usedCount     Int         @default(0)
   lastUsedAt    DateTime?
 
   @@unique([userPackageId, serviceId])
   @@index([userPackageId])
+}
+
+model UserVehicleDocument {
+  id        String  @id @default(uuid())
+  vehicleId String
+  vehicle   UserVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  type        String  // drivingLicense | registrationForm | insurance | inspectionReport
+  status      String  // expiring | expired | renewalRequired | renewed
+  expiryDate  DateTime?
+  fileUrl     String?
+
+  @@unique([vehicleId, type])
+  @@index([vehicleId])
+  @@index([type])
 }

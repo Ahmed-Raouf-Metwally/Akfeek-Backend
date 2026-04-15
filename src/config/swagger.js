@@ -575,6 +575,10 @@ Authorization: Bearer <your_jwt_token>
             description: 'Vehicle management'
         },
         {
+            name: 'Car Profile UI',
+            description: 'Car profile UI response plus maintenance records CRUD for the mobile car profile screens.'
+        },
+        {
             name: 'Services',
             description: 'Service catalog'
         },
