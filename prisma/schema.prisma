@@ -1066,6 +1066,10 @@ model MobileWorkshop {
   workshopTypeId String?
   workshopType   MobileWorkshopType? @relation(fields: [workshopTypeId], references: [id], onDelete: SetNull)
 
+  // Catalog item (static UI service tile)
+  catalogItemId String?
+  catalogItem   MobileWorkshopCatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+
   // Vehicle / Equipment
   vehicleType  String? // نوع المركبة: Van, Pickup, Truck...
   vehicleModel String? // موديل المركبة: Ford Transit
@@ -1121,6 +1125,100 @@ model MobileWorkshop {
   @@index([vendorId])
   @@index([city])
   @@index([workshopTypeId])
+  @@index([catalogItemId])
+}
+
+// Static Mobile Workshop Catalog — matches mobile UI exactly (7 items)
+model MobileWorkshopCatalogItem {
+  id String @id @default(uuid())
+
+  // Stable key for the mobile UI (enum-like)
+  key String @unique // BATTERY | TIRE_SERVICE | ENGINE_OIL | ELECTRICAL | ENGINE_PROBLEMS | MAINTENANCE | OTHER_ISSUE
+
+  nameAr        String
+  imageUrl      String?
+  pricingNoteAr String? // e.g. "حسب الفحص"
+
+  priceMin Float?
+  priceMax Float?
+  currency String @default("SAR")
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workshops MobileWorkshop[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+// New: Hierarchical Mobile Workshop Catalogs (Admin-managed)
+model MobileWorkshopCatalog {
+  id       String  @id @default(uuid())
+  name     String
+  nameAr   String?
+  imageUrl String?
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categories MobileWorkshopCategory[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model MobileWorkshopCategory {
+  id        String @id @default(uuid())
+  catalogId String
+  catalog   MobileWorkshopCatalog @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+
+  name     String
+  nameAr   String?
+  imageUrl String?
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  services MobileWorkshopCatalogService[]
+
+  @@index([catalogId])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model MobileWorkshopCatalogService {
+  id         String @id @default(uuid())
+  categoryId String
+  category   MobileWorkshopCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  name     String
+  nameAr   String?
+  imageUrl String?
+
+  priceMin Float?
+  priceMax Float?
+  currency String @default("SAR")
+  pricingNoteAr String?
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([sortOrder])
 }
 
 model MobileWorkshopService {

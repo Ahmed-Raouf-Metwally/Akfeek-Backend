@@ -586,71 +586,297 @@ async function main() {
   }
   console.log('✅ Created mobile workshop types');
 
-  // 17. Create Mobile Workshop Vendor and Units
-  const mobileWorkshopVendorUser = await prisma.user.upsert({
-    where: { email: 'mobilevendor@akfeek.com' },
-    update: {},
-    create: {
-      email: 'mobilevendor@akfeek.com',
-      passwordHash,
-      role: 'VENDOR',
-      status: 'ACTIVE',
-      emailVerified: true,
-      phoneVerified: true,
-      phone: '+966700000001',
-      preferredLanguage: 'AR',
-      profile: {
-        create: {
-          firstName: 'ورشة',
-          lastName: 'متنقلة',
-        },
+  // 16.1 Create Static Mobile Workshop Catalog Items (matches mobile UI exactly)
+  const mobileWorkshopCatalog = [
+    { key: 'BATTERY', nameAr: 'بطارية', priceMin: 100, priceMax: 150, sortOrder: 1 },
+    { key: 'TIRE_SERVICE', nameAr: 'إطار / بنشر', priceMin: 100, priceMax: 150, sortOrder: 2 },
+    { key: 'ENGINE_OIL', nameAr: 'زيت المحرك', priceMin: 100, priceMax: 150, sortOrder: 3 },
+    { key: 'ELECTRICAL', nameAr: 'كهرباء', priceMin: 100, priceMax: 150, sortOrder: 4 },
+    { key: 'ENGINE_PROBLEMS', nameAr: 'مشاكل المحرك', priceMin: 100, priceMax: 150, sortOrder: 5 },
+    { key: 'MAINTENANCE', nameAr: 'صيانة', priceMin: 100, priceMax: 150, sortOrder: 6 },
+    { key: 'OTHER_ISSUE', nameAr: 'مشكلة أخرى', pricingNoteAr: 'حسب الفحص', priceMin: null, priceMax: null, sortOrder: 7 },
+  ];
+
+  const createdCatalogItems = {};
+  for (const item of mobileWorkshopCatalog) {
+    const upserted = await prisma.mobileWorkshopCatalogItem.upsert({
+      where: { key: item.key },
+      update: {
+        nameAr: item.nameAr,
+        pricingNoteAr: item.pricingNoteAr || null,
+        priceMin: item.priceMin,
+        priceMax: item.priceMax,
+        currency: 'SAR',
+        sortOrder: item.sortOrder,
+        isActive: true,
       },
-    },
+      create: {
+        key: item.key,
+        nameAr: item.nameAr,
+        pricingNoteAr: item.pricingNoteAr || null,
+        priceMin: item.priceMin,
+        priceMax: item.priceMax,
+        currency: 'SAR',
+        sortOrder: item.sortOrder,
+        isActive: true,
+      },
+    });
+    createdCatalogItems[item.key] = upserted;
+  }
+  console.log('✅ Created mobile workshop static catalog items');
+
+  // 16.2 Create Hierarchical Mobile Workshop Catalog (Catalogs -> Categories -> Services)
+  // This is the user-facing hierarchical catalog used by GET /api/mobile-workshop/catalogs (+ categories/services endpoints).
+  // Idempotent: finds by (catalog name) and (category name within catalog) and (service name within category).
+  const mwCatalogName = 'Mobile Workshop';
+  const mwCatalogNameAr = 'الورشة المتنقلة';
+
+  const existingMwCatalog = await prisma.mobileWorkshopCatalog.findFirst({
+    where: { name: mwCatalogName },
   });
 
-  const mobileWorkshopProfile = await prisma.vendorProfile.upsert({
-    where: { userId: mobileWorkshopVendorUser.id },
-    update: {},
-    create: {
-      userId: mobileWorkshopVendorUser.id,
-      vendorType: 'MOBILE_WORKSHOP',
-      businessName: 'الورشة المتنقلة',
-      businessNameAr: 'الورشة المتنقلة',
-      description: 'خدمات صيانة متنقلة',
-      contactPhone: '+966700000001',
-      contactEmail: 'mobilevendor@akfeek.com',
-      city: 'الرياض',
-      country: 'السعودية',
-      address: 'الرياض',
-      status: 'ACTIVE',
-      isVerified: true,
-      averageRating: 4.8,
-      totalReviews: 15,
-    },
-  });
+  const mwCatalog = existingMwCatalog
+    ? await prisma.mobileWorkshopCatalog.update({
+        where: { id: existingMwCatalog.id },
+        data: {
+          nameAr: mwCatalogNameAr,
+          imageUrl: null,
+          sortOrder: 1,
+          isActive: true,
+        },
+      })
+    : await prisma.mobileWorkshopCatalog.create({
+        data: {
+          name: mwCatalogName,
+          nameAr: mwCatalogNameAr,
+          imageUrl: null,
+          sortOrder: 1,
+          isActive: true,
+        },
+      });
 
-  // Create Mobile Workshop Units (only one per vendor due to unique constraint)
-  const mobileWorkshops = [
-    { name: 'Toyota Van Unit 1', nameAr: 'وحدة تويوتا 1', type: 'Van', model: 'Toyota Hiace', year: 2023, plate: 'م و 001', typeIdx: 0 },
+  const mwHierarchy = [
+    { name: 'Battery', nameAr: 'بطارية', price: 120, sortOrder: 1 },
+    { name: 'Tire service', nameAr: 'إطار / بنشر', price: 110, sortOrder: 2 },
+    { name: 'Engine oil', nameAr: 'زيت المحرك', price: 130, sortOrder: 3 },
+    { name: 'Electrical', nameAr: 'كهرباء', price: 140, sortOrder: 4 },
+    { name: 'Engine problems', nameAr: 'مشاكل المحرك', price: 150, sortOrder: 5 },
+    { name: 'Maintenance', nameAr: 'صيانة', price: 125, sortOrder: 6 },
+    { name: 'Other issue', nameAr: 'مشكلة أخرى', price: null, pricingNoteAr: 'حسب الفحص', sortOrder: 7 },
+  ];
+
+  for (const item of mwHierarchy) {
+    const existingCategory = await prisma.mobileWorkshopCategory.findFirst({
+      where: { catalogId: mwCatalog.id, name: item.name },
+    });
+
+    const category = existingCategory
+      ? await prisma.mobileWorkshopCategory.update({
+          where: { id: existingCategory.id },
+          data: {
+            nameAr: item.nameAr,
+            imageUrl: null,
+            sortOrder: item.sortOrder,
+            isActive: true,
+          },
+        })
+      : await prisma.mobileWorkshopCategory.create({
+          data: {
+            catalogId: mwCatalog.id,
+            name: item.name,
+            nameAr: item.nameAr,
+            imageUrl: null,
+            sortOrder: item.sortOrder,
+            isActive: true,
+          },
+        });
+
+    const existingService = await prisma.mobileWorkshopCatalogService.findFirst({
+      where: { categoryId: category.id, name: item.name },
+    });
+
+    if (existingService) {
+      await prisma.mobileWorkshopCatalogService.update({
+        where: { id: existingService.id },
+        data: {
+          nameAr: item.nameAr,
+          imageUrl: null,
+          priceMin: item.price,
+          priceMax: item.price,
+          currency: 'SAR',
+          pricingNoteAr: item.pricingNoteAr || null,
+          sortOrder: item.sortOrder,
+          isActive: true,
+        },
+      });
+    } else {
+      await prisma.mobileWorkshopCatalogService.create({
+        data: {
+          categoryId: category.id,
+          name: item.name,
+          nameAr: item.nameAr,
+          imageUrl: null,
+          priceMin: item.price,
+          priceMax: item.price,
+          currency: 'SAR',
+          pricingNoteAr: item.pricingNoteAr || null,
+          sortOrder: item.sortOrder,
+          isActive: true,
+        },
+      });
+    }
+  }
+
+  console.log('✅ Created mobile workshop hierarchical catalog (catalogs/categories/services)');
+
+  // 17. Create Mobile Workshop Vendors and current workshop locations
+  const mobileWorkshopVendors = [
+    {
+      email: 'mobilevendor1@akfeek.com',
+      phone: '+966700000001',
+      firstName: 'ورشة',
+      lastName: 'الشمال',
+      businessName: 'الورشة المتنقلة - الشمال',
+      businessNameAr: 'الورشة المتنقلة - الشمال',
+      workshopName: 'Toyota Van Unit North',
+      workshopNameAr: 'وحدة تويوتا - الشمال',
+      type: 'Van',
+      model: 'Toyota Hiace',
+      year: 2023,
+      plate: 'م و 101',
+      typeIdx: 0,
+      latitude: 24.774265,
+      longitude: 46.738586,
+    },
+    {
+      email: 'mobilevendor2@akfeek.com',
+      phone: '+966700000002',
+      firstName: 'ورشة',
+      lastName: 'الوسط',
+      businessName: 'الورشة المتنقلة - الوسط',
+      businessNameAr: 'الورشة المتنقلة - الوسط',
+      workshopName: 'Toyota Van Unit Center',
+      workshopNameAr: 'وحدة تويوتا - الوسط',
+      type: 'Van',
+      model: 'Toyota Hiace',
+      year: 2024,
+      plate: 'م و 102',
+      typeIdx: 0,
+      latitude: 24.7136,
+      longitude: 46.6753,
+    },
+    {
+      email: 'mobilevendor3@akfeek.com',
+      phone: '+966700000003',
+      firstName: 'ورشة',
+      lastName: 'الجنوب',
+      businessName: 'الورشة المتنقلة - الجنوب',
+      businessNameAr: 'الورشة المتنقلة - الجنوب',
+      workshopName: 'Toyota Van Unit South',
+      workshopNameAr: 'وحدة تويوتا - الجنوب',
+      type: 'Van',
+      model: 'Toyota Hiace',
+      year: 2022,
+      plate: 'م و 103',
+      typeIdx: 0,
+      latitude: 24.6037,
+      longitude: 46.7219,
+    },
   ];
 
   const createdMobileWorkshops = [];
-  for (const mw of mobileWorkshops) {
+  for (const vendorSeed of mobileWorkshopVendors) {
+    const mobileWorkshopVendorUser = await prisma.user.upsert({
+      where: { email: vendorSeed.email },
+      update: {
+        passwordHash,
+        role: 'VENDOR',
+        status: 'ACTIVE',
+        emailVerified: true,
+        phoneVerified: true,
+        phone: vendorSeed.phone,
+        preferredLanguage: 'AR',
+      },
+      create: {
+        email: vendorSeed.email,
+        passwordHash,
+        role: 'VENDOR',
+        status: 'ACTIVE',
+        emailVerified: true,
+        phoneVerified: true,
+        phone: vendorSeed.phone,
+        preferredLanguage: 'AR',
+        profile: {
+          create: {
+            firstName: vendorSeed.firstName,
+            lastName: vendorSeed.lastName,
+          },
+        },
+      },
+    });
+
+    const existingProfile = await prisma.profile.findUnique({
+      where: { userId: mobileWorkshopVendorUser.id },
+      select: { id: true },
+    });
+    if (existingProfile) {
+      await prisma.profile.update({
+        where: { userId: mobileWorkshopVendorUser.id },
+        data: {
+          firstName: vendorSeed.firstName,
+          lastName: vendorSeed.lastName,
+        },
+      });
+    }
+
+    const mobileWorkshopProfile = await prisma.vendorProfile.upsert({
+      where: { userId: mobileWorkshopVendorUser.id },
+      update: {
+        vendorType: 'MOBILE_WORKSHOP',
+        businessName: vendorSeed.businessName,
+        businessNameAr: vendorSeed.businessNameAr,
+        description: 'خدمات صيانة متنقلة',
+        contactPhone: vendorSeed.phone,
+        contactEmail: vendorSeed.email,
+        city: 'الرياض',
+        country: 'السعودية',
+        address: 'الرياض',
+        status: 'ACTIVE',
+        isVerified: true,
+        averageRating: 4.8,
+        totalReviews: 15,
+      },
+      create: {
+        userId: mobileWorkshopVendorUser.id,
+        vendorType: 'MOBILE_WORKSHOP',
+        businessName: vendorSeed.businessName,
+        businessNameAr: vendorSeed.businessNameAr,
+        description: 'خدمات صيانة متنقلة',
+        contactPhone: vendorSeed.phone,
+        contactEmail: vendorSeed.email,
+        city: 'الرياض',
+        country: 'السعودية',
+        address: 'الرياض',
+        status: 'ACTIVE',
+        isVerified: true,
+        averageRating: 4.8,
+        totalReviews: 15,
+      },
+    });
+
     const workshop = await prisma.mobileWorkshop.upsert({
       where: { vendorId: mobileWorkshopProfile.id },
-      update: {},
-      create: {
-        name: mw.name,
-        nameAr: mw.nameAr,
-        vendorId: mobileWorkshopProfile.id,
-        workshopTypeId: createdWorkshopTypes[mw.typeIdx].id,
-        vehicleType: mw.type,
-        vehicleModel: mw.model,
-        year: mw.year,
-        plateNumber: mw.plate,
+      update: {
+        name: vendorSeed.workshopName,
+        nameAr: vendorSeed.workshopNameAr,
+        workshopTypeId: createdWorkshopTypes[vendorSeed.typeIdx].id,
+        vehicleType: vendorSeed.type,
+        vehicleModel: vendorSeed.model,
+        year: vendorSeed.year,
+        plateNumber: vendorSeed.plate,
         city: 'الرياض',
-        latitude: 24.7136 + Math.random() * 0.1,
-        longitude: 46.6753 + Math.random() * 0.1,
+        latitude: vendorSeed.latitude,
+        longitude: vendorSeed.longitude,
         serviceRadius: 30,
         basePrice: 100,
         pricePerKm: 2,
@@ -658,11 +884,34 @@ async function main() {
         isAvailable: true,
         isActive: true,
         isVerified: true,
+        catalogItemId: createdCatalogItems.BATTERY?.id || null,
+      },
+      create: {
+        name: vendorSeed.workshopName,
+        nameAr: vendorSeed.workshopNameAr,
+        vendorId: mobileWorkshopProfile.id,
+        workshopTypeId: createdWorkshopTypes[vendorSeed.typeIdx].id,
+        vehicleType: vendorSeed.type,
+        vehicleModel: vendorSeed.model,
+        year: vendorSeed.year,
+        plateNumber: vendorSeed.plate,
+        city: 'الرياض',
+        latitude: vendorSeed.latitude,
+        longitude: vendorSeed.longitude,
+        serviceRadius: 30,
+        basePrice: 100,
+        pricePerKm: 2,
+        minPrice: 100,
+        isAvailable: true,
+        isActive: true,
+        isVerified: true,
+        catalogItemId: createdCatalogItems.BATTERY?.id || null,
       },
     });
+
     createdMobileWorkshops.push(workshop);
   }
-  console.log('✅ Created mobile workshop vendor and units');
+  console.log('✅ Created mobile workshop vendors and current locations');
 
   // 18. Create Bookings (some CONFIRMED, some PENDING)
   // Get existing services

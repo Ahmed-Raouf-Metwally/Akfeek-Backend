@@ -10,31 +10,23 @@
 
 ---
 
-## 1) فلو الطلب والعروض (Request → Offers → Select → Invoice → Pay)
+## 1) الفلو المعتمد الآن (حجز مباشر — بدون طلبات/عروض/شات/تتبع)
 
-هذا الفلو **مستخدم** في التست والمنطق الرئيسي للورش المتنقلة.
+هذا هو الفلو المبسّط المطلوب لتطبيق العميل: اختيار خدمة من شاشة الورش المتنقلة → اختيار السيارة → تأكيد.  
+عند الإنشاء: النظام يعيّن **أقرب ورشة متاحة** تلقائياً بناءً على الموقع.
 
 | Method | Endpoint | الحالة | ملاحظات |
 |--------|----------|--------|---------|
-| GET | `/api/mobile-workshop-types` | **مستخدم** | التست + الداشبورد (قائمة أنواع الورش) |
-| GET | `/api/mobile-workshop-types/{id}` | غير مستخدم | مفيد لو شاشة تفاصيل نوع واحد |
-| GET | `/api/mobile-workshop-types/{typeId}/services` | غير مستخدم | بديل لاستخراج الخدمات من الـ types في رد واحد |
-| POST | `/api/mobile-workshop-requests` | **مستخدم** | التست — إنشاء طلب وإشعار الورش |
-| GET | `/api/mobile-workshop-requests` | **مستخدم** | التست — طلباتي (عميل) |
-| GET | `/api/mobile-workshop-requests/{id}` | **مستخدم** | التست — تفاصيل الطلب + العروض |
-| POST | `/api/mobile-workshop-requests/{requestId}/select-offer` | **مستخدم** | التست — اختيار عرض → حجز + فاتورة |
-| GET | `/api/mobile-workshops` | **مستخدم** | التست + الداشبورد (قائمة الورش) |
-| GET | `/api/mobile-workshops/{id}` | **مستخدم** | تفاصيل ورشة واحدة |
-| **GET** | **`/api/mobile-workshops/my`** | **مستخدم (فيندور)** | ورشتي المتنقلة — موجود في الباكند والداشبورد (vendor/mobile-workshop) |
-| GET | `/api/mobile-workshops/my/requests` | **مستخدم** | التست + الداشبورد — طلبات ورشتي (بائع) |
-| POST | `/api/mobile-workshops/{workshopId}/requests/{requestId}/offer` | **مستخدم** | التست — إرسال عرض (بائع) |
+| GET | `/api/mobile-workshop/catalog` | **مستخدم** | كاتالوج ثابت (7 عناصر فقط) مطابق للتصميم + نطاق السعر |
+| POST | `/api/mobile-workshop/bookings` | **مستخدم** | إنشاء حجز + تعيين أقرب ورشة + إنشاء فاتورة |
+| GET | `/api/mobile-workshop/bookings/{id}` | **مستخدم** | تفاصيل الحجز (عميل) |
 
-**ملاحظة:** بعد اختيار العرض والدفع يُستخدم:
-- `GET /api/invoices/my/{id}` و `PATCH /api/invoices/my/{id}/pay` (مستخدم في التست).
+**الدفع:**  
+- `GET /api/invoices/my/{id}` و `PATCH /api/invoices/my/{id}/pay`
 
 ---
 
-## 2) CRUD الورش وأنواعها (أدمن)
+## 2) إدارة بيانات الورش (Vendor/Admin)
 
 | Method | Endpoint | الحالة | ملاحظات |
 |--------|----------|--------|---------|
@@ -44,20 +36,13 @@
 | POST | `/api/mobile-workshops/{id}/services` | غير مستخدم من واجهة | إضافة خدمة لورشة (أدمن) |
 | PUT | `/api/mobile-workshops/{id}/services/{svcId}` | غير مستخدم من واجهة | تحديث خدمة ورشة (أدمن) |
 | DELETE | `/api/mobile-workshops/{id}/services/{svcId}` | غير مستخدم من واجهة | حذف خدمة ورشة (أدمن) |
-| POST | `/api/mobile-workshop-types` | غير مستخدم من واجهة | إضافة نوع ورشة (أدمن) |
-| GET | `/api/mobile-workshop-types/{typeId}/services` | غير مستخدم | خدمات نوع الورشة |
-| POST | `/api/mobile-workshop-types/{typeId}/services` | غير مستخدم من واجهة | إضافة خدمة لنوع (أدمن) |
-| GET | `/api/mobile-workshop-types/{id}` | غير مستخدم | نوع ورشة بالمعرف |
-| PUT | `/api/mobile-workshop-types/{id}` | غير مستخدم من واجهة | تحديث نوع (أدمن) |
-| DELETE | `/api/mobile-workshop-types/{id}` | غير مستخدم من واجهة | حذف نوع (أدمن) |
-| PUT | `/api/mobile-workshop-types/{typeId}/services/{serviceId}` | غير مستخدم من واجهة | تحديث خدمة نوع (أدمن) |
-| DELETE | `/api/mobile-workshop-types/{typeId}/services/{serviceId}` | غير مستخدم من واجهة | حذف خدمة نوع (أدمن) |
+> ملاحظة: endpoints الخاصة بـ`/api/mobile-workshop-types` و`/api/mobile-workshop-requests` (فلو الطلب والعروض) تُعتبر **Legacy** وغير معتمدة للفلو المبسّط الحالي.
 
 هذه الـ CRUD **موجودة** وتُستخدم من Swagger/أدمن عند الحاجة؛ لو الداشبورد ما يعرض شاشات إدارية لها فهي "غير مستخدمة من واجهة" فقط.
 
 ---
 
-## 3) فلو الحجز المباشر (Mobile Car Service) — بدون طلبات/عروض
+## 3) Mobile Car Service (مستقل)
 
 فلو **مستقل**: حجز مباشر من كاتالوج الخدمات (subServiceId + vehicleId + location).  
 **غير مستخدم** من الداشبورد حالياً (الرابط معطّل في السايدبار).

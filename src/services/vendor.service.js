@@ -242,6 +242,13 @@ class VendorService {
       banner,
       status,
       vendorType,
+      mobileWorkshopName,
+      mobileWorkshopNameAr,
+      mobileWorkshopDescription,
+      mobileWorkshopCity,
+      mobileWorkshopLatitude,
+      mobileWorkshopLongitude,
+      mobileWorkshopServiceRadius,
     } = data;
 
     // Validate the linked user
@@ -259,10 +266,32 @@ class VendorService {
       await prisma.user.update({ where: { id: userId }, data: { role: 'VENDOR' } });
     }
 
+    const normalizedVendorType =
+      vendorType && ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'MOBILE_WORKSHOP', 'TOWING_SERVICE', 'ADHMN_AKFEEK'].includes(vendorType)
+        ? vendorType
+        : 'AUTO_PARTS';
+
+    const lat =
+      mobileWorkshopLatitude === undefined || mobileWorkshopLatitude === null || mobileWorkshopLatitude === ''
+        ? null
+        : Number(mobileWorkshopLatitude);
+    const lng =
+      mobileWorkshopLongitude === undefined || mobileWorkshopLongitude === null || mobileWorkshopLongitude === ''
+        ? null
+        : Number(mobileWorkshopLongitude);
+    const radius =
+      mobileWorkshopServiceRadius === undefined || mobileWorkshopServiceRadius === null || mobileWorkshopServiceRadius === ''
+        ? 30
+        : Number(mobileWorkshopServiceRadius);
+
+    if ((lat !== null && Number.isNaN(lat)) || (lng !== null && Number.isNaN(lng))) {
+      throw new AppError('Mobile workshop latitude/longitude must be valid numbers', 400, 'VALIDATION_ERROR');
+    }
+
     const vendor = await prisma.vendorProfile.create({
       data: {
         userId,
-        ...(vendorType && { vendorType: ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'MOBILE_WORKSHOP', 'TOWING_SERVICE', 'ADHMN_AKFEEK'].includes(vendorType) ? vendorType : 'AUTO_PARTS' }),
+        vendorType: normalizedVendorType,
         businessName,
         businessNameAr,
         description,
@@ -277,6 +306,21 @@ class VendorService {
         logo,
         banner,
         status: status || 'PENDING_APPROVAL',
+        ...(normalizedVendorType === 'MOBILE_WORKSHOP' && {
+          mobileWorkshop: {
+            create: {
+              name: mobileWorkshopName || businessName || 'Mobile Workshop',
+              nameAr: mobileWorkshopNameAr || businessNameAr || businessName || null,
+              description: mobileWorkshopDescription || description || null,
+              city: mobileWorkshopCity || city || null,
+              latitude: lat,
+              longitude: lng,
+              serviceRadius: Number.isNaN(radius) ? 30 : radius,
+              isAvailable: true,
+              isActive: true,
+            },
+          },
+        }),
       },
       include: {
         user: {
@@ -284,6 +328,19 @@ class VendorService {
             id: true,
             email: true,
             phone: true,
+          },
+        },
+        mobileWorkshop: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            city: true,
+            latitude: true,
+            longitude: true,
+            serviceRadius: true,
+            isAvailable: true,
+            isActive: true,
           },
         },
       },
@@ -321,6 +378,13 @@ class VendorService {
       banner,
       vendorType,
       commissionPercent,
+      mobileWorkshopName,
+      mobileWorkshopNameAr,
+      mobileWorkshopDescription,
+      mobileWorkshopCity,
+      mobileWorkshopLatitude,
+      mobileWorkshopLongitude,
+      mobileWorkshopServiceRadius,
     } = data;
 
     // Validate commissionPercent only when a real value is provided (not empty/null)
@@ -332,6 +396,34 @@ class VendorService {
     }
 
     const validVendorTypes = ['AUTO_PARTS', 'COMPREHENSIVE_CARE', 'CERTIFIED_WORKSHOP', 'CAR_WASH', 'MOBILE_WORKSHOP', 'TOWING_SERVICE', 'ADHMN_AKFEEK'];
+    const normalizedVendorType =
+      vendorType !== undefined && validVendorTypes.includes(vendorType) ? vendorType : undefined;
+
+    const lat =
+      mobileWorkshopLatitude === undefined || mobileWorkshopLatitude === null || mobileWorkshopLatitude === ''
+        ? undefined
+        : Number(mobileWorkshopLatitude);
+    const lng =
+      mobileWorkshopLongitude === undefined || mobileWorkshopLongitude === null || mobileWorkshopLongitude === ''
+        ? undefined
+        : Number(mobileWorkshopLongitude);
+    const radius =
+      mobileWorkshopServiceRadius === undefined || mobileWorkshopServiceRadius === null || mobileWorkshopServiceRadius === ''
+        ? undefined
+        : Number(mobileWorkshopServiceRadius);
+
+    if ((lat !== undefined && Number.isNaN(lat)) || (lng !== undefined && Number.isNaN(lng))) {
+      throw new AppError('Mobile workshop latitude/longitude must be valid numbers', 400, 'VALIDATION_ERROR');
+    }
+
+    const existingVendor = await prisma.vendorProfile.findUnique({
+      where: { id },
+      select: { vendorType: true, mobileWorkshop: { select: { id: true } } },
+    });
+
+    const effectiveVendorType = normalizedVendorType ?? existingVendor?.vendorType;
+    const shouldManageMobileWorkshop = effectiveVendorType === 'MOBILE_WORKSHOP';
+
     const vendor = await prisma.vendorProfile.update({
       where: { id },
       data: {
@@ -350,12 +442,39 @@ class VendorService {
         ...(country !== undefined && { country }),
         ...(logo !== undefined && { logo }),
         ...(banner !== undefined && { banner }),
-        ...(vendorType !== undefined && validVendorTypes.includes(vendorType) && { vendorType }),
+        ...(normalizedVendorType !== undefined && { vendorType: normalizedVendorType }),
         // commissionPercent: null = use global setting; a number = override for this vendor
         ...(commissionPercent !== undefined && {
           commissionPercent: commissionPercent === null || commissionPercent === ''
             ? null
             : parseFloat(commissionPercent),
+        }),
+        ...(shouldManageMobileWorkshop && {
+          mobileWorkshop: existingVendor?.mobileWorkshop
+            ? {
+                update: {
+                  ...(mobileWorkshopName !== undefined && { name: mobileWorkshopName || businessName || 'Mobile Workshop' }),
+                  ...(mobileWorkshopNameAr !== undefined && { nameAr: mobileWorkshopNameAr || businessNameAr || businessName || null }),
+                  ...(mobileWorkshopDescription !== undefined && { description: mobileWorkshopDescription || description || null }),
+                  ...(mobileWorkshopCity !== undefined && { city: mobileWorkshopCity || city || null }),
+                  ...(lat !== undefined && { latitude: lat }),
+                  ...(lng !== undefined && { longitude: lng }),
+                  ...(radius !== undefined && { serviceRadius: radius }),
+                },
+              }
+            : {
+                create: {
+                  name: mobileWorkshopName || businessName || 'Mobile Workshop',
+                  nameAr: mobileWorkshopNameAr || businessNameAr || businessName || null,
+                  description: mobileWorkshopDescription || description || null,
+                  city: mobileWorkshopCity || city || null,
+                  latitude: lat ?? null,
+                  longitude: lng ?? null,
+                  serviceRadius: radius ?? 30,
+                  isAvailable: true,
+                  isActive: true,
+                },
+              },
         }),
       },
       include: {
@@ -364,6 +483,20 @@ class VendorService {
             id: true,
             email: true,
             phone: true,
+          },
+        },
+        mobileWorkshop: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            description: true,
+            city: true,
+            latitude: true,
+            longitude: true,
+            serviceRadius: true,
+            isAvailable: true,
+            isActive: true,
           },
         },
       },

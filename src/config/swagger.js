@@ -480,32 +480,18 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: '5. الورش المتنقلة (Mobile Workshop)',
-            description: `**الورش المتنقلة — جميع الاند بوينت**
+            description: `**الورش المتنقلة (Mobile Workshop) — فلو مبسط بدون تتبع أو شات**
 
 ---
 
-**1. أنواع الورش — /api/mobile-workshop-types**
+**1. الكاتالوج الثابت + الحجز المباشر — /api/mobile-workshop**
 | Method | Path | الوصف | صلاحية |
 |--------|------|--------|--------|
-| GET | /api/mobile-workshop-types | قائمة أنواع الورش + خدمات كل نوع | عام |
-| GET | /api/mobile-workshop-types/:typeId/services | خدمات نوع معيّن | عام |
-| GET | /api/mobile-workshop-types/:id | تفاصيل نوع ورشة | عام |
-| POST | /api/mobile-workshop-types | إضافة نوع ورشة | أدمن |
-| PUT | /api/mobile-workshop-types/:id | تحديث نوع ورشة | أدمن |
-| DELETE | /api/mobile-workshop-types/:id | حذف نوع ورشة | أدمن |
-| POST | /api/mobile-workshop-types/:typeId/services | إضافة خدمة للنوع | أدمن |
-| PUT | /api/mobile-workshop-types/:typeId/services/:serviceId | تحديث خدمة النوع | أدمن |
-| DELETE | /api/mobile-workshop-types/:typeId/services/:serviceId | حذف خدمة من النوع | أدمن |
+| GET | /api/mobile-workshop/catalog | كاتالوج ثابت مطابق لتصميم الموبايل (7 عناصر فقط) | عام |
+| POST | /api/mobile-workshop/bookings | إنشاء حجز وتعيين أقرب ورشة متاحة تلقائياً | عميل |
+| GET | /api/mobile-workshop/bookings/:id | تفاصيل الحجز (عميل) | عميل |
 
-**2. طلبات العميل — /api/mobile-workshop-requests**
-| Method | Path | الوصف | صلاحية |
-|--------|------|--------|--------|
-| POST | /api/mobile-workshop-requests | إنشاء طلب (vehicleId, workshopTypeId, موقع، searchRadiusKm?) | عميل |
-| GET | /api/mobile-workshop-requests | طلباتي (status, page, limit) | عميل |
-| GET | /api/mobile-workshop-requests/:id | تفاصيل طلب مع العروض | عميل |
-| POST | /api/mobile-workshop-requests/:requestId/select-offer | اختيار عرض → حجز + فاتورة | عميل |
-
-**3. الورش المتنقلة — /api/mobile-workshops**
+**2. إدارة بيانات الورشة المتنقلة (Vendor/Admin) — /api/mobile-workshops**
 | Method | Path | الوصف | صلاحية |
 |--------|------|--------|--------|
 | GET | /api/mobile-workshops | قائمة كل الورش | مصادق |
@@ -514,9 +500,6 @@ Authorization: Bearer <your_jwt_token>
 | PUT | /api/mobile-workshops/my | تحديث بيانات ورشتي | فيندور |
 | DELETE | /api/mobile-workshops/my | حذف ورشتي | فيندور |
 | POST | /api/mobile-workshops/my/upload-image | رفع صورة لورشتي | فيندور |
-| GET | /api/mobile-workshops/my/requests | طلبات ورشتي | فيندور |
-| POST | /api/mobile-workshops/:workshopId/requests/:requestId/offer | إرسال عرض أو موافقة | فيندور |
-| POST | /api/mobile-workshops/:workshopId/requests/:requestId/reject | رفض الطلب | فيندور |
 | GET | /api/mobile-workshops/:id | تفاصيل ورشة | مصادق |
 | POST | /api/mobile-workshops | إضافة ورشة | أدمن |
 | PUT | /api/mobile-workshops/:id | تحديث ورشة | أدمن |
@@ -526,25 +509,26 @@ Authorization: Bearer <your_jwt_token>
 | PUT | /api/mobile-workshops/:id/services/:svcId | تحديث خدمة | أدمن |
 | DELETE | /api/mobile-workshops/:id/services/:svcId | حذف خدمة | أدمن |
 
-**4. تنفيذ الحجز بعد قبول العرض — /api/bookings**
-| Method | Path | الوصف | صلاحية |
-|--------|------|--------|--------|
-| PATCH | /api/bookings/:id/mobile-workshop-status | تحديث حالة التنفيذ (TECHNICIAN_EN_ROUTE -> ARRIVED -> IN_PROGRESS -> COMPLETED) | فيندور ورشة متنقلة |
-| GET | /api/bookings/:bookingId/chat/messages | جلب رسائل شات الحجز | عميل/فيندور الورشة |
-| POST | /api/bookings/:bookingId/chat/messages | إرسال رسالة شات | عميل/فيندور الورشة |
-| GET | /api/bookings/:bookingId/track | بيانات التتبع الحالية | عميل صاحب الحجز |
-| GET | /api/bookings/:bookingId/location-history | سجل المواقع للتتبع | عميل |
+**3. الدفع**
+- Customer: \`PATCH /api/invoices/my/:id/pay\`
 
-**5. دفع الفاتورة بعد اختيار العرض:**
-- Customer: \`PATCH /api/invoices/my/:id/pay\` (يفتح الشات والتتبع مباشرة)
-- Admin fallback: \`PATCH /api/invoices/:id/mark-paid\`
+ملاحظة: فلو الورش المتنقلة هنا **لا يعتمد على الشات أو التتبع**.
+`
+        },
+        {
+            name: '5. الورشة المتنقلة للمستخدم (Mobile Workshop User)',
+            description: `واجهات العميل لعرض كاتالوج الورشة المتنقلة (ثابت + هرمي) وإنشاء الحجز.
 
-**6. Socket events بعد الدفع (Realtime):**
-- \`invoice:paid\`
-- \`booking:ready\`
-- \`customer:join_booking\`, \`driver:join_booking\`
-- \`booking:message\`
-- \`driver:location\`, \`technician:location_update\``
+**الكاتالوج (Public):**
+- GET \`/api/mobile-workshop/catalog\` (ثابت حسب التصميم)
+- GET \`/api/mobile-workshop/catalogs\` (هرمي: catalogs → categories → services)
+- GET \`/api/mobile-workshop/catalogs/{catalogId}/categories\`
+- GET \`/api/mobile-workshop/categories/{categoryId}/services\`
+
+**الحجز (Customer):**
+- POST \`/api/mobile-workshop/bookings\`
+- GET \`/api/mobile-workshop/bookings/{id}\`
+`
         },
         {
             name: 'Authentication',
@@ -590,10 +574,7 @@ Authorization: Bearer <your_jwt_token>
             name: 'Broadcasts',
             description: 'Job broadcasts (towing + mobile workshop). GET /api/broadcasts?type=towing|mobile-workshop|all.'
         },
-        {
-            name: 'Mobile Workshop Requests',
-            description: 'Mobile workshop requests: POST, GET, GET :id, POST :requestId/select-offer. Then PATCH /api/invoices/my/:id/pay.'
-        },
+        // Mobile Workshop Requests (legacy broadcast/offers flow) intentionally removed from the documented surface
         {
             name: 'Supply Requests',
             description: 'Spare parts supply chain'
@@ -661,7 +642,9 @@ Authorization: Bearer <your_jwt_token>
         ]
     },
     apis: [
-        './src/api/routes/**/*.js',
+        // All routes, excluding legacy mobile workshop flows that are not mounted anymore
+        './src/api/routes/**/!(mobileWorkshopRequests.routes|mobileWorkshopTypes.routes|mobileCarService.routes).js',
+        './src/api/routes/admin/**/*.js',
         './src/api/controllers/*.js',
         './src/config/swagger-schemas.js',
         './src/modules/vendor/*.js'

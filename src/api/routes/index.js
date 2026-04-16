@@ -18,6 +18,8 @@ const ratingRoutes = require('./ratings.routes');
 const notificationRoutes = require('./notifications.routes');
 const addressRoutes = require('./addresses.routes');
 const adminSettingsRoutes = require('./admin/settings.routes');
+const adminMobileWorkshopCatalogRoutes = require('./admin/mobileWorkshopCatalog.admin.routes');
+const adminMobileWorkshopHierarchyRoutes = require('./admin/mobileWorkshopHierarchy.admin.routes');
 const towingRoutes = require('./towing.routes');
 const technicianTowingRoutes = require('./technicianTowing.routes');
 const feedbackRoutes = require('./feedback.routes');
@@ -30,8 +32,7 @@ const akfeekJourneyRoutes = require('./akfeekJourney.routes');
 const winchRoutes = require('./winches.routes');
 // Mobile Workshop routes
 const mobileWorkshopRoutes = require('./mobileWorkshops.routes');
-const mobileWorkshopTypesRoutes = require('./mobileWorkshopTypes.routes');
-const mobileWorkshopRequestsRoutes = require('./mobileWorkshopRequests.routes');
+const mobileWorkshopSimpleBookingRoutes = require('./mobileWorkshopSimpleBooking.routes');
 
 // Auto Parts Marketplace routes
 const vendorRoutes = require('./vendors.routes');
@@ -66,8 +67,7 @@ router.use('/akfeek-journey', akfeekJourneyRoutes);
 router.use('/winches', winchRoutes);
 // Mobile Workshops
 router.use('/mobile-workshops', mobileWorkshopRoutes);
-router.use('/mobile-workshop-types', mobileWorkshopTypesRoutes);
-router.use('/mobile-workshop-requests', mobileWorkshopRequestsRoutes);
+router.use('/mobile-workshop', mobileWorkshopSimpleBookingRoutes);
 
 // تسميات الأدوار للعرض في الواجهة (بدون مفاتيح تقنية مثل users.roles.EMPLOYEE)
 const { ROLE_LABELS } = require('../../constants/roles');
@@ -150,6 +150,8 @@ router.use('/vendor-onboarding', vendorOnboardingRoutes);
 
 // Admin routes
 router.use('/admin/settings', adminSettingsRoutes);
+router.use('/admin/mobile-workshop', adminMobileWorkshopCatalogRoutes);
+router.use('/admin/mobile-workshop-hierarchy', adminMobileWorkshopHierarchyRoutes);
 router.use('/admin/feedback', feedbackAdminRoutes);
 router.use('/admin/employees', require('./admin/employees.routes'));
 router.use('/admin/banners', require('./admin/banners.routes'));
