@@ -476,7 +476,7 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: '4. Towing',
-            description: 'Towing flow: POST /api/bookings/towing/request, GET /api/winches/my/broadcasts, POST .../offer, GET/POST offers/accept, PATCH /api/invoices/{id}/mark-paid, GET/PATCH /api/winches/my/jobs. Socket: customer:join_booking, driver:join_booking, driver:location, booking:message.'
+            description: 'Towing flow: POST /api/bookings/towing/request, GET /api/winches/my/broadcasts, POST .../offer, GET/POST offers/accept, PATCH /api/invoices/{id}/mark-paid, GET/PATCH /api/winches/my/jobs. Socket: customer:join_booking, driver:join_booking, driver:location, booking:message, booking:get_current_location. Current location response events: booking:current_location, winch:location_update, technician:location_update.'
         },
         {
             name: '5. الورش المتنقلة (Mobile Workshop)',

@@ -21,6 +21,42 @@ class TowingController {
     }
 
     /**
+     * Get towing quote (price + time) without creating booking
+     * POST /api/bookings/towing/quote
+     */
+    async createQuote(req, res, next) {
+        try {
+            const customerId = req.user.id;
+            const result = await towingService.createTowingQuote(customerId, req.body);
+
+            res.json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Get my towing requests/services with status (active/completed/all)
+     * GET /api/bookings/towing/my
+     */
+    async getMyTowingRequests(req, res, next) {
+        try {
+            const customerId = req.user.id;
+            const { status } = req.query;
+            const result = await towingService.getMyTowingRequests(customerId, status);
+            res.json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
      * Get broadcast details (for customer who created the request)
      * GET /api/bookings/towing/:broadcastId
      */
@@ -77,6 +113,27 @@ class TowingController {
             res.json({
                 success: true,
                 message: 'Offer accepted successfully',
+                data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Get socket/chat access details for paid towing booking
+     * GET /api/bookings/towing/booking/:bookingId/socket-access
+     */
+    async getSocketAccess(req, res, next) {
+        try {
+            const { bookingId } = req.params;
+            const userId = req.user.id;
+
+            const result = await towingService.getSocketAccess(bookingId, userId);
+
+            res.json({
+                success: true,
+                message: 'Socket access resolved successfully',
                 data: result
             });
         } catch (error) {

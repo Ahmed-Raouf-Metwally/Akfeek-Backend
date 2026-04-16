@@ -149,22 +149,24 @@ class OSRMService {
             };
         }
 
-        // Strictly enforce road-based routing as requested
-        // If OSRM fails, throw error instead of falling back to Haversine
-        throw new Error(`Routing service unavailable: ${result.error || 'Unknown error'}`);
+        // Fallback: OSRM failed (e.g. request rejected with 400).
+        // We still need to return distance + duration for customer quote flow.
+        logger.info('OSRM calculateTripDistance failed, using Haversine fallback', {
+            error: result.error || 'Unknown error'
+        });
 
-        /* 
-        // Fallback disabled to ensure accurate road-based pricing
         const distance = this.calculateHaversineDistance(pickupLat, pickupLng, destLat, destLng);
-        const avgSpeed = 40;
-        const duration = Math.round((distance / avgSpeed) * 60);
+        const avgSpeed = 40; // km/h
+        const baseDuration = (distance / avgSpeed) * 60; // minutes
+        const trafficFactor = this.getTrafficFactor();
+        const duration = Math.round(baseDuration * trafficFactor);
 
         return {
             distance: Math.round(distance * 10) / 10,
             duration,
-            method: 'Haversine'
+            method: 'Haversine',
+            accurate: false
         };
-        */
     }
 }
 

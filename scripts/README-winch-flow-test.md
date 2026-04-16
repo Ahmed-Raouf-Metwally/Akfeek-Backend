@@ -3,16 +3,11 @@
 ## المتطلبات
 
 1. **قاعدة البيانات** تعمل (MySQL على المنفذ المحدد في `.env` أو `localhost:3306`).
-2. **البيانات الأساسية**: تشغيل الـ seed الرئيسي مرة واحدة على الأقل:
+2. **البيانات الأساسية (Demo Seed)**: تشغيل seed الديمو مرة واحدة على الأقل:
    ```bash
-   npm run prisma:seed
+   npm run prisma:seed:demo
    ```
-   (يُنشئ عميل مثل `ahmed.ali@example.com` ومركبات وخدمة السحب.)
-3. **فيندور ونش للاختبار**: إنشاء فيندور ونش واحد بموقع الرياض:
-   ```bash
-   node prisma/seed-towing-vendor-for-test.js
-   ```
-   المستخدم: `winch.vendor@test.com` / `Admin123!`
+   (يُنشئ عملاء مثل `user1@akfeek.com` + فيندور ونش `vendor2@akfeek.com` + ونش فعلي + إعدادات السحب.)
 4. **السيرفر يعمل**:
    ```bash
    npm run dev
@@ -46,15 +41,15 @@ API_BASE_URL=http://localhost:3000 node scripts/test-winch-flow.js
 
 | الرسالة | الحل |
 |--------|------|
-| Customer login failed | شغّل `npm run prisma:seed` (عميل + مركبات). |
-| No winches nearby / Create towing request failed | شغّل `node prisma/seed-towing-vendor-for-test.js` (ونش بموقع الرياض). |
-| Vendor login failed | نفس الأمر أعلاه (ينشئ المستخدم `winch.vendor@test.com`). |
+| Customer login failed | شغّل `npm run prisma:seed:demo` (user1@akfeek.com / password123). |
+| Vendor login failed | شغّل `npm run prisma:seed:demo` (vendor2@akfeek.com / password123). |
+| Admin login failed | شغّل `npm run prisma:seed` (admin@akfeek.com / admin123). |
 | No vehicles | تأكد أن العميل له مركبات (الـ seed الرئيسي يضيف مركبات لأول عملاء). |
 | Can't reach database server | شغّل MySQL واتصل بالمنفذ الصحيح في `.env`. |
 
 ## متغيرات البيئة (اختيارية)
 
 - `API_BASE_URL` أو `TEST_API_URL`: عنوان الـ API (افتراضي: `http://localhost:3000`).
-- `TEST_CUSTOMER_EMAIL`, `TEST_CUSTOMER_PASSWORD`: عميل (افتراضي: ahmed.ali@example.com / Admin123!).
-- `TEST_WINCH_VENDOR_EMAIL`, `TEST_WINCH_VENDOR_PASSWORD`: فيندور الوينش (افتراضي: winch.vendor@test.com / Admin123!).
-- `TEST_ADMIN_EMAIL`, `TEST_ADMIN_PASSWORD`: أدمن (افتراضي: admin@akfeek.com / Admin123!).
+- `TEST_CUSTOMER_EMAIL`, `TEST_CUSTOMER_PASSWORD`: عميل (افتراضي: user1@akfeek.com / password123).
+- `TEST_WINCH_VENDOR_EMAIL`, `TEST_WINCH_VENDOR_PASSWORD`: فيندور الوينش (افتراضي: vendor2@akfeek.com / password123).
+- `TEST_ADMIN_EMAIL`, `TEST_ADMIN_PASSWORD`: أدمن (افتراضي: admin@akfeek.com / admin123).

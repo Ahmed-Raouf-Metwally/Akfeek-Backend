@@ -79,6 +79,20 @@ router.get('/towing', authMiddleware, requireRole('ADMIN'), settingsController.g
 
 /**
  * @swagger
+ * /api/admin/settings/towing/init:
+ *   post:
+ *     summary: Initialize towing pricing/time settings keys (upsert defaults)
+ *     tags: [Admin Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Towing settings initialized
+ */
+router.post('/towing/init', authMiddleware, requireRole('ADMIN'), settingsController.initTowingPricingSettings);
+
+/**
+ * @swagger
  * /api/admin/settings/{key}:
  *   put:
  *     summary: Update a system setting

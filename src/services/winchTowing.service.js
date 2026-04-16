@@ -32,7 +32,8 @@ async function getActiveBroadcastsForWinch(vendorUserId) {
         return { broadcasts: [], message: 'Update your winch location to receive requests.' };
     }
 
-    const radiusKm = await getSystemSetting('TOWING_SEARCH_RADIUS', 10);
+    // Search radius (kept as default constant; removed admin knob)
+    const radiusKm = 10;
 
     const broadcasts = await prisma.jobBroadcast.findMany({
         where: {
@@ -318,11 +319,26 @@ async function updateWinchJobStatus(vendorUserId, bookingId, newStatus) {
         throw new AppError('Booking not assigned to your winch', 403, 'FORBIDDEN');
     }
     const booking = await prisma.booking.findUnique({
-        where: { id: bookingId }
+        where: { id: bookingId },
+        include: {
+            invoice: {
+                select: { status: true }
+            }
+        }
     });
     if (!booking) {
         throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
     }
+
+    // Customer must pay first before the winch can start/progress the job.
+    if (booking.invoice?.status !== 'PAID') {
+        throw new AppError(
+            'Customer must pay the invoice before starting or progressing the job',
+            400,
+            'PAYMENT_REQUIRED'
+        );
+    }
+
     const validTransitions = {
         [BookingStatus.TECHNICIAN_ASSIGNED]: [BookingStatus.TECHNICIAN_EN_ROUTE],
         [BookingStatus.TECHNICIAN_EN_ROUTE]: [BookingStatus.ARRIVED],

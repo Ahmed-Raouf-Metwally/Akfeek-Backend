@@ -998,8 +998,14 @@ async function getMyBookings(req, res, next) {
     const status = req.query.status || null;
     const skip = (page - 1) * limit;
 
+    // Customer intent: towing/mobile "request" phase shouldn't appear as a real booking
+    // in "My bookings" UI. Job broadcast uses a Booking row with status BROADCASTING/OFFERS_RECEIVED.
     const where = { customerId: req.user.id };
-    if (status) Object.assign(where, buildStatusWhere(status));
+    if (status) {
+      Object.assign(where, buildStatusWhere(status));
+    } else {
+      where.status = { notIn: ['BROADCASTING', 'OFFERS_RECEIVED'] };
+    }
 
     const [items, total] = await Promise.all([
       prisma.booking.findMany({

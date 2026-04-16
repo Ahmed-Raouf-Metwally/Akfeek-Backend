@@ -16,12 +16,29 @@ exports.updateLocation = async (req, res, next) => {
         const technicianId = req.user.id;
         const locationData = req.body;
 
+        if (locationData.bookingId) {
+            const booking = await prisma.booking.findUnique({
+                where: { id: locationData.bookingId },
+                select: {
+                    technicianId: true,
+                    invoice: { select: { status: true } }
+                }
+            });
+
+            if (!booking || booking.technicianId !== technicianId) {
+                throw new AppError('Not authorized for this booking', 403, 'FORBIDDEN');
+            }
+            if (booking.invoice?.status !== 'PAID') {
+                throw new AppError('Customer must pay first. Tracking opens after payment.', 400, 'PAYMENT_REQUIRED');
+            }
+        }
+
         const result = await trackingService.updateTechnicianLocation(technicianId, locationData);
 
         // Emit Socket.io event to customer if on job
         if (locationData.bookingId && result.eta) {
             const io = socketIo.getIo();
-            io.to(`booking:${locationData.bookingId}`).emit('technician:location_update', {
+            const payload = {
                 bookingId: locationData.bookingId,
                 location: {
                     latitude: locationData.latitude,
@@ -31,7 +48,9 @@ exports.updateLocation = async (req, res, next) => {
                     timestamp: new Date()
                 },
                 eta: result.eta
-            });
+            };
+            io.to(`booking:${locationData.bookingId}`).emit('technician:location_update', payload);
+            io.to(`booking:${locationData.bookingId}`).emit('winch:location_update', payload);
         }
 
         res.json({
@@ -56,12 +75,13 @@ exports.getTrackingInfo = async (req, res, next) => {
         const { bookingId } = req.params;
         const customerId = req.user.id;
 
-        const trackingInfo = await trackingService.getTrackingInfo(bookingId);
-
         // Verify customer owns this booking
         const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
-            select: { customerId: true }
+            select: {
+                customerId: true,
+                invoice: { select: { status: true } }
+            }
         });
 
         if (!booking) {
@@ -71,6 +91,11 @@ exports.getTrackingInfo = async (req, res, next) => {
         if (booking.customerId !== customerId) {
             throw new AppError('Unauthorized', 403, 'FORBIDDEN');
         }
+        if (booking.invoice?.status !== 'PAID') {
+            throw new AppError('Payment required before tracking', 400, 'PAYMENT_REQUIRED');
+        }
+
+        const trackingInfo = await trackingService.getTrackingInfo(bookingId);
 
         res.json({
             success: true,

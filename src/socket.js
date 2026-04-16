@@ -4,6 +4,8 @@ const logger = require('./utils/logger/logger');
 const prisma = require('./utils/database/prisma');
 
 let io;
+// In-memory last known driver location per booking (fallback when DB persistence fails)
+const lastBookingLocation = new Map();
 
 /**
  * Initialize Socket.io
@@ -40,6 +42,60 @@ function init(server) {
     io.on('connection', (socket) => {
         logger.info(`Socket connected: ${socket.id} (user: ${socket.userId})`);
 
+        const emitCurrentBookingLocation = async (bookingId, technicianId, targetSocket = socket) => {
+            if (!bookingId || !technicianId) return;
+
+            let locationPayload = null;
+
+            // 1) Try DB (source of truth when available)
+            try {
+                const latestLocation = await prisma.technicianLocation.findFirst({
+                    where: {
+                        bookingId,
+                        technicianId,
+                        status: { not: 'OFFLINE' }
+                    },
+                    orderBy: {
+                        createdAt: 'desc'
+                    }
+                });
+
+                if (latestLocation) {
+                    locationPayload = {
+                        bookingId,
+                        latitude: Number(latestLocation.latitude),
+                        longitude: Number(latestLocation.longitude),
+                        heading: latestLocation.heading != null ? Number(latestLocation.heading) : null,
+                        speed: latestLocation.speed != null ? Number(latestLocation.speed) : null,
+                        timestamp: latestLocation.createdAt
+                    };
+                }
+            } catch (_) {
+                // ignore DB errors, fallback to memory
+            }
+
+            // 2) Fallback to in-memory last location (when DB insert is not available)
+            if (!locationPayload) {
+                const mem = lastBookingLocation.get(bookingId);
+                if (mem && mem.technicianId === technicianId) {
+                    locationPayload = {
+                        bookingId,
+                        latitude: Number(mem.latitude),
+                        longitude: Number(mem.longitude),
+                        heading: mem.heading != null ? Number(mem.heading) : null,
+                        speed: mem.speed != null ? Number(mem.speed) : null,
+                        timestamp: mem.timestamp
+                    };
+                }
+            }
+
+            if (!locationPayload) return;
+
+            targetSocket.emit('booking:current_location', locationPayload);
+            targetSocket.emit('winch:location_update', locationPayload);
+            targetSocket.emit('technician:location_update', locationPayload);
+        };
+
         // ——— حجز الوينش: غرفة مشتركة بين العميل وفيندور الوينش ———
 
         // العميل ينضم لغرفة الحجز — مسموح فقط بعد دفع الفاتورة (حتى يتفتح السوكت للتتبع والمحادثة)
@@ -48,8 +104,11 @@ function init(server) {
             try {
                 const booking = await prisma.booking.findUnique({
                     where: { id: bookingId },
-                    select: { customerId: true, technicianId: true },
-                    include: { invoice: { select: { status: true } } }
+                    select: {
+                        customerId: true,
+                        technicianId: true,
+                        invoice: { select: { status: true } }
+                    }
                 });
                 if (!booking) return socket.emit('error', { message: 'Booking not found' });
                 if (booking.customerId !== socket.userId) {
@@ -61,6 +120,7 @@ function init(server) {
                 socket.join(`booking:${bookingId}`);
                 logger.info(`Customer ${socket.userId} joined booking room: ${bookingId}`);
                 socket.emit('customer:joined', { bookingId, message: 'Joined booking room for tracking and chat' });
+                await emitCurrentBookingLocation(bookingId, booking.technicianId);
             } catch (err) {
                 socket.emit('error', { message: err.message || 'Failed to join booking' });
             }
@@ -72,8 +132,11 @@ function init(server) {
             try {
                 const booking = await prisma.booking.findUnique({
                     where: { id: bookingId },
-                    select: { customerId: true, technicianId: true },
-                    include: { invoice: { select: { status: true } } }
+                    select: {
+                        customerId: true,
+                        technicianId: true,
+                        invoice: { select: { status: true } }
+                    }
                 });
                 if (!booking) return socket.emit('error', { message: 'Booking not found' });
                 if (booking.technicianId !== socket.userId) {
@@ -100,6 +163,43 @@ function init(server) {
             logger.info(`Driver left booking room: ${bookingId}`);
         });
 
+        // العميل يطلب آخر موقع محفوظ حاليًا يدويًا بعد الانضمام
+        socket.on('booking:get_current_location', async (bookingId) => {
+            if (!bookingId) return socket.emit('error', { message: 'bookingId required' });
+            try {
+                const booking = await prisma.booking.findUnique({
+                    where: { id: bookingId },
+                    select: {
+                        customerId: true,
+                        technicianId: true,
+                        invoice: { select: { status: true } }
+                    }
+                });
+
+                if (!booking) {
+                    return socket.emit('error', { message: 'Booking not found' });
+                }
+
+                const isCustomer = booking.customerId === socket.userId;
+                const isDriver = booking.technicianId === socket.userId;
+
+                if (!isCustomer && !isDriver) {
+                    return socket.emit('error', { message: 'Not authorized for this booking' });
+                }
+
+                if (booking.invoice?.status !== 'PAID') {
+                    return socket.emit('error', {
+                        message: 'Payment required before tracking.',
+                        code: 'PAYMENT_REQUIRED'
+                    });
+                }
+
+                await emitCurrentBookingLocation(bookingId, booking.technicianId);
+            } catch (err) {
+                socket.emit('error', { message: err.message || 'Failed to get current location' });
+            }
+        });
+
         // تتبع الموقع: السائق يرسل موقعه → يُبث للعميل ويُحفظ
         socket.on('driver:location', async (payload) => {
             const { bookingId, latitude, longitude, heading, speed } = payload || {};
@@ -109,10 +209,19 @@ function init(server) {
             try {
                 const booking = await prisma.booking.findUnique({
                     where: { id: bookingId },
-                    select: { technicianId: true }
+                    select: {
+                        technicianId: true,
+                        invoice: { select: { status: true } }
+                    }
                 });
                 if (!booking || booking.technicianId !== socket.userId) {
                     return socket.emit('error', { message: 'Not authorized' });
+                }
+                if (booking.invoice?.status !== 'PAID') {
+                    return socket.emit('error', {
+                        message: 'Customer must pay first. Tracking opens after payment.',
+                        code: 'PAYMENT_REQUIRED'
+                    });
                 }
                 const locationData = {
                     bookingId,
@@ -122,7 +231,10 @@ function init(server) {
                     speed: speed != null ? Number(speed) : null,
                     timestamp: new Date().toISOString()
                 };
+                // Keep last location in memory for snapshot requests
+                lastBookingLocation.set(bookingId, { ...locationData, technicianId: socket.userId });
                 io.to(`booking:${bookingId}`).emit('winch:location_update', locationData);
+                io.to(`booking:${bookingId}`).emit('technician:location_update', locationData);
                 try {
                     await prisma.technicianLocation.create({
                         data: {
@@ -150,8 +262,12 @@ function init(server) {
             try {
                 const booking = await prisma.booking.findUnique({
                     where: { id: bookingId },
-                    select: { customerId: true, technicianId: true, chatRoom: { select: { id: true } } },
-                    include: { mobileWorkshop: { select: { vendor: { select: { userId: true } } } } }
+                    select: {
+                        customerId: true,
+                        technicianId: true,
+                        chatRoom: { select: { id: true } },
+                        mobileWorkshop: { select: { vendor: { select: { userId: true } } } }
+                    }
                 });
                 if (!booking) return socket.emit('error', { message: 'Booking not found' });
                 const vendorUserId = booking.mobileWorkshop?.vendor?.userId || null;

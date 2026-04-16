@@ -378,6 +378,77 @@ async function main() {
     });
   }
 
+  // System settings (Towing pricing & timing defaults for admin dashboard)
+  const towingSettings = [
+    {
+      key: 'TOWING_BASE_PRICE',
+      category: 'TOWING',
+      type: 'NUMBER',
+      value: 100,
+      description: 'Base towing price (SAR) added on every request',
+      descriptionAr: 'السعر الأساسي (ر.س) يضاف على كل طلب',
+      isEditable: true,
+    },
+    {
+      key: 'TOWING_PRICE_PER_KM',
+      category: 'TOWING',
+      type: 'NUMBER',
+      value: 2,
+      description: 'Towing price per kilometer (SAR/km)',
+      descriptionAr: 'سعر الكيلومتر (ر.س/كم) يضاف لكل كيلومتر',
+      isEditable: true,
+    },
+    {
+      key: 'TOWING_MIN_PRICE',
+      category: 'TOWING',
+      type: 'NUMBER',
+      value: 100,
+      description: 'Minimum final towing price (SAR) for a trip',
+      descriptionAr: 'الحد الأدنى (ر.س) أقل سعر للرحلة',
+      isEditable: true,
+    },
+    {
+      key: 'TOWING_MINUTES_PER_KM',
+      category: 'TOWING',
+      type: 'NUMBER',
+      value: 1,
+      description: 'Estimated time in minutes per kilometer for customer (minutes/km)',
+      descriptionAr: 'الوقت التقديري بالدقائق لكل كيلومتر قبل استقبال عروض الوينش',
+      isEditable: true,
+    },
+    {
+      key: 'TOWING_ADDITIONAL_MINUTES',
+      category: 'TOWING',
+      type: 'NUMBER',
+      value: 0,
+      description: 'Additional fixed minutes added to total estimated time',
+      descriptionAr: 'وقت إضافي ثابت يضاف للوقت الكلي المقدر',
+      isEditable: true,
+    },
+  ];
+
+  for (const s of towingSettings) {
+    await prisma.systemSettings.upsert({
+      where: { key: s.key },
+      update: {
+        category: s.category,
+        type: s.type,
+        isEditable: s.isEditable,
+        description: s.description,
+        descriptionAr: s.descriptionAr,
+      },
+      create: {
+        key: s.key,
+        value: String(s.value),
+        type: s.type,
+        category: s.category,
+        isEditable: s.isEditable,
+        description: s.description,
+        descriptionAr: s.descriptionAr,
+      },
+    });
+  }
+
   console.log('✅ Seeded 3 mobile workshop vendors with current locations');
 }
 

@@ -3,6 +3,29 @@ const bcrypt = require('bcrypt');
 
 const prisma = new PrismaClient();
 
+async function resolveSeedPhone(email, desiredPhone) {
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+    select: { phone: true },
+  });
+  if (existingUser?.phone) return existingUser.phone;
+
+  let candidate = desiredPhone;
+  let counter = 0;
+
+  while (true) {
+    const owner = await prisma.user.findFirst({
+      where: { phone: candidate },
+      select: { email: true },
+    });
+    if (!owner || owner.email === email) return candidate;
+
+    counter += 1;
+    const suffix = String(counter).padStart(2, '0');
+    candidate = `${desiredPhone}${suffix}`;
+  }
+}
+
 async function main() {
   console.log('🌱 Starting seed...');
 
@@ -786,6 +809,7 @@ async function main() {
 
   const createdMobileWorkshops = [];
   for (const vendorSeed of mobileWorkshopVendors) {
+    const resolvedPhone = await resolveSeedPhone(vendorSeed.email, vendorSeed.phone);
     const mobileWorkshopVendorUser = await prisma.user.upsert({
       where: { email: vendorSeed.email },
       update: {
@@ -794,7 +818,7 @@ async function main() {
         status: 'ACTIVE',
         emailVerified: true,
         phoneVerified: true,
-        phone: vendorSeed.phone,
+        phone: resolvedPhone,
         preferredLanguage: 'AR',
       },
       create: {
@@ -804,7 +828,7 @@ async function main() {
         status: 'ACTIVE',
         emailVerified: true,
         phoneVerified: true,
-        phone: vendorSeed.phone,
+        phone: resolvedPhone,
         preferredLanguage: 'AR',
         profile: {
           create: {
@@ -836,7 +860,7 @@ async function main() {
         businessName: vendorSeed.businessName,
         businessNameAr: vendorSeed.businessNameAr,
         description: 'خدمات صيانة متنقلة',
-        contactPhone: vendorSeed.phone,
+        contactPhone: resolvedPhone,
         contactEmail: vendorSeed.email,
         city: 'الرياض',
         country: 'السعودية',
@@ -852,7 +876,7 @@ async function main() {
         businessName: vendorSeed.businessName,
         businessNameAr: vendorSeed.businessNameAr,
         description: 'خدمات صيانة متنقلة',
-        contactPhone: vendorSeed.phone,
+        contactPhone: resolvedPhone,
         contactEmail: vendorSeed.email,
         city: 'الرياض',
         country: 'السعودية',
@@ -1133,6 +1157,78 @@ async function main() {
     });
   }
   console.log('✅ Created user package subscriptions');
+
+  // 21. System settings (Towing pricing & timing defaults for admin dashboard)
+  const towingSettings = [
+    {
+      key: 'TOWING_BASE_PRICE',
+      category: 'TOWING',
+      type: 'NUMBER',
+      value: 100,
+      description: 'Base towing price (SAR) added on every request',
+      descriptionAr: 'السعر الأساسي (ر.س) يضاف على كل طلب',
+      isEditable: true,
+    },
+    {
+      key: 'TOWING_PRICE_PER_KM',
+      category: 'TOWING',
+      type: 'NUMBER',
+      value: 2,
+      description: 'Towing price per kilometer (SAR/km)',
+      descriptionAr: 'سعر الكيلومتر (ر.س/كم) يضاف لكل كيلومتر',
+      isEditable: true,
+    },
+    {
+      key: 'TOWING_MIN_PRICE',
+      category: 'TOWING',
+      type: 'NUMBER',
+      value: 100,
+      description: 'Minimum final towing price (SAR) for a trip',
+      descriptionAr: 'الحد الأدنى (ر.س) أقل سعر للرحلة',
+      isEditable: true,
+    },
+    {
+      key: 'TOWING_MINUTES_PER_KM',
+      category: 'TOWING',
+      type: 'NUMBER',
+      value: 1,
+      description: 'Estimated time in minutes per kilometer for customer (minutes/km)',
+      descriptionAr: 'الوقت التقديري بالدقائق لكل كيلومتر قبل استقبال عروض الوينش',
+      isEditable: true,
+    },
+    {
+      key: 'TOWING_ADDITIONAL_MINUTES',
+      category: 'TOWING',
+      type: 'NUMBER',
+      value: 0,
+      description: 'Additional fixed minutes added to total estimated time',
+      descriptionAr: 'وقت إضافي ثابت يضاف للوقت الكلي المقدر',
+      isEditable: true,
+    },
+  ];
+
+  for (const s of towingSettings) {
+    await prisma.systemSettings.upsert({
+      where: { key: s.key },
+      update: {
+        category: s.category,
+        type: s.type,
+        isEditable: s.isEditable,
+        description: s.description,
+        descriptionAr: s.descriptionAr,
+      },
+      create: {
+        key: s.key,
+        value: String(s.value),
+        type: s.type,
+        category: s.category,
+        isEditable: s.isEditable,
+        description: s.description,
+        descriptionAr: s.descriptionAr,
+      },
+    });
+  }
+  console.log('✅ Seeded towing system settings for admin dashboard');
 
   console.log('🎉 Seed extended successfully!');
 }

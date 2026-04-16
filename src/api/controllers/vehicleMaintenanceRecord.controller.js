@@ -1,6 +1,25 @@
 const maintenanceRecordService = require('../../services/vehicleMaintenanceRecord.service');
 
 class VehicleMaintenanceRecordController {
+  async getFilters(req, res, next) {
+    try {
+      const data = await maintenanceRecordService.getFilters();
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async listAllMy(req, res, next) {
+    try {
+      const { types, q } = req.query;
+      const maintenanceRecords = await maintenanceRecordService.listAllForUser(req.user.id, { types, q });
+      res.json({ maintenanceRecords });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async listUpcoming(req, res, next) {
     try {
       const upcomingMaintenance = await maintenanceRecordService.listUpcoming(req.user.id);
@@ -21,7 +40,11 @@ class VehicleMaintenanceRecordController {
 
   async list(req, res, next) {
     try {
-      const maintenanceRecords = await maintenanceRecordService.list(req.params.vehicleId, req.user.id);
+      const { types, q } = req.query;
+      const maintenanceRecords = await maintenanceRecordService.list(req.params.vehicleId, req.user.id, {
+        types,
+        q,
+      });
       res.json({ maintenanceRecords });
     } catch (error) {
       next(error);

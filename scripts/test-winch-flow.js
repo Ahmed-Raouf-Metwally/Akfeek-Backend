@@ -29,12 +29,13 @@ const DESTINATION_LOCATION = {
   longitude: 46.7000,
   address: 'Workshop, Al Olaya, Riyadh',
 };
+// Defaults aligned with prisma/seed.js (demo seed)
 const CUSTOMER_EMAIL = process.env.TEST_CUSTOMER_EMAIL || 'user1@akfeek.com';
-const CUSTOMER_PASSWORD = process.env.TEST_CUSTOMER_PASSWORD || 'Customer123!';
-const VENDOR_EMAIL = process.env.TEST_WINCH_VENDOR_EMAIL || 'vendor-towing-service-1@akfeek.com';
-const VENDOR_PASSWORD = process.env.TEST_WINCH_VENDOR_PASSWORD || 'Vendor123!';
+const CUSTOMER_PASSWORD = process.env.TEST_CUSTOMER_PASSWORD || 'password123';
+const VENDOR_EMAIL = process.env.TEST_WINCH_VENDOR_EMAIL || 'vendor2@akfeek.com';
+const VENDOR_PASSWORD = process.env.TEST_WINCH_VENDOR_PASSWORD || 'password123';
 const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || 'admin@akfeek.com';
-const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'Admin123!';
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin123';
 
 const api = axios.create({
   baseURL: `${BASE_URL}/api`,
@@ -59,7 +60,7 @@ function setAuth(token) {
 async function loginAsCustomer() {
   const res = await api.post('/auth/login', { identifier: CUSTOMER_EMAIL, password: CUSTOMER_PASSWORD });
   if (!res.data.success || !res.data.data?.token) {
-    throw new Error('Customer login failed. Run prisma seed (user1@akfeek.com / Customer123!)');
+    throw new Error('Customer login failed. Run demo seed: npm run prisma:seed:demo (user1@akfeek.com / password123)');
   }
   customerToken = res.data.data.token;
   setAuth(customerToken);
@@ -69,7 +70,7 @@ async function loginAsCustomer() {
 async function loginAsVendor() {
   const res = await api.post('/auth/login', { identifier: VENDOR_EMAIL, password: VENDOR_PASSWORD });
   if (!res.data.success || !res.data.data?.token) {
-    throw new Error('Vendor login failed. Run: npm run prisma:seed:24vendors then prisma:seed:winches (vendor-towing-service-1@akfeek.com / Vendor123!)');
+    throw new Error('Vendor login failed. Run demo seed: npm run prisma:seed:demo (vendor2@akfeek.com / password123)');
   }
   vendorToken = res.data.data.token;
   setAuth(vendorToken);
@@ -79,7 +80,7 @@ async function loginAsVendor() {
 async function loginAsAdmin() {
   const res = await api.post('/auth/login', { identifier: ADMIN_EMAIL, password: ADMIN_PASSWORD });
   if (!res.data.success || !res.data.data?.token) {
-    throw new Error('Admin login failed. Use admin@akfeek.com / Admin123!');
+    throw new Error('Admin login failed. Ensure admin exists (admin@akfeek.com / admin123). Run: npm run prisma:seed');
   }
   adminToken = res.data.data.token;
   setAuth(adminToken);
