@@ -12,12 +12,16 @@ const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || process.env.API_BASE_URL 
  */
 function getFullUrl(path) {
   if (!path) return null;
+  let p = String(path).trim();
+  // Fix mistaken double-origin storage (e.g. http://hosthttp://host/uploads/...)
+  const dupOrigin = p.match(/^(https?:\/\/[^/]+)(https?:\/\/.+)/i);
+  if (dupOrigin) p = dupOrigin[2];
   // If already a full URL, return as-is
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
+  if (p.startsWith('http://') || p.startsWith('https://')) {
+    return p;
   }
   // Ensure path starts with /
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const normalizedPath = p.startsWith('/') ? p : `/${p}`;
   return `${PUBLIC_BASE_URL}${normalizedPath}`;
 }
 

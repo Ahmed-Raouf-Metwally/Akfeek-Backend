@@ -450,6 +450,46 @@ async function main() {
   }
 
   console.log('✅ Seeded 3 mobile workshop vendors with current locations');
+
+  // About Us (من نحن) — single page + default core values if missing
+  const existingAbout = await prisma.aboutUsPage.findFirst({ select: { id: true } });
+  if (!existingAbout) {
+    await prisma.aboutUsPage.create({
+      data: {
+        brandNameEn: 'Akfeek',
+        brandNameAr: 'أكفيك',
+        introHeadingAr: 'نقدم صيانة و قطع غيار بثقة و سهولة',
+        introHeadingEn: 'Maintenance and spare parts with trust and ease',
+        introBodyAr:
+          'أكفيك منصة سعودية تربطك بخدمات السيارات والصيانة وقطع الغيار الموثوقة، بخطوات بسيطة وأسعار واضحة.',
+        introBodyEn:
+          'Akfeek is a Saudi platform connecting you with trusted car services, maintenance, and spare parts — simple steps and transparent pricing.',
+        valuesSectionTitleAr: 'القيم الأساسية',
+        valuesSectionTitleEn: 'Core values',
+        coreValues: {
+          create: [
+            {
+              sortOrder: 0,
+              titleAr: 'الثقة و الشفافية',
+              titleEn: 'Trust and transparency',
+              descriptionAr: 'نلتزم بالوضوح في السعر والخدمة وبناء علاقة طويلة مع عملائنا.',
+              descriptionEn: 'Clear pricing, honest service, and lasting customer relationships.',
+              iconKey: 'check_badge',
+            },
+            {
+              sortOrder: 1,
+              titleAr: 'راحة و تجربة مميزة',
+              titleEn: 'Comfort and a distinctive experience',
+              descriptionAr: 'من الطلب وحتى إتمام الخدمة، نوفّر لك تجربة سلسة ومريحة.',
+              descriptionEn: 'A smooth, comfortable journey from booking to completion.',
+              iconKey: 'sparkles',
+            },
+          ],
+        },
+      },
+    });
+    console.log('✅ Seeded About Us page (من نحن) with default core values');
+  }
 }
 
 main()

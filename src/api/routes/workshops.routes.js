@@ -5,8 +5,10 @@ const workshopInspectionController = require('../controllers/workshopInspection.
 const workshopReviewController = require('../controllers/workshopReview.controller');
 const workshopImageController = require('../controllers/workshopImage.controller');
 const workshopServiceController = require('../controllers/workshopService.controller');
+const vendorWorkshopOfferController = require('../controllers/vendorWorkshopOffer.controller');
 const { upload } = require('../../utils/imageUpload');
-const { optionalAuth, authMiddleware } = require('../middlewares/auth.middleware');
+const authMiddleware = require('../middlewares/auth.middleware');
+const { optionalAuth } = authMiddleware;
 const requireRole = require('../middlewares/role.middleware');
 
 router.use(optionalAuth);
@@ -265,6 +267,136 @@ router.delete('/profile/me/services/:svcId', requireRole('VENDOR'), workshopServ
  *       404:
  *         description: Workshop not found
  */
+
+// Vendor customer offers / bundles — must be before GET /:id
+/**
+ * @swagger
+ * /api/workshops/{id}/customer-offers:
+ *   get:
+ *     summary: List active customer offers for a certified workshop (public)
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: vehicleModelId
+ *         schema: { type: string, format: uuid }
+ *         description: Filter offers that restrict to this vehicle model
+ *     responses:
+ *       200:
+ *         description: Offers list
+ *       404:
+ *         description: Workshop not found
+ */
+router.get('/:id/customer-offers', vendorWorkshopOfferController.listByWorkshop);
+
+/**
+ * @swagger
+ * /api/workshops/{id}/customer-offers/{offerId}/purchase:
+ *   post:
+ *     summary: Buy PREPAID_BUNDLE (creates booking + invoice; pay invoice to activate slots)
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: offerId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               scheduledDate: { type: string, format: date-time }
+ *               vehicleId: { type: string, format: uuid }
+ *               addressId: { type: string, format: uuid }
+ *               notes: { type: string }
+ *     responses:
+ *       201:
+ *         description: booking, invoice, purchase (PENDING_PAYMENT until invoice paid)
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.post(
+  '/:id/customer-offers/:offerId/purchase',
+  authMiddleware,
+  requireRole('CUSTOMER'),
+  vendorWorkshopOfferController.purchaseBundle
+);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me/customer-offers:
+ *   get:
+ *     summary: List my workshop customer offers (vendor)
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security:
+ *       - bearerAuth: []
+ *   post:
+ *     summary: Create customer offer or prepaid bundle
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [offerType, title, validUntil]
+ *             properties:
+ *               offerType: { type: string, enum: [PERCENT_DISCOUNT, PREPAID_BUNDLE] }
+ *               title: { type: string }
+ *               titleAr: { type: string }
+ *               description: { type: string }
+ *               descriptionAr: { type: string }
+ *               validFrom: { type: string, format: date-time }
+ *               validUntil: { type: string, format: date-time }
+ *               isActive: { type: boolean }
+ *               sortOrder: { type: integer }
+ *               vehicleModelIds:
+ *                 type: array
+ *                 items: { type: string, format: uuid }
+ *               discountScope: { type: string, enum: [ALL_SERVICES, ONE_SERVICE] }
+ *               discountPercent: { type: integer }
+ *               certifiedWorkshopServiceId: { type: string, format: uuid }
+ *               paidSlots: { type: integer }
+ *               bonusSlots: { type: integer }
+ *               bundlePrice: { type: number }
+ *               validityDays: { type: integer }
+ *     responses:
+ *       201:
+ *         description: Created
+ */
+router.get('/profile/me/customer-offers', requireRole('VENDOR'), vendorWorkshopOfferController.listMine);
+router.post('/profile/me/customer-offers', requireRole('VENDOR'), vendorWorkshopOfferController.create);
+
+/**
+ * @swagger
+ * /api/workshops/profile/me/customer-offers/{offerId}:
+ *   put:
+ *     summary: Update offer
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security:
+ *       - bearerAuth: []
+ *   delete:
+ *     summary: Delete offer
+ *     tags: [1. الورش المعتمدة (Certified Workshops)]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put('/profile/me/customer-offers/:offerId', requireRole('VENDOR'), vendorWorkshopOfferController.update);
+router.delete('/profile/me/customer-offers/:offerId', requireRole('VENDOR'), vendorWorkshopOfferController.remove);
+
 router.get('/:id', workshopController.getWorkshopById);
 
 // Admin endpoints

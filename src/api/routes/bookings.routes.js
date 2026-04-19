@@ -296,6 +296,18 @@ router.get('/:id', bookingController.getBookingById);
  *               notes:
  *                 type: string
  *                 description: ملاحظات (اختياري). Notes (optional).
+ *               vendorWorkshopOfferId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: |
+ *                   Certified workshop + workshopServiceIds only.
+ *                   Active PERCENT_DISCOUNT offer from GET /api/workshops/{workshopId}/customer-offers — applies discount to eligible lines (do not combine with userWorkshopOfferPurchaseId).
+ *               userWorkshopOfferPurchaseId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: |
+ *                   Consume one prepaid bundle slot (ACTIVE purchase after paying bundle invoice).
+ *                   Booking must include the bundle's CertifiedWorkshopService line; that line becomes 0 SAR (do not combine with vendorWorkshopOfferId).
  *           examples:
  *             bookByServiceIds:
  *               summary: حجز باستخدام serviceIds (Catalog services)

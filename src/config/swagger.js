@@ -25,6 +25,7 @@ Comprehensive car services platform supporting 4 service models:
 ## Postman
 
 - Import spec: File -> Import -> \`http://localhost:3000/api-docs.json\` or \`openapi.json\` (after \`npm run openapi\`)
+- **Mobile-only spec (smaller):** \`http://localhost:3000/api-docs/mobile.json\` — same auth flow; UI at \`/api-docs/mobile\`.
 - Auth: Authorization tab, Bearer Token, JWT from \`POST /api/auth/login\`
 
 ## Authentication
@@ -122,6 +123,88 @@ Authorization: Bearer <your_jwt_token>
                             example: 10,
                             description: 'Total number of pages'
                         }
+                    }
+                },
+                AboutUsCoreValueItem: {
+                    type: 'object',
+                    description: 'One core value card on the About Us screen',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        sortOrder: { type: 'integer', example: 0 },
+                        titleAr: { type: 'string', example: 'الثقة و الشفافية' },
+                        titleEn: { type: 'string', nullable: true, example: 'Trust and transparency' },
+                        descriptionAr: { type: 'string' },
+                        descriptionEn: { type: 'string', nullable: true },
+                        iconKey: {
+                            type: 'string',
+                            enum: ['check_badge', 'sparkles', 'shield', 'star'],
+                            description: 'Preset icon key for the mobile app to map to a local asset'
+                        },
+                        iconUrl: {
+                            type: 'string',
+                            nullable: true,
+                            description: 'Absolute URL when a custom icon was uploaded from the dashboard'
+                        }
+                    }
+                },
+                AboutUsPageData: {
+                    type: 'object',
+                    description: 'Full About Us page payload (value of `data` in the JSON response)',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        brandNameEn: { type: 'string', example: 'Akfeek' },
+                        brandNameAr: { type: 'string', example: 'أكفيك' },
+                        logoUrl: {
+                            type: 'string',
+                            nullable: true,
+                            description: 'Absolute URL for the main logo image, or null if not set'
+                        },
+                        introHeadingAr: { type: 'string', example: 'نقدم صيانة و قطع غيار بثقة و سهولة' },
+                        introHeadingEn: { type: 'string', nullable: true },
+                        introBodyAr: { type: 'string', description: 'Main intro paragraph (Arabic)' },
+                        introBodyEn: { type: 'string', nullable: true },
+                        valuesSectionTitleAr: { type: 'string', example: 'القيم الأساسية' },
+                        valuesSectionTitleEn: { type: 'string', nullable: true, example: 'Core values' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
+                        coreValues: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/AboutUsCoreValueItem' },
+                            description: 'Active cards only (`isActive: true`)'
+                        }
+                    }
+                },
+                AboutUsPublicResponse: {
+                    type: 'object',
+                    properties: {
+                        success: { type: 'boolean', example: true },
+                        data: { $ref: '#/components/schemas/AboutUsPageData' }
+                    }
+                },
+                PackageDealType: {
+                    type: 'string',
+                    enum: ['STANDARD', 'PERCENT_SUBSCRIPTION'],
+                    description: 'PERCENT_SUBSCRIPTION = prepaid bundle (usageCount washes) with marketing discount %; price = upfront total'
+                },
+                PackageItem: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        name: { type: 'string' },
+                        nameAr: { type: 'string', nullable: true },
+                        description: { type: 'string', nullable: true },
+                        descriptionAr: { type: 'string', nullable: true },
+                        price: { type: 'string', description: 'Decimal as string' },
+                        usageCount: { type: 'integer', nullable: true },
+                        validityDays: { type: 'integer' },
+                        isActive: { type: 'boolean' },
+                        sortOrder: { type: 'integer' },
+                        imageUrl: { type: 'string', nullable: true },
+                        dealType: { $ref: '#/components/schemas/PackageDealType' },
+                        discountPercent: { type: 'integer', nullable: true, example: 10 },
+                        listPriceTotal: { type: 'string', nullable: true, description: 'Reference total before discount (decimal string)' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' }
                     }
                 },
                 // Address schemas
@@ -404,47 +487,12 @@ Authorization: Bearer <your_jwt_token>
             description: 'Top/Bottom banners for the mobile app. Public: GET /api/banners. Admin: /api/admin/banners.'
         },
         {
+            name: 'About Us',
+            description: 'من نحن — محتوى صفحة التعريف للموبايل. عام: `GET /api/about-us`. التحرير (أدمن): `/api/admin/about-us`.'
+        },
+        {
             name: 'Akfeek Journey',
-            description: `
-**رحلة موجّهة للعميل (CUSTOMER)** — الخطوات: \`INSURANCE_TOW\` → \`INSURANCE_DOCS\` → \`TOW_TO_WORKSHOP\` → \`WORKSHOP_BOOKING\` → \`POST_REPAIR_TOW_HOME\`.
-
-### ترتيب اختبار E2E في Swagger (من البداية لحد العودة للبيت)
-
-1. **POST** \`/api/auth/login\` — توكن عميل (\`CUSTOMER\`).
-2. **POST** \`/api/akfeek-journey/start\` — Body: \`vehicleId\` (مستحسن لمسار السحب).
-3. **GET** \`/api/akfeek-journey/me\` — احفظ \`journey.id\` و \`currentStep\`.
-
-**أ) خطوة سحب التأمين \`INSURANCE_TOW\`**
-4. **POST** \`/api/bookings/towing/request\` → \`bookingId\`, \`broadcastId\`.
-5. **GET** \`/api/bookings/towing/{broadcastId}\` (اختياري).
-6. **GET** \`/api/bookings/towing/{broadcastId}/offers\`
-7. **POST** \`/api/bookings/towing/{broadcastId}/offers/{offerId}/accept\` → فاتورة.
-8. **PATCH** \`/api/invoices/my/{invoiceId}/pay\` — دفع العميل (أو أدمن: \`/api/invoices/{id}/mark-paid\`).
-9. **PATCH** \`/api/akfeek-journey/{journeyId}/step/INSURANCE_TOW/link\` — Body: \`{ "bookingId" }\`.
-   - بديل سريع: **PATCH** \`.../step/INSURANCE_TOW/skip\`.
-
-**ب) وثائق التأمين \`INSURANCE_DOCS\`**
-10. **POST** \`/api/akfeek-journey/{journeyId}/documents\` (multipart \`files\`) **أو** **PATCH** \`.../step/INSURANCE_DOCS/complete\` **أو** \`.../skip\`.
-11. **GET** \`/api/akfeek-journey/me\`.
-
-**ج) سحب للورشة \`TOW_TO_WORKSHOP\`**
-12. كرر فلو السحب (4–8) ثم **PATCH** \`.../step/TOW_TO_WORKSHOP/link\` — أو \`skip\`.
-
-**د) حجز الورشة \`WORKSHOP_BOOKING\`**
-13. **GET** \`/api/workshops\` — **GET** \`/api/workshops/{workshopId}/services\`.
-14. **POST** \`/api/bookings\` — \`workshopId\`, \`deliveryMethod\`, \`workshopServiceIds\` أو \`serviceIds\`, \`scheduledDate\`, …
-15. **PATCH** \`/api/bookings/{bookingId}/confirm\` — توكن **فيندور الورشة** (إن لزم).
-16. **PATCH** \`/api/akfeek-journey/{journeyId}/step/WORKSHOP_BOOKING/link\` — Body: \`{ "bookingId" }\`.
-17. **PATCH** \`/api/invoices/my/{invoiceId}/pay\` — حتى تصبح فاتورة الورشة مدفوعة (شرط إكمال الخطوة في الرحلة).
-18. **GET** \`/api/akfeek-journey/me\`.
-
-**هـ) العودة للمنزل \`POST_REPAIR_TOW_HOME\`**
-19. فلو سحب مرة أخرى ثم **PATCH** \`.../step/POST_REPAIR_TOW_HOME/link\` — أو **PATCH** \`.../step/POST_REPAIR_TOW_HOME/skip\` (رفض العودة بالسحب → إكمال الرحلة).
-
-20. **GET** \`/api/akfeek-journey/me\` — توقع \`status: COMPLETED\`.
-
-**أدمن (ليس للموبايل):** \`GET /api/admin/akfeek-journey\`, \`GET .../{id}\`, \`GET .../documents/{documentId}/file\`.
-`.trim()
+            description: `Insurance and workshop guided journeys`.trim()
         },
         {
             name: 'Inspections',
@@ -462,59 +510,59 @@ Authorization: Bearer <your_jwt_token>
             name: 'Admin Employees',
             description: 'موظفو أكفيك — إدارة وصلاحيات (أدمن فقط) — /api/admin/employees'
         },
-        {
-            name: '1. Certified Workshops',
-            description: 'Certified workshops CRUD + booking (POST /api/bookings with workshopId).'
-        },
-        {
-            name: '2. Car Wash',
-            description: 'Car wash flow: customer books cleaning service, pays invoice, vendor marks complete. GET /api/services?category=CLEANING, POST /api/bookings, PATCH /api/invoices/my/{id}/pay, PATCH /api/bookings/{id}/complete.'
-        },
-        {
-            name: '3. Comprehensive Care',
-            description: 'Comprehensive care flow: GET /api/services?category=COMPREHENSIVE_CARE, POST /api/bookings, PATCH /api/invoices/my/{id}/pay, PATCH /api/bookings/{id}/complete.'
-        },
-        {
-            name: '4. Towing',
-            description: 'Towing flow: POST /api/bookings/towing/request, GET /api/winches/my/broadcasts, POST .../offer, GET/POST offers/accept, PATCH /api/invoices/{id}/mark-paid, GET/PATCH /api/winches/my/jobs. Socket: customer:join_booking, driver:join_booking, driver:location, booking:message, booking:get_current_location. Current location response events: booking:current_location, winch:location_update, technician:location_update.'
-        },
-        {
-            name: '5. الورش المتنقلة (Mobile Workshop)',
-            description: `**الورش المتنقلة (Mobile Workshop) — فلو مبسط بدون تتبع أو شات**
+//         {
+//             name: '1. Certified Workshops',
+//             description: 'Certified workshops CRUD + booking (POST /api/bookings with workshopId).'
+//         },
+//         {
+//             name: '2. Car Wash',
+//             description: 'Car wash flow: customer books cleaning service, pays invoice, vendor marks complete. GET /api/services?category=CLEANING, POST /api/bookings, PATCH /api/invoices/my/{id}/pay, PATCH /api/bookings/{id}/complete.'
+//         },
+//         {
+//             name: '3. Comprehensive Care',
+//             description: 'Comprehensive care flow: GET /api/services?category=COMPREHENSIVE_CARE, POST /api/bookings, PATCH /api/invoices/my/{id}/pay, PATCH /api/bookings/{id}/complete.'
+//         },
+//         {
+//             name: '4. Towing',
+//             description: 'Towing flow: POST /api/bookings/towing/request, GET /api/winches/my/broadcasts, POST .../offer, GET/POST offers/accept, PATCH /api/invoices/{id}/mark-paid, GET/PATCH /api/winches/my/jobs. Socket: customer:join_booking, driver:join_booking, driver:location, booking:message, booking:get_current_location. Current location response events: booking:current_location, winch:location_update, technician:location_update.'
+//         },
+//         {
+//             name: '5. الورش المتنقلة (Mobile Workshop)',
+//             description: `**الورش المتنقلة (Mobile Workshop) — فلو مبسط بدون تتبع أو شات**
 
----
+// ---
 
-**1. الكاتالوج الثابت + الحجز المباشر — /api/mobile-workshop**
-| Method | Path | الوصف | صلاحية |
-|--------|------|--------|--------|
-| GET | /api/mobile-workshop/catalog | كاتالوج ثابت مطابق لتصميم الموبايل (7 عناصر فقط) | عام |
-| POST | /api/mobile-workshop/bookings | إنشاء حجز وتعيين أقرب ورشة متاحة تلقائياً | عميل |
-| GET | /api/mobile-workshop/bookings/:id | تفاصيل الحجز (عميل) | عميل |
+// **1. الكاتالوج الثابت + الحجز المباشر — /api/mobile-workshop**
+// | Method | Path | الوصف | صلاحية |
+// |--------|------|--------|--------|
+// | GET | /api/mobile-workshop/catalog | كاتالوج ثابت مطابق لتصميم الموبايل (7 عناصر فقط) | عام |
+// | POST | /api/mobile-workshop/bookings | إنشاء حجز وتعيين أقرب ورشة متاحة تلقائياً | عميل |
+// | GET | /api/mobile-workshop/bookings/:id | تفاصيل الحجز (عميل) | عميل |
 
-**2. إدارة بيانات الورشة المتنقلة (Vendor/Admin) — /api/mobile-workshops**
-| Method | Path | الوصف | صلاحية |
-|--------|------|--------|--------|
-| GET | /api/mobile-workshops | قائمة كل الورش | مصادق |
-| GET | /api/mobile-workshops/my | ورشتي المتنقلة | فيندور |
-| POST | /api/mobile-workshops/my | إنشاء ورشتي المتنقلة | فيندور |
-| PUT | /api/mobile-workshops/my | تحديث بيانات ورشتي | فيندور |
-| DELETE | /api/mobile-workshops/my | حذف ورشتي | فيندور |
-| POST | /api/mobile-workshops/my/upload-image | رفع صورة لورشتي | فيندور |
-| GET | /api/mobile-workshops/:id | تفاصيل ورشة | مصادق |
-| POST | /api/mobile-workshops | إضافة ورشة | أدمن |
-| PUT | /api/mobile-workshops/:id | تحديث ورشة | أدمن |
-| DELETE | /api/mobile-workshops/:id | حذف ورشة | أدمن |
-| POST | /api/mobile-workshops/:id/upload-image | رفع صورة (لأدمن) | أدمن |
-| POST | /api/mobile-workshops/:id/services | إضافة خدمة لورشة | أدمن |
-| PUT | /api/mobile-workshops/:id/services/:svcId | تحديث خدمة | أدمن |
-| DELETE | /api/mobile-workshops/:id/services/:svcId | حذف خدمة | أدمن |
+// **2. إدارة بيانات الورشة المتنقلة (Vendor/Admin) — /api/mobile-workshops**
+// | Method | Path | الوصف | صلاحية |
+// |--------|------|--------|--------|
+// | GET | /api/mobile-workshops | قائمة كل الورش | مصادق |
+// | GET | /api/mobile-workshops/my | ورشتي المتنقلة | فيندور |
+// | POST | /api/mobile-workshops/my | إنشاء ورشتي المتنقلة | فيندور |
+// | PUT | /api/mobile-workshops/my | تحديث بيانات ورشتي | فيندور |
+// | DELETE | /api/mobile-workshops/my | حذف ورشتي | فيندور |
+// | POST | /api/mobile-workshops/my/upload-image | رفع صورة لورشتي | فيندور |
+// | GET | /api/mobile-workshops/:id | تفاصيل ورشة | مصادق |
+// | POST | /api/mobile-workshops | إضافة ورشة | أدمن |
+// | PUT | /api/mobile-workshops/:id | تحديث ورشة | أدمن |
+// | DELETE | /api/mobile-workshops/:id | حذف ورشة | أدمن |
+// | POST | /api/mobile-workshops/:id/upload-image | رفع صورة (لأدمن) | أدمن |
+// | POST | /api/mobile-workshops/:id/services | إضافة خدمة لورشة | أدمن |
+// | PUT | /api/mobile-workshops/:id/services/:svcId | تحديث خدمة | أدمن |
+// | DELETE | /api/mobile-workshops/:id/services/:svcId | حذف خدمة | أدمن |
 
-**3. الدفع**
-- Customer: \`PATCH /api/invoices/my/:id/pay\`
+// **3. الدفع**
+// - Customer: \`PATCH /api/invoices/my/:id/pay\`
 
-ملاحظة: فلو الورش المتنقلة هنا **لا يعتمد على الشات أو التتبع**.
-`
-        },
+// ملاحظة: فلو الورش المتنقلة هنا **لا يعتمد على الشات أو التتبع**.
+// `
+//         },
         {
             name: '5. الورشة المتنقلة للمستخدم (Mobile Workshop User)',
             description: `واجهات العميل لعرض كاتالوج الورشة المتنقلة (ثابت + هرمي) وإنشاء الحجز.
@@ -539,14 +587,6 @@ Authorization: Bearer <your_jwt_token>
             }
         },
         {
-            name: 'Vehicle Brands',
-            description: 'Vehicle brand management (Toyota, BMW, etc.)'
-        },
-        {
-            name: 'Vehicle Models',
-            description: 'Vehicle model management (Camry, X5, etc.)'
-        },
-        {
             name: 'Users',
             description: 'User profile management'
         },
@@ -555,9 +595,19 @@ Authorization: Bearer <your_jwt_token>
             description: 'Vendor CRUD: list (GET), create (POST), get (GET :id), update (PUT :id), delete (DELETE :id), status (PUT :id/status).'
         },
         {
+            name: 'Vehicle Brands',
+            description: 'Vehicle brand management (Toyota, BMW, etc.)'
+        },
+        {
+            name: 'Vehicle Models',
+            description: 'Vehicle model management (Camry, X5, etc.)'
+        },
+        {
             name: 'Vehicles',
             description: 'Vehicle management'
         },
+        
+        
         {
             name: 'Car Profile UI',
             description: 'Car profile UI response plus maintenance records CRUD for the mobile car profile screens.'
@@ -603,18 +653,18 @@ Authorization: Bearer <your_jwt_token>
             name: 'Addresses',
             description: 'Address management'
         },
-        {
-            name: 'Towing Service',
-            description: 'Emergency towing service'
-        },
-        {
-            name: 'Technician Towing',
-            description: 'Technician towing endpoints'
-        },
-        {
-            name: 'Technician Car Wash',
-            description: 'Technician car wash broadcast endpoints (legacy).'
-        },
+        // {
+        //     name: 'Towing Service',
+        //     description: 'Emergency towing service'
+        // },
+        // {
+        //     name: 'Technician Towing',
+        //     description: 'Technician towing endpoints'
+        // },
+        // {
+        //     name: 'Technician Car Wash',
+        //     description: 'Technician car wash broadcast endpoints (legacy).'
+        // },
         {
             name: 'Admin Settings',
             description: 'System settings for administrators'
@@ -625,7 +675,20 @@ Authorization: Bearer <your_jwt_token>
         },
         {
             name: 'Auto Parts',
-            description: 'Auto parts catalog management'
+            description: `
+**قطع الغيار (كتالوج الماركتبليس)**
+
+- قائمة/تفاصيل/إنشاء/تعديل — مسارات \`/api/auto-parts\` (جزء منها يتطلب JWT).
+- **المفضلة (Wishlist):** مصادقة مطلوبة (Bearer):
+  - \`GET /api/auto-parts/favorites\` — قائمة المفضلة مع ترقيم صفحات.
+  - \`POST /api/auto-parts/favorites\` — Body: \`{ "autoPartId" }\` (إضافة؛ idempotent إن وُجدت مسبقاً).
+  - \`DELETE /api/auto-parts/favorites/{autoPartId}\` — إزالة من المفضلة.
+- **تفاصيل قطعة:** \`GET /api/auto-parts/{id}\` مع توكن يعيد الحقل \`isFavorite\` (قيمة منطقية) إن وُجد المستخدم.
+`.trim()
+        },
+        {
+            name: 'Packages',
+            description: 'الباقات والاشتراكات — GET/POST /api/packages (أدمن للكتابة)، شراء المستخدم عبر /api/user-packages/*'
         },
         {
             name: 'Cart',

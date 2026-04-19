@@ -95,6 +95,7 @@ model User {
   autoParts         AutoPart[]         @relation("VendorParts")
   marketplaceOrders MarketplaceOrder[]
   cart              Cart?
+  autoPartFavorites AutoPartFavorite[]
 
   // Workshop Reviews
   workshopReviews WorkshopReview[]
@@ -125,6 +126,9 @@ model User {
 
   // Packages
   userPackages UserPackage[]
+
+  // Certified workshop vendor offers (prepaid bundles & percent promos)
+  workshopOfferPurchases UserWorkshopOfferPurchase[]
 
   @@index([email])
   @@index([phone])
@@ -712,6 +716,7 @@ model AutoPart {
   compatibility    AutoPartCompatibility[]
   orderItems       MarketplaceOrderItem[]
   cartItems        CartItem[]
+  favorites        AutoPartFavorite[]
   autoPartServices AutoPartService[]
   autoPartVendors  AutoPartVendor[]
   bookingAutoParts BookingAutoPart[]
@@ -885,9 +890,11 @@ model CertifiedWorkshop {
   vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
 
   // Relations
-  bookings         Booking[]
-  reviews          WorkshopReview[]
-  workshopServices CertifiedWorkshopService[]
+  bookings              Booking[]
+  reviews               WorkshopReview[]
+  workshopServices      CertifiedWorkshopService[]
+  vendorWorkshopOffers  VendorWorkshopOffer[]
+  workshopOfferPurchases UserWorkshopOfferPurchase[]
 
   @@index([isActive, isVerified])
   @@index([city])
@@ -909,13 +916,112 @@ model CertifiedWorkshopService {
   estimatedDuration Int? // بالدقائق
   isActive          Boolean @default(true)
 
-  bookingServices BookingService[]
+  bookingServices   BookingService[]
+  vendorWorkshopOffers VendorWorkshopOffer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([workshopId])
   @@index([serviceType])
+}
+
+// ================================================================================================
+// VENDOR WORKSHOP OFFERS (Certified workshop — percent on service(s) or prepaid bundle)
+// ================================================================================================
+
+enum VendorWorkshopOfferType {
+  PERCENT_DISCOUNT
+  PREPAID_BUNDLE
+}
+
+enum WorkshopOfferDiscountScope {
+  ALL_SERVICES
+  ONE_SERVICE
+}
+
+enum UserWorkshopOfferPurchaseStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  DEPLETED
+  EXPIRED
+  CANCELLED
+}
+
+model VendorWorkshopOffer {
+  id         String            @id @default(uuid())
+  workshopId String
+  workshop   CertifiedWorkshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  offerType VendorWorkshopOfferType
+
+  title       String
+  titleAr     String?
+  description String? @db.Text
+  descriptionAr String? @db.Text
+
+  validFrom  DateTime @default(now())
+  validUntil DateTime
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+
+  /// Empty or null = all vehicle models; else array of VehicleModel ids (JSON string[])
+  vehicleModelIds Json?
+
+  discountScope WorkshopOfferDiscountScope?
+  /// 1–100 when offerType = PERCENT_DISCOUNT
+  discountPercent Int?
+
+  /// Target workshop line item (required for PREPAID_BUNDLE; for PERCENT + ONE_SERVICE)
+  certifiedWorkshopServiceId String?
+  certifiedWorkshopService   CertifiedWorkshopService? @relation(fields: [certifiedWorkshopServiceId], references: [id], onDelete: SetNull)
+
+  paidSlots    Int?
+  bonusSlots   Int?
+  bundlePrice  Decimal? @db.Decimal(10, 2)
+  validityDays Int?
+
+  purchases UserWorkshopOfferPurchase[]
+
+  percentAppliedBookings Booking[] @relation("VendorWorkshopOfferPercentBooking")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workshopId, isActive])
+  @@index([workshopId, offerType])
+}
+
+model UserWorkshopOfferPurchase {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offerId  String
+  offer    VendorWorkshopOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  workshopId String
+  workshop   CertifiedWorkshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  totalSlots Int
+  usedSlots  Int @default(0)
+  expiresAt  DateTime
+
+  status UserWorkshopOfferPurchaseStatus @default(PENDING_PAYMENT)
+
+  /// Booking created to bill the bundle (one-time payment)
+  purchaseBookingId String? @unique
+  purchaseBooking   Booking? @relation("WorkshopOfferPurchaseBooking", fields: [purchaseBookingId], references: [id], onDelete: SetNull)
+
+  invoiceId String? @unique
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  consumedInBookingServices BookingService[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([offerId])
+  @@index([workshopId])
 }
 
 model WorkshopReview {
@@ -1425,6 +1531,13 @@ model Booking {
   mobileWorkshopOfferId   String?                @unique
   mobileWorkshopOffer     MobileWorkshopOffer?   @relation(fields: [mobileWorkshopOfferId], references: [id])
 
+  /// Certified workshop: optional percent promo applied to this booking
+  vendorWorkshopOfferId String?
+  vendorWorkshopOffer   VendorWorkshopOffer? @relation("VendorWorkshopOfferPercentBooking", fields: [vendorWorkshopOfferId], references: [id], onDelete: SetNull)
+
+  /// One-to-one: booking row created to pay for a prepaid bundle purchase
+  workshopOfferBundlePurchase UserWorkshopOfferPurchase? @relation("WorkshopOfferPurchaseBooking")
+
   // Scheduling
   scheduledDate DateTime?
   scheduledTime String? // "09:00" - Store as string for flexibility
@@ -1515,12 +1628,17 @@ model BookingService {
   totalPrice       Decimal @db.Decimal(10, 2)
   estimatedMinutes Int? // وقت الخدمة بالدقائق (من Service أو CertifiedWorkshopService أو MobileWorkshopService)
 
+  /// Slot consumed from UserWorkshopOfferPurchase (prepaid bundle)
+  workshopOfferPurchaseId String?
+  workshopOfferPurchase   UserWorkshopOfferPurchase? @relation(fields: [workshopOfferPurchaseId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
 
   @@index([bookingId])
   @@index([serviceId])
   @@index([workshopServiceId])
   @@index([mobileWorkshopServiceId])
+  @@index([workshopOfferPurchaseId])
 }
 
 // Spare parts on a booking (e.g. Mobile Car Service)
@@ -1844,6 +1962,9 @@ model Invoice {
   // Relations
   lineItems InvoiceLineItem[]
   payments  Payment[]
+
+  /// Set when invoice is for a prepaid workshop bundle purchase
+  workshopOfferPurchase UserWorkshopOfferPurchase?
 
   @@index([customerId])
   @@index([status])
@@ -2248,6 +2369,20 @@ model CartItem {
 
   @@unique([cartId, autoPartId])
   @@index([cartId])
+  @@index([autoPartId])
+}
+
+// Customer wishlist for marketplace auto parts (not the shopping cart)
+model AutoPartFavorite {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  autoPartId String
+  autoPart   AutoPart @relation(fields: [autoPartId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, autoPartId])
+  @@index([userId])
   @@index([autoPartId])
 }
 
@@ -2707,8 +2842,59 @@ model BannerImage {
 }
 
 // ================================================================================================
+// ABOUT US (من نحن) — mobile screen + admin dashboard CMS
+// ================================================================================================
+
+model AboutUsPage {
+  id                   String   @id @default(uuid())
+  brandNameEn          String   @default("Akfeek")
+  brandNameAr          String   @default("أكفيك")
+  /// Main logo shown on About Us (relative /uploads/... or absolute URL)
+  logoUrl              String?
+  introHeadingAr       String   @default("")
+  introHeadingEn       String?
+  /// MySQL TEXT cannot have a default — seed / getOrCreate sets this
+  introBodyAr          String   @db.Text
+  introBodyEn          String?  @db.Text
+  valuesSectionTitleAr String   @default("القيم الأساسية")
+  valuesSectionTitleEn String?  @default("Core values")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  coreValues AboutUsCoreValue[]
+
+  @@map("about_us_pages")
+}
+
+model AboutUsCoreValue {
+  id              String      @id @default(uuid())
+  pageId          String
+  page            AboutUsPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  sortOrder       Int         @default(0)
+  titleAr         String
+  titleEn         String?
+  descriptionAr   String      @db.Text
+  descriptionEn   String?     @db.Text
+  /// Preset for app icons: check_badge | sparkles | shield | star
+  iconKey         String      @default("sparkles")
+  /// Optional uploaded icon (relative /uploads/... or absolute)
+  iconUrl         String?
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([pageId, sortOrder])
+  @@map("about_us_core_values")
+}
+
+// ================================================================================================
 // PACKAGES SYSTEM - Subscription/Package Management
 // ================================================================================================
+
+enum PackageDealType {
+  STANDARD
+  PERCENT_SUBSCRIPTION
+}
 
 model Package {
   id            String   @id @default(uuid())
@@ -2722,6 +2908,11 @@ model Package {
   isActive      Boolean  @default(true)
   sortOrder     Int      @default(0)
   imageUrl      String?
+  dealType      PackageDealType @default(STANDARD)
+  /// Required when dealType = PERCENT_SUBSCRIPTION (1–100)
+  discountPercent Int?
+  /// Optional reference total before discount (for “save X%” UI)
+  listPriceTotal  Decimal? @db.Decimal(10, 2)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -2730,6 +2921,7 @@ model Package {
 
   @@index([isActive])
   @@index([sortOrder])
+  @@index([dealType, isActive])
 }
 
 model PackageService {

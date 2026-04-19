@@ -73,14 +73,12 @@ const deleteFile = (filePath) => {
 
 /**
  * Get file URL from path
- * @param {string} filePath - Relative file path
- * @returns {string} Full URL
+ * Returns a root-relative path so any environment's base URL can be prepended.
+ * @param {string} filePath - Relative file path inside uploads/workshops/
+ * @returns {string} Root-relative URL, e.g. /uploads/workshops/<id>/file.jpg
  */
-const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
-
 const getFileUrl = (filePath) => {
-    // Return full URL with domain
-    return `${PUBLIC_BASE_URL}/uploads/workshops/${filePath}`;
+    return `/uploads/workshops/${filePath}`;
 };
 
 /**

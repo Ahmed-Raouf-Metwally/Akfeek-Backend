@@ -26,6 +26,7 @@ const feedbackRoutes = require('./feedback.routes');
 const feedbackAdminRoutes = require('./admin/feedback.admin.routes');
 const technicalSupportRoutes = require('./technicalSupport.routes');
 const bannersRoutes = require('./banners.routes');
+const aboutUsRoutes = require('./aboutUs.routes');
 const akfeekJourneyRoutes = require('./akfeekJourney.routes');
 
 // Winch routes
@@ -59,6 +60,8 @@ router.use('/workshops', workshopRoutes);
 
 // Public banners for mobile app
 router.use('/banners', bannersRoutes);
+// About Us (من نحن) — public CMS payload for mobile
+router.use('/about-us', aboutUsRoutes);
 
 // Akfeek guided journey (customer)
 router.use('/akfeek-journey', akfeekJourneyRoutes);
@@ -155,6 +158,7 @@ router.use('/admin/mobile-workshop-hierarchy', adminMobileWorkshopHierarchyRoute
 router.use('/admin/feedback', feedbackAdminRoutes);
 router.use('/admin/employees', require('./admin/employees.routes'));
 router.use('/admin/banners', require('./admin/banners.routes'));
+router.use('/admin/about-us', require('./admin/aboutUs.routes'));
 router.use('/admin/akfeek-journey', require('./admin/akfeekJourney.admin.routes'));
 router.use('/dashboard', require('./dashboard.routes'));
 router.use('/admin/finance', require('./admin/finance.routes'));

@@ -5,6 +5,7 @@ const workshopInspectionService = require('../../services/workshopInspection.ser
 const { getPlatformCommissionPercent } = require('../../utils/pricing');
 const { buildStatusWhere, getDisplayStatus } = require('../../constants/bookingStatus');
 const { emitBookingStatusChange } = require('../../socket');
+const vendorWorkshopOfferService = require('../../services/vendorWorkshopOffer.service');
 
 const MOBILE_WORKSHOP_VENDOR_TRANSITIONS = {
   TECHNICIAN_ASSIGNED: ['TECHNICIAN_EN_ROUTE'],
@@ -467,7 +468,9 @@ async function createBooking(req, res, next) {
       workshopServiceIds,
       services: servicesLegacy,
       addressId,
-      notes
+      notes,
+      vendorWorkshopOfferId,
+      userWorkshopOfferPurchaseId,
     } = req.body;
 
     const workType = bodyWorkType === 'REWORK' ? 'REWORK' : 'WORK';
@@ -521,7 +524,10 @@ async function createBooking(req, res, next) {
         throw new AppError(`Service not found or inactive: ${missing[0]}`, 404, 'NOT_FOUND');
       }
 
-      const requiresVehicleAny = resolvedServicesForIds.some((s) => s.requiresVehicle === true);
+      // COMPREHENSIVE_CARE services don't need a specific vehicle — the customer books for themselves.
+      const requiresVehicleAny = resolvedServicesForIds.some(
+        (s) => s.requiresVehicle === true && s.category !== 'COMPREHENSIVE_CARE',
+      );
       if (requiresVehicleAny && !vehicleId) {
         throw new AppError('vehicleId is required for the selected service(s)', 400, 'VALIDATION_ERROR');
       }
@@ -792,6 +798,31 @@ async function createBooking(req, res, next) {
       }
     }
 
+    let offerDiscountBooking = 0;
+    let appliedVendorWorkshopOfferId = null;
+    let purchaseToConsumeId = null;
+    if ((vendorWorkshopOfferId || userWorkshopOfferPurchaseId) && !(workshopId && useWorkshopServices)) {
+      throw new AppError(
+        'vendorWorkshopOfferId and userWorkshopOfferPurchaseId apply only to certified workshop bookings using workshopServiceIds',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+    if (workshopId && useWorkshopServices && (vendorWorkshopOfferId || userWorkshopOfferPurchaseId)) {
+      const prep = await vendorWorkshopOfferService.prepareWorkshopBookingLines(bookingServiceData, {
+        workshopId,
+        vendorWorkshopOfferId,
+        userWorkshopOfferPurchaseId,
+        customerId,
+      });
+      offerDiscountBooking = Math.round(Number(prep.discountTotal || 0) * 100) / 100;
+      appliedVendorWorkshopOfferId = prep.appliedVendorWorkshopOfferId || null;
+      purchaseToConsumeId = prep.purchaseToConsumeId || null;
+      subtotal = Math.round(
+        bookingServiceData.reduce((sum, line) => sum + Number(line.totalPrice || 0), 0) * 100
+      ) / 100;
+    }
+
     const totalEstimatedMinutes = bookingServiceData.reduce((sum, s) => sum + (s.estimatedMinutes ?? 0), 0);
 
     // لا نضيف ضريبة قيمة مضافة على الحجوزات — الإجمالي = المجموع الجزئي + الرسوم فقط
@@ -823,89 +854,134 @@ async function createBooking(req, res, next) {
     const platformCommission = Math.round(subtotal * effectiveCommissionPercent / 100 * 100) / 100;
     const vendorEarnings = Math.round((subtotal - platformCommission) * 100) / 100;
 
-    const booking = await prisma.booking.create({
-      data: {
-        bookingNumber,
-        customer: { connect: { id: customerId } },
-        ...(vehicleId ? { vehicle: { connect: { id: vehicleId } } } : {}),
-        ...(addressId ? { address: { connect: { id: addressId } } } : {}),
-        scheduledDate: new Date(scheduledDate),
-        scheduledTime: scheduledTime || null,
-        workType,
-        estimatedDuration: totalEstimatedMinutes || null,
-        ...(workshopId ? { workshop: { connect: { id: workshopId } } } : {}),
-        deliveryMethod: deliveryMethod || null,
-        flatbedFee,
-        status: 'PENDING',
-        subtotal,
-        laborFee: 0,
-        deliveryFee: flatbedFee,
-        partsTotal: 0,
-        discount: 0,
-        tax,
-        totalPrice,
-        platformCommissionPercent: effectiveCommissionPercent,
-        notes: notes || null,
-        metadata: {
-          commissionPercent: effectiveCommissionPercent,
-          platformCommission,
-          vendorEarnings,
+    const bookingInclude = {
+      customer: {
+        select: {
+          id: true,
+          email: true,
+          profile: { select: { firstName: true, lastName: true } }
+        }
+      },
+      vehicle: {
+        include: {
+          vehicleModel: { include: { brand: true } }
+        }
+      },
+      workshop: workshopId ? {
+        select: {
+          id: true,
+          name: true,
+          nameAr: true,
+          city: true,
+          phone: true,
+          email: true,
+          address: true,
+          vendor: {
+            select: {
+              id: true,
+              businessName: true,
+              businessNameAr: true,
+              contactPhone: true,
+              contactEmail: true,
+              address: true,
+              city: true,
+              logo: true,
+            },
+          },
         },
-        services: {
-          create: bookingServiceData.map(({ serviceId, workshopServiceId, quantity, unitPrice, totalPrice: tp, estimatedMinutes: em }) => ({
+      } : false,
+      services: {
+        include: {
+          service: { select: { id: true, name: true, nameAr: true } },
+          workshopService: { select: { id: true, name: true, nameAr: true } }
+        }
+      }
+    };
+
+    const bookingCreatePayload = {
+      bookingNumber,
+      customer: { connect: { id: customerId } },
+      ...(vehicleId ? { vehicle: { connect: { id: vehicleId } } } : {}),
+      ...(addressId ? { address: { connect: { id: addressId } } } : {}),
+      scheduledDate: new Date(scheduledDate),
+      scheduledTime: scheduledTime || null,
+      workType,
+      estimatedDuration: totalEstimatedMinutes || null,
+      ...(workshopId ? { workshop: { connect: { id: workshopId } } } : {}),
+      deliveryMethod: deliveryMethod || null,
+      flatbedFee,
+      status: 'PENDING',
+      subtotal,
+      laborFee: 0,
+      deliveryFee: flatbedFee,
+      partsTotal: 0,
+      discount: offerDiscountBooking,
+      tax,
+      totalPrice,
+      platformCommissionPercent: effectiveCommissionPercent,
+      notes: notes || null,
+      ...(appliedVendorWorkshopOfferId
+        ? { vendorWorkshopOffer: { connect: { id: appliedVendorWorkshopOfferId } } }
+        : {}),
+      metadata: {
+        commissionPercent: effectiveCommissionPercent,
+        platformCommission,
+        vendorEarnings,
+        ...(offerDiscountBooking > 0 ? { workshopOfferDiscount: offerDiscountBooking } : {}),
+      },
+      services: {
+        create: bookingServiceData.map(
+          ({
+            serviceId,
+            workshopServiceId,
+            quantity,
+            unitPrice,
+            totalPrice: tp,
+            estimatedMinutes: em,
+            workshopOfferPurchaseId: wopId,
+          }) => ({
             ...(serviceId ? { service: { connect: { id: serviceId } } } : {}),
             ...(workshopServiceId ? { workshopService: { connect: { id: workshopServiceId } } } : {}),
             quantity,
             unitPrice,
             totalPrice: tp,
-            ...(em != null ? { estimatedMinutes: em } : {})
-          }))
-        }
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            email: true,
-            profile: { select: { firstName: true, lastName: true } }
-          }
-        },
-        vehicle: {
-          include: {
-            vehicleModel: { include: { brand: true } }
-          }
-        },
-        workshop: workshopId ? {
-          select: {
-            id: true,
-            name: true,
-            nameAr: true,
-            city: true,
-            phone: true,
-            email: true,
-            address: true,
-            vendor: {
-              select: {
-                id: true,
-                businessName: true,
-                businessNameAr: true,
-                contactPhone: true,
-                contactEmail: true,
-                address: true,
-                city: true,
-                logo: true,
-              },
-            },
-          },
-        } : false,
-        services: {
-          include: {
-            service: { select: { id: true, name: true, nameAr: true } },
-            workshopService: { select: { id: true, name: true, nameAr: true } }
-          }
-        }
+            ...(em != null ? { estimatedMinutes: em } : {}),
+            ...(wopId ? { workshopOfferPurchase: { connect: { id: wopId } } } : {}),
+          })
+        )
       }
-    });
+    };
+
+    let booking;
+    if (purchaseToConsumeId) {
+      booking = await prisma.$transaction(async (tx) => {
+        const latest = await tx.userWorkshopOfferPurchase.findUnique({
+          where: { id: purchaseToConsumeId },
+        });
+        if (!latest || latest.status !== 'ACTIVE') {
+          throw new AppError('Bundle purchase is not active', 400, 'PURCHASE_NOT_ACTIVE');
+        }
+        if (latest.usedSlots >= latest.totalSlots) {
+          throw new AppError('No remaining uses on this bundle purchase', 400, 'PURCHASE_DEPLETED');
+        }
+        await tx.userWorkshopOfferPurchase.update({
+          where: { id: purchaseToConsumeId },
+          data: {
+            usedSlots: { increment: 1 },
+            status: latest.usedSlots + 1 >= latest.totalSlots ? 'DEPLETED' : 'ACTIVE',
+          },
+        });
+        return tx.booking.create({
+          data: bookingCreatePayload,
+          include: bookingInclude,
+        });
+      });
+    } else {
+      booking = await prisma.booking.create({
+        data: bookingCreatePayload,
+        include: bookingInclude,
+      });
+    }
 
     await prisma.bookingStatusHistory.create({
       data: {
@@ -948,7 +1024,7 @@ async function createBooking(req, res, next) {
             customerId: booking.customerId,
             subtotal: Number(booking.subtotal) || 0,
             tax: 0,
-            discount: 0,
+            discount: Number(booking.discount) || 0,
             totalAmount: Number(booking.totalPrice) || 0,
             paidAmount: 0,
             status: 'PENDING',

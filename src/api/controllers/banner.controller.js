@@ -10,6 +10,16 @@ function normalizePosition(pos) {
   return p;
 }
 
+function mapBannersWithAbsoluteImageUrls(banners) {
+  return banners.map((b) => ({
+    ...b,
+    images: (b.images || []).map((img) => ({
+      ...img,
+      imageUrl: getFullUrl(img.imageUrl),
+    })),
+  }));
+}
+
 const bannerSelect = {
   id: true,
   position: true,
@@ -43,7 +53,7 @@ async function getPublic(req, res, next) {
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
         select: bannerSelect,
       });
-      return res.json({ success: true, data: items });
+      return res.json({ success: true, data: mapBannersWithAbsoluteImageUrls(items) });
     }
 
     const [top, bottom, autoParts, carWash] = await Promise.all([
@@ -69,7 +79,15 @@ async function getPublic(req, res, next) {
       }),
     ]);
 
-    res.json({ success: true, data: { top, bottom, autoParts, carWash } });
+    res.json({
+      success: true,
+      data: {
+        top: mapBannersWithAbsoluteImageUrls(top),
+        bottom: mapBannersWithAbsoluteImageUrls(bottom),
+        autoParts: mapBannersWithAbsoluteImageUrls(autoParts),
+        carWash: mapBannersWithAbsoluteImageUrls(carWash),
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -200,10 +218,9 @@ async function adminUploadImages(req, res, next) {
 
     const imagesData = files.map((f) => {
       const imageUrl = `/uploads/banners/${bannerId}/${f.filename}`;
-      const fullImageUrl = getFullUrl(imageUrl);
       const row = {
         bannerId,
-        imageUrl: fullImageUrl,
+        imageUrl,
         linkUrl,
         sortOrder: nextOrder,
       };

@@ -1,4 +1,5 @@
 const prisma = require('../../utils/database/prisma');
+const vendorWorkshopOfferService = require('../../services/vendorWorkshopOffer.service');
 const { AppError } = require('../middlewares/error.middleware');
 const { getPlatformCommissionPercent } = require('../../utils/pricing');
 const { emitInvoicePaid } = require('../../socket');
@@ -700,6 +701,10 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
           paidAt: fullyPaid ? invoice.paidAt || new Date() : invoice.paidAt,
         },
       });
+
+      if (fullyPaid) {
+        await vendorWorkshopOfferService.activateWorkshopOfferPurchaseAfterInvoicePaid(tx, updatedInvoice.id);
+      }
 
       // 4) منح النقاط عند إتمام الدفع (حسب POINTS_CONVERSION_RATE)
       const pointsSetting = await tx.systemSettings.findUnique({

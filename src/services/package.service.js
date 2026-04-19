@@ -2,14 +2,45 @@ const prisma = require('../utils/database/prisma');
 const { AppError } = require('../api/middlewares/error.middleware');
 const logger = require('../utils/logger/logger');
 
+const PACKAGE_DEAL_TYPES = ['STANDARD', 'PERCENT_SUBSCRIPTION'];
+
+function normalizePackageDealType(raw) {
+  if (raw === undefined || raw === null || raw === '') return 'STANDARD';
+  const v = String(raw).trim().toUpperCase();
+  if (!PACKAGE_DEAL_TYPES.includes(v)) {
+    throw new AppError(`dealType must be one of: ${PACKAGE_DEAL_TYPES.join(', ')}`, 400, 'VALIDATION_ERROR');
+  }
+  return v;
+}
+
 class PackageService {
+  assertPercentSubscriptionFields(discountPercent, usageCount, serviceIds) {
+    const d = discountPercent === undefined || discountPercent === null ? null : Number(discountPercent);
+    if (d === null || Number.isNaN(d) || d < 1 || d > 100) {
+      throw new AppError('PERCENT_SUBSCRIPTION requires discountPercent between 1 and 100', 400, 'VALIDATION_ERROR');
+    }
+    const u = usageCount === undefined || usageCount === null ? null : Number(usageCount);
+    if (u === null || Number.isNaN(u) || u < 1) {
+      throw new AppError('PERCENT_SUBSCRIPTION requires usageCount (included washes) >= 1', 400, 'VALIDATION_ERROR');
+    }
+    if (!Array.isArray(serviceIds) || serviceIds.length < 1) {
+      throw new AppError('PERCENT_SUBSCRIPTION requires at least one linked service', 400, 'VALIDATION_ERROR');
+    }
+  }
+
   async getAllPackages(filters = {}) {
-    const { isActive = true, includeServices = true } = filters;
+    const { isActive = true, includeServices = true, dealType } = filters;
+
+    const where = { isActive };
+    if (dealType) {
+      const dt = String(dealType).trim().toUpperCase();
+      if (PACKAGE_DEAL_TYPES.includes(dt)) {
+        where.dealType = dt;
+      }
+    }
 
     const packages = await prisma.package.findMany({
-      where: {
-        isActive
-      },
+      where,
       include: {
         services: includeServices ? {
           include: {
@@ -45,7 +76,28 @@ class PackageService {
   }
 
   async createPackage(data) {
-    const { name, nameAr, description, descriptionAr, price, usageCount, validityDays, serviceIds, imageUrl, sortOrder = 0 } = data;
+    const {
+      name,
+      nameAr,
+      description,
+      descriptionAr,
+      price,
+      usageCount,
+      validityDays,
+      serviceIds,
+      imageUrl,
+      sortOrder = 0,
+      dealType: rawDealType,
+      discountPercent,
+      listPriceTotal,
+    } = data;
+
+    const dealType = normalizePackageDealType(rawDealType);
+    if (dealType === 'PERCENT_SUBSCRIPTION') {
+      this.assertPercentSubscriptionFields(discountPercent, usageCount, serviceIds);
+    } else if (discountPercent != null || listPriceTotal != null) {
+      throw new AppError('discountPercent and listPriceTotal are only allowed when dealType is PERCENT_SUBSCRIPTION', 400, 'VALIDATION_ERROR');
+    }
 
     const pkg = await prisma.package.create({
       data: {
@@ -58,6 +110,12 @@ class PackageService {
         validityDays,
         imageUrl,
         sortOrder,
+        dealType,
+        discountPercent: dealType === 'PERCENT_SUBSCRIPTION' ? Number(discountPercent) : null,
+        listPriceTotal:
+          dealType === 'PERCENT_SUBSCRIPTION' && listPriceTotal !== undefined && listPriceTotal !== null && listPriceTotal !== ''
+            ? listPriceTotal
+            : null,
         services: serviceIds ? {
           create: serviceIds.map(serviceId => ({ serviceId }))
         } : undefined
@@ -76,9 +134,27 @@ class PackageService {
   }
 
   async updatePackage(id, data) {
-    const { name, nameAr, description, descriptionAr, price, usageCount, validityDays, isActive, serviceIds, imageUrl, sortOrder } = data;
+    const {
+      name,
+      nameAr,
+      description,
+      descriptionAr,
+      price,
+      usageCount,
+      validityDays,
+      isActive,
+      serviceIds,
+      imageUrl,
+      sortOrder,
+      dealType: rawDealType,
+      discountPercent,
+      listPriceTotal,
+    } = data;
 
-    const existing = await prisma.package.findUnique({ where: { id } });
+    const existing = await prisma.package.findUnique({
+      where: { id },
+      include: { services: { select: { serviceId: true } } },
+    });
     if (!existing) {
       throw new AppError('Package not found', 404, 'NOT_FOUND');
     }
@@ -95,12 +171,48 @@ class PackageService {
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
     if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
 
+    if (rawDealType !== undefined) {
+      updateData.dealType = normalizePackageDealType(rawDealType);
+      if (updateData.dealType === 'STANDARD') {
+        updateData.discountPercent = null;
+        updateData.listPriceTotal = null;
+      }
+    }
+    if (discountPercent !== undefined) {
+      updateData.discountPercent =
+        discountPercent === null || discountPercent === '' ? null : Number(discountPercent);
+    }
+    if (listPriceTotal !== undefined) {
+      updateData.listPriceTotal =
+        listPriceTotal === null || listPriceTotal === '' ? null : listPriceTotal;
+    }
+
     if (serviceIds !== undefined) {
       await prisma.packageService.deleteMany({ where: { packageId: id } });
       if (serviceIds.length > 0) {
         updateData.services = {
           create: serviceIds.map(serviceId => ({ serviceId }))
         };
+      }
+    }
+
+    const nextDeal = updateData.dealType ?? existing.dealType;
+    const nextUsage = updateData.usageCount !== undefined ? updateData.usageCount : existing.usageCount;
+    const nextDisc = updateData.discountPercent !== undefined ? updateData.discountPercent : existing.discountPercent;
+    const nextServiceIds =
+      serviceIds !== undefined ? serviceIds : existing.services.map((s) => s.serviceId);
+
+    if (nextDeal === 'PERCENT_SUBSCRIPTION') {
+      this.assertPercentSubscriptionFields(nextDisc, nextUsage, nextServiceIds);
+    } else {
+      const mergedList =
+        updateData.listPriceTotal !== undefined ? updateData.listPriceTotal : existing.listPriceTotal;
+      if (nextDisc != null || mergedList != null) {
+        throw new AppError(
+          'discountPercent and listPriceTotal are only allowed when dealType is PERCENT_SUBSCRIPTION',
+          400,
+          'VALIDATION_ERROR'
+        );
       }
     }
 

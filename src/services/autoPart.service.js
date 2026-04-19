@@ -1,6 +1,7 @@
 const prisma = require('../utils/database/prisma');
 const { AppError } = require('../api/middlewares/error.middleware');
 const logger = require('../utils/logger/logger');
+const autoPartFavoriteService = require('./autoPartFavorite.service');
 
 const DEFAULT_PUBLIC_BASE_URL = 'https://akfeek-backend.developteam.site';
 const getPublicBaseUrl = () =>
@@ -320,6 +321,11 @@ class AutoPartService {
       }
     }
 
+    let isFavorite = false;
+    if (requestingUser?.id) {
+      isFavorite = await autoPartFavoriteService.isFavorite(requestingUser.id, id);
+    }
+
     return {
       ...part,
       badges: Array.isArray(part.badges) ? part.badges : (part.badges ?? []),
@@ -327,6 +333,7 @@ class AutoPartService {
         ? normalizeImageUrl(part.images.find((i) => i.isPrimary).url)
         : (part.images?.[0]?.url ? normalizeImageUrl(part.images[0].url) : null),
       brandLogoUrl: part.brandRef?.logo ? normalizeImageUrl(part.brandRef.logo) : null,
+      isFavorite,
     };
   }
 

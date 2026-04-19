@@ -38,6 +38,7 @@ async function startServer() {
       logger.info(`🚀 Server running on http://${HOST}:${PORT}`);
       logger.info(`📡 Socket.io enabled`);
       logger.info(`📚 API Docs: http://localhost:${PORT}/api-docs`);
+      logger.info(`📱 Mobile API Docs: http://localhost:${PORT}/api-docs/mobile`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV}`);
       logger.info(`🇸🇦 Default Language: Arabic (AR)`);
     });

@@ -16,6 +16,26 @@ const { emitNewTowingRequestToWinches } = require('../socket');
 const { getPlatformCommissionPercent } = require('../utils/pricing');
 const { getUrgencyLabels, getVehicleConditionLabels } = require('../utils/broadcastDisplayLabels');
 
+/** Human-readable address from client; null/omit/blank OK (quote + optional booking fields). */
+function normalizeOptionalAddress(addr) {
+    if (addr === undefined || addr === null) return null;
+    if (typeof addr !== 'string') return null;
+    const t = addr.trim();
+    return t.length ? t : null;
+}
+
+/** JobBroadcast.locationAddress is required (non-null String) — fallback to coordinates. */
+function broadcastLocationLabel(addr, lat, lng) {
+    const normalized = normalizeOptionalAddress(addr);
+    if (normalized) return normalized;
+    const la = Number(lat);
+    const lo = Number(lng);
+    if (Number.isFinite(la) && Number.isFinite(lo)) {
+        return `Pick-up (${la.toFixed(5)}, ${lo.toFixed(5)})`;
+    }
+    return 'Towing pickup';
+}
+
 class TowingService {
     /**
      * Create towing request and broadcast to nearby technicians
@@ -44,12 +64,6 @@ class TowingService {
         }
         if (!validLat(destinationLocation.latitude) || !validLng(destinationLocation.longitude)) {
             throw new AppError('Invalid destination coordinates (lat -90..90, lng -180..180)', 400, 'VALIDATION_ERROR');
-        }
-        if (!pickupLocation.address || typeof pickupLocation.address !== 'string') {
-            throw new AppError('Pickup address is required', 400, 'VALIDATION_ERROR');
-        }
-        if (!destinationLocation.address || typeof destinationLocation.address !== 'string') {
-            throw new AppError('Destination address is required', 400, 'VALIDATION_ERROR');
         }
 
         const tripDistance = await osrmService.calculateTripDistance(
@@ -103,12 +117,14 @@ class TowingService {
         if (!validLat(destinationLocation.latitude) || !validLng(destinationLocation.longitude)) {
             throw new AppError('Invalid destination coordinates (lat -90..90, lng -180..180)', 400, 'VALIDATION_ERROR');
         }
-        if (!pickupLocation.address || typeof pickupLocation.address !== 'string') {
-            throw new AppError('Pickup address is required', 400, 'VALIDATION_ERROR');
-        }
-        if (!destinationLocation.address || typeof destinationLocation.address !== 'string') {
-            throw new AppError('Destination address is required', 400, 'VALIDATION_ERROR');
-        }
+
+        const pickupAddressDb = normalizeOptionalAddress(pickupLocation.address);
+        const destinationAddressDb = normalizeOptionalAddress(destinationLocation.address);
+        const broadcastPickupLabel = broadcastLocationLabel(
+            pickupLocation.address,
+            pickupLocation.latitude,
+            pickupLocation.longitude
+        );
 
         // Validate vehicle ownership only when client sends vehicleId
         // Mobile towing flow may not include vehicleId.
@@ -176,10 +192,10 @@ class TowingService {
                 status: 'BROADCASTING',
                 pickupLat: pickupLocation.latitude,
                 pickupLng: pickupLocation.longitude,
-                pickupAddress: pickupLocation.address,
+                pickupAddress: pickupAddressDb,
                 destinationLat: destinationLocation.latitude,
                 destinationLng: destinationLocation.longitude,
-                destinationAddress: destinationLocation.address,
+                destinationAddress: destinationAddressDb,
                 totalPrice: pricing.finalPrice,
                 notes,
                 metadata: {
@@ -221,7 +237,7 @@ class TowingService {
                 customerId,
                 latitude: pickupLocation.latitude,
                 longitude: pickupLocation.longitude,
-                locationAddress: pickupLocation.address,
+                locationAddress: broadcastPickupLabel,
                 radiusKm: 10,
                 broadcastUntil: expiresAt,
                 description: `Towing Request: ${vehicleCondition}` + (notes ? ` - ${notes}` : ''),
@@ -270,12 +286,12 @@ class TowingService {
                     pickupLocation: {
                         latitude: pickupLocation.latitude,
                         longitude: pickupLocation.longitude,
-                        address: pickupLocation.address
+                        address: pickupAddressDb
                     },
                     destinationLocation: {
                         latitude: destinationLocation.latitude,
                         longitude: destinationLocation.longitude,
-                        address: destinationLocation.address
+                        address: destinationAddressDb
                     },
                     distanceKm: tripDistance.distance,
                     urgency: urgency || 'NORMAL',

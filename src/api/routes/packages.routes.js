@@ -10,29 +10,41 @@ router.use(authMiddleware);
  * @swagger
  * /api/packages:
  *   get:
- *     summary: Get all active packages
- *     description: Retrieve all active packages with their associated services
+ *     summary: Get packages (optionally filter by deal type)
+ *     description: |
+ *       Active packages with linked services. Use `dealType=PERCENT_SUBSCRIPTION` for mobile «عروض» (prepaid % bundle).
+ *       Use `activeOnly=false` to include inactive (admin).
  *     tags: [Packages]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: dealType
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [STANDARD, PERCENT_SUBSCRIPTION]
+ *         description: Filter by package deal type
+ *       - in: query
+ *         name: activeOnly
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: ['true', 'false']
+ *         description: When `false`, returns inactive packages too
  *     responses:
  *       200:
- *         description: List of packages
+ *         description: Array of packages in `data`
  *         content:
  *           application/json:
- *             example:
- *               - id: "pkg-123"
- *                 name: "Basic Package"
- *                 nameAr: "الباقة الأساسية"
- *                 description: "包括基本服务"
- *                 price: 300
- *                 usageCount: null
- *                 validityDays: 30
- *                 isActive: true
- *                 services:
- *                   - id: "svc-1"
- *                     name: "Oil Change"
- *                     nameAr: "تغيير الزيت"
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/PackageItem'
  */
 router.get('/', packagesController.getAllPackages);
 
@@ -111,12 +123,27 @@ router.get('/:id', packagesController.getPackageById);
  *                 type: string
  *               description:
  *                 type: string
+ *               descriptionAr:
+ *                 type: string
  *               price:
  *                 type: number
  *               usageCount:
  *                 type: integer
+ *                 description: For PERCENT_SUBSCRIPTION, required (e.g. 5 washes)
  *               validityDays:
  *                 type: integer
+ *               sortOrder:
+ *                 type: integer
+ *               imageUrl:
+ *                 type: string
+ *               dealType:
+ *                 $ref: '#/components/schemas/PackageDealType'
+ *               discountPercent:
+ *                 type: integer
+ *                 description: Required when dealType is PERCENT_SUBSCRIPTION (1-100)
+ *               listPriceTotal:
+ *                 type: number
+ *                 description: Optional reference list total for savings UI
  *               serviceIds:
  *                 type: array
  *                 items:

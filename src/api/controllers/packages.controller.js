@@ -6,7 +6,8 @@ class PackagesController {
     try {
       const packages = await packageService.getAllPackages({
         isActive: req.query.activeOnly !== 'false',
-        includeServices: true
+        includeServices: true,
+        dealType: req.query.dealType,
       });
       return success(res, packages, { message: 'Packages retrieved successfully' });
     } catch (error) {

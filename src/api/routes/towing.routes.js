@@ -45,19 +45,19 @@ const authMiddleware = require('../middlewares/auth.middleware');
  *               pickupLocation:
  *                 type: object
  *                 description: "موقع الالتقاط (من أين) — لحساب المسافة والسعر (basePrice + مسافة × pricePerKm)"
- *                 required: [latitude, longitude, address]
+ *                 required: [latitude, longitude]
  *                 properties:
  *                   latitude: { type: number, description: "خط العرض" }
  *                   longitude: { type: number, description: "خط الطول" }
- *                   address: { type: string, description: "عنوان الموقع" }
+ *                   address: { type: string, nullable: true, description: "عنوان اختياري أو null — إن لم يُرسل يُخزَّن null في الحجز ويُعرَض للبث من الإحداثيات" }
  *               destinationLocation:
  *                 type: object
  *                 description: "الوجهة (إلى أين) — لحساب مسافة الرحلة"
- *                 required: [latitude, longitude, address]
+ *                 required: [latitude, longitude]
  *                 properties:
  *                   latitude: { type: number, description: "خط العرض" }
  *                   longitude: { type: number, description: "خط الطول" }
- *                   address: { type: string, description: "عنوان الوجهة" }
+ *                   address: { type: string, nullable: true, description: "عنوان اختياري أو null" }
  *               vehicleCondition:
  *                 type: string
  *                 enum: [NOT_STARTING, ACCIDENT, FLAT_TIRE, ENGINE_FAILURE, OTHER]
@@ -131,18 +131,18 @@ router.post('/request', authMiddleware, towingController.createRequest);
  *             properties:
  *               pickupLocation:
  *                 type: object
- *                 required: [latitude, longitude, address]
+ *                 required: [latitude, longitude]
  *                 properties:
  *                   latitude: { type: number, description: "خط العرض" }
  *                   longitude: { type: number, description: "خط الطول" }
- *                   address: { type: string, description: "عنوان" }
+ *                   address: { type: string, nullable: true, description: "عنوان اختياري أو null" }
  *               destinationLocation:
  *                 type: object
- *                 required: [latitude, longitude, address]
+ *                 required: [latitude, longitude]
  *                 properties:
  *                   latitude: { type: number, description: "خط العرض" }
  *                   longitude: { type: number, description: "خط الطول" }
- *                   address: { type: string, description: "عنوان" }
+ *                   address: { type: string, nullable: true, description: "عنوان اختياري أو null" }
  *     responses:
  *       200:
  *         description: التسعيرة المحسوبة (السعر + الوقت) بدون إنشاء booking

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const autoPartController = require('../controllers/autoPart.controller');
+const autoPartFavoriteController = require('../controllers/autoPartFavorite.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const { upload: uploadAutoPartImage } = require('../../utils/autoPartImageUpload');
 const requireRole = require('../middlewares/role.middleware');
@@ -115,19 +116,130 @@ router.get('/brand/:vehicleBrandId', authMiddleware.optionalAuth, autoPartContro
 
 /**
  * @swagger
+ * /api/auto-parts/favorites:
+ *   get:
+ *     summary: List my favorite auto parts (wishlist / المفضلة)
+ *     description: |
+ *       Returns paginated wishlist rows (newest first). Each row includes `favoriteId`, `createdAt`, and `autoPart` summary
+ *       (price, stock, badges, primary image URL, category, brand).
+ *     tags: [Auto Parts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Wishlist with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/AutoPartFavoritesListData'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *   post:
+ *     summary: Add auto part to favorites (idempotent)
+ *     description: |
+ *       Body must include `autoPartId`. The part must exist and be active + approved.
+ *       If already favorited, upsert succeeds — still returns 201 with the row payload.
+ *     tags: [Auto Parts]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/AddAutoPartFavoriteBody'
+ *     responses:
+ *       201:
+ *         description: Added (or already in list)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AddAutoPartFavoriteResponse'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *         description: Missing autoPartId or part not available
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ *         description: Product not found
+ */
+router.get('/favorites', authMiddleware, autoPartFavoriteController.listFavorites);
+router.post('/favorites', authMiddleware, autoPartFavoriteController.addFavorite);
+
+/**
+ * @swagger
+ * /api/auto-parts/favorites/{autoPartId}:
+ *   delete:
+ *     summary: Remove auto part from favorites
+ *     description: Deletes the favorite row for the current user and this part. 404 if it was not favorited.
+ *     tags: [Auto Parts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: autoPartId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Removed from wishlist
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RemoveAutoPartFavoriteResponse'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ *         description: Favorite not found for this user/part
+ */
+router.delete('/favorites/:autoPartId', authMiddleware, autoPartFavoriteController.removeFavorite);
+
+/**
+ * @swagger
  * /api/auto-parts/{id}:
  *   get:
  *     summary: Get part details
+ *     description: |
+ *       Public with optional Bearer. When a valid JWT is sent, response `data` includes **`isFavorite`**
+ *       (`true`/`false`) for whether this part is in the user's wishlist.
  *     tags: [Auto Parts]
+ *     security:
+ *       - {}
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
  *     responses:
  *       200:
- *         description: Part details
+ *         description: Part details (includes relations; `isFavorite` when authenticated)
  *         content:
  *           application/json:
  *             schema:
@@ -136,7 +248,16 @@ router.get('/brand/:vehicleBrandId', authMiddleware.optionalAuth, autoPartContro
  *                 success:
  *                   type: boolean
  *                 data:
- *                   $ref: '#/components/schemas/AutoPart'
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/AutoPart'
+ *                     - type: object
+ *                       description: API may return additional fields (category, images, vendor, etc.)
+ *                       properties:
+ *                         isFavorite:
+ *                           type: boolean
+ *                           description: Wishlist flag when Bearer token is present
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
  */
 router.get('/:id', authMiddleware.optionalAuth, autoPartController.getPartById);
 
