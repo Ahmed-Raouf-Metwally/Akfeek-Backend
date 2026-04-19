@@ -524,13 +524,8 @@ async function createBooking(req, res, next) {
         throw new AppError(`Service not found or inactive: ${missing[0]}`, 404, 'NOT_FOUND');
       }
 
-      // COMPREHENSIVE_CARE services don't need a specific vehicle — the customer books for themselves.
-      const requiresVehicleAny = resolvedServicesForIds.some(
-        (s) => s.requiresVehicle === true && s.category !== 'COMPREHENSIVE_CARE',
-      );
-      if (requiresVehicleAny && !vehicleId) {
-        throw new AppError('vehicleId is required for the selected service(s)', 400, 'VALIDATION_ERROR');
-      }
+      // vehicleId is optional — services that require a vehicle should still be bookable
+      // without specifying one (the customer may provide the vehicle info later or on-site).
 
       if (!workshopId) {
         const allCertifiedWorkshop = resolvedServicesForIds.every((s) => s.category === 'CERTIFIED_WORKSHOP');

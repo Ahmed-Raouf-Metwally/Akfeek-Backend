@@ -79,6 +79,50 @@ router.get('/towing', authMiddleware, requireRole('ADMIN'), settingsController.g
 
 /**
  * @swagger
+ * /api/admin/settings/about:
+ *   get:
+ *     summary: Get about-page content (admin)
+ *     tags: [Admin Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: About settings
+ *   put:
+ *     summary: Update about-page content
+ *     tags: [Admin Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               taglineAr: { type: string }
+ *               taglineEn: { type: string }
+ *               bodyAr:    { type: string }
+ *               bodyEn:    { type: string }
+ *               values:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     icon:    { type: string }
+ *                     titleAr: { type: string }
+ *                     titleEn: { type: string }
+ *                     descAr:  { type: string }
+ *                     descEn:  { type: string }
+ *     responses:
+ *       200:
+ *         description: Updated successfully
+ */
+router.get('/about', authMiddleware, requireRole('ADMIN'), settingsController.getAboutSettings);
+router.put('/about', authMiddleware, requireRole('ADMIN'), settingsController.updateAboutSettings);
+
+/**
+ * @swagger
  * /api/admin/settings/towing/init:
  *   post:
  *     summary: Initialize towing pricing/time settings keys (upsert defaults)

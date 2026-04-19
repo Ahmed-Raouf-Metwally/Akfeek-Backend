@@ -149,6 +149,63 @@ class SettingsController {
     }
 
     /**
+     * GET /api/admin/settings/about  — get about-page content
+     * GET /api/about                 — public version for mobile app
+     */
+    async getAboutSettings(req, res, next) {
+        try {
+            const settings = await getSettingsByCategory('ABOUT');
+            const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
+
+            // Parse VALUES JSON safely
+            let values = [];
+            try { values = JSON.parse(map.ABOUT_VALUES || '[]'); } catch (_) { values = []; }
+
+            res.json({
+                success: true,
+                data: {
+                    taglineAr:    map.ABOUT_TAGLINE_AR    || '',
+                    taglineEn:    map.ABOUT_TAGLINE_EN    || '',
+                    bodyAr:       map.ABOUT_BODY_AR       || '',
+                    bodyEn:       map.ABOUT_BODY_EN       || '',
+                    values,
+                },
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * PUT /api/admin/settings/about  — update about-page content (batch)
+     */
+    async updateAboutSettings(req, res, next) {
+        try {
+            const { taglineAr, taglineEn, bodyAr, bodyEn, values } = req.body;
+
+            const entries = [
+                { key: 'ABOUT_TAGLINE_AR', value: taglineAr ?? '', type: 'STRING', description: 'About page tagline (Arabic)',  descriptionAr: 'شعار صفحة من نحن (عربي)' },
+                { key: 'ABOUT_TAGLINE_EN', value: taglineEn ?? '', type: 'STRING', description: 'About page tagline (English)', descriptionAr: 'شعار صفحة من نحن (إنجليزي)' },
+                { key: 'ABOUT_BODY_AR',    value: bodyAr    ?? '', type: 'STRING', description: 'About page body text (Arabic)',  descriptionAr: 'نص صفحة من نحن (عربي)' },
+                { key: 'ABOUT_BODY_EN',    value: bodyEn    ?? '', type: 'STRING', description: 'About page body text (English)', descriptionAr: 'نص صفحة من نحن (إنجليزي)' },
+                { key: 'ABOUT_VALUES',     value: JSON.stringify(Array.isArray(values) ? values : []), type: 'JSON', description: 'About page core values', descriptionAr: 'القيم الأساسية' },
+            ];
+
+            for (const e of entries) {
+                await prisma.systemSettings.upsert({
+                    where:  { key: e.key },
+                    update: { value: String(e.value), category: 'ABOUT', type: e.type, description: e.description, descriptionAr: e.descriptionAr },
+                    create: { key: e.key, value: String(e.value), category: 'ABOUT', type: e.type, isEditable: true, description: e.description, descriptionAr: e.descriptionAr },
+                });
+            }
+
+            res.json({ success: true, message: 'About settings updated', messageAr: 'تم تحديث محتوى صفحة من نحن' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
      * Get all system settings (all categories)
      * GET /api /admin/settings
      */
