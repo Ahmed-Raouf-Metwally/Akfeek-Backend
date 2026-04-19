@@ -104,18 +104,11 @@ function init(server) {
             try {
                 const booking = await prisma.booking.findUnique({
                     where: { id: bookingId },
-                    select: {
-                        customerId: true,
-                        technicianId: true,
-                        invoice: { select: { status: true } }
-                    }
+                    select: { customerId: true, technicianId: true }
                 });
                 if (!booking) return socket.emit('error', { message: 'Booking not found' });
                 if (booking.customerId !== socket.userId) {
                     return socket.emit('error', { message: 'Not authorized for this booking' });
-                }
-                if (booking.invoice?.status !== 'PAID') {
-                    return socket.emit('error', { message: 'Payment required before joining. Pay the invoice first.', code: 'PAYMENT_REQUIRED' });
                 }
                 socket.join(`booking:${bookingId}`);
                 logger.info(`Customer ${socket.userId} joined booking room: ${bookingId}`);
@@ -132,18 +125,11 @@ function init(server) {
             try {
                 const booking = await prisma.booking.findUnique({
                     where: { id: bookingId },
-                    select: {
-                        customerId: true,
-                        technicianId: true,
-                        invoice: { select: { status: true } }
-                    }
+                    select: { customerId: true, technicianId: true }
                 });
                 if (!booking) return socket.emit('error', { message: 'Booking not found' });
                 if (booking.technicianId !== socket.userId) {
                     return socket.emit('error', { message: 'Not authorized for this booking' });
-                }
-                if (booking.invoice?.status !== 'PAID') {
-                    return socket.emit('error', { message: 'Customer must pay first. Socket opens after payment.', code: 'PAYMENT_REQUIRED' });
                 }
                 socket.join(`booking:${bookingId}`);
                 logger.info(`Driver ${socket.userId} joined booking room: ${bookingId}`);
@@ -169,11 +155,7 @@ function init(server) {
             try {
                 const booking = await prisma.booking.findUnique({
                     where: { id: bookingId },
-                    select: {
-                        customerId: true,
-                        technicianId: true,
-                        invoice: { select: { status: true } }
-                    }
+                    select: { customerId: true, technicianId: true }
                 });
 
                 if (!booking) {
@@ -185,13 +167,6 @@ function init(server) {
 
                 if (!isCustomer && !isDriver) {
                     return socket.emit('error', { message: 'Not authorized for this booking' });
-                }
-
-                if (booking.invoice?.status !== 'PAID') {
-                    return socket.emit('error', {
-                        message: 'Payment required before tracking.',
-                        code: 'PAYMENT_REQUIRED'
-                    });
                 }
 
                 await emitCurrentBookingLocation(bookingId, booking.technicianId);
@@ -209,19 +184,10 @@ function init(server) {
             try {
                 const booking = await prisma.booking.findUnique({
                     where: { id: bookingId },
-                    select: {
-                        technicianId: true,
-                        invoice: { select: { status: true } }
-                    }
+                    select: { technicianId: true }
                 });
                 if (!booking || booking.technicianId !== socket.userId) {
                     return socket.emit('error', { message: 'Not authorized' });
-                }
-                if (booking.invoice?.status !== 'PAID') {
-                    return socket.emit('error', {
-                        message: 'Customer must pay first. Tracking opens after payment.',
-                        code: 'PAYMENT_REQUIRED'
-                    });
                 }
                 const locationData = {
                     bookingId,

@@ -320,24 +320,11 @@ async function updateWinchJobStatus(vendorUserId, bookingId, newStatus) {
     }
     const booking = await prisma.booking.findUnique({
         where: { id: bookingId },
-        include: {
-            invoice: {
-                select: { status: true }
-            }
-        }
     });
     if (!booking) {
         throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
     }
 
-    // Customer must pay first before the winch can start/progress the job.
-    if (booking.invoice?.status !== 'PAID') {
-        throw new AppError(
-            'Customer must pay the invoice before starting or progressing the job',
-            400,
-            'PAYMENT_REQUIRED'
-        );
-    }
 
     const validTransitions = {
         [BookingStatus.TECHNICIAN_ASSIGNED]: [BookingStatus.TECHNICIAN_EN_ROUTE],

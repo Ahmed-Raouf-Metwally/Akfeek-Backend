@@ -55,7 +55,7 @@ router.use(auth);
  *       404:
  *         description: No winch linked to your vendor account
  */
-router.get('/my', role('VENDOR'), ctrl.getMyWinch);
+router.get('/my', role(['VENDOR', 'ADMIN']), ctrl.getMyWinch);
 
 /**
  * @swagger
@@ -119,7 +119,7 @@ router.get('/my', role('VENDOR'), ctrl.getMyWinch);
  *       409:
  *         description: You already have a winch linked
  */
-router.post('/my', role('VENDOR'), ctrl.createMyWinch);
+router.post('/my', role(['VENDOR', 'ADMIN']), ctrl.createMyWinch);
 
 /**
  * @swagger
@@ -174,7 +174,7 @@ router.post('/my', role('VENDOR'), ctrl.createMyWinch);
  *       404:
  *         description: No winch linked to your vendor account
  */
-router.put('/my', role('VENDOR'), ctrl.updateMyWinch);
+router.put('/my', role(['VENDOR', 'ADMIN']), ctrl.updateMyWinch);
 
 /**
  * @swagger
@@ -202,7 +202,7 @@ router.put('/my', role('VENDOR'), ctrl.updateMyWinch);
  *       409:
  *         description: لا يمكن الحذف — يوجد مهام نشطة
  */
-router.delete('/my', role('VENDOR'), ctrl.deleteMyWinch);
+router.delete('/my', role(['VENDOR', 'ADMIN']), ctrl.deleteMyWinch);
 
 /**
  * @swagger
@@ -322,7 +322,7 @@ router.post(
  *       404:
  *         description: No winch linked to your vendor account
  */
-router.get('/my/broadcasts', role('VENDOR'), ctrl.getMyBroadcasts);
+router.get('/my/broadcasts', role(['VENDOR', 'ADMIN']), ctrl.getMyBroadcasts);
 
 /**
  * @swagger
@@ -368,7 +368,7 @@ router.get('/my/broadcasts', role('VENDOR'), ctrl.getMyBroadcasts);
  *       404:
  *         description: Broadcast not found or no winch linked
  */
-router.post('/my/broadcasts/:broadcastId/offer', role('VENDOR'), ctrl.submitMyOffer);
+router.post('/my/broadcasts/:broadcastId/offer', role(['VENDOR', 'ADMIN']), ctrl.submitMyOffer);
 
 /**
  * @swagger
@@ -408,7 +408,7 @@ router.post('/my/broadcasts/:broadcastId/offer', role('VENDOR'), ctrl.submitMyOf
  *                           agreedPrice: { type: number }
  *                           scheduledDate: { type: string }
  */
-router.get('/my/jobs', role('VENDOR'), ctrl.getMyJobs);
+router.get('/my/jobs', role(['VENDOR', 'ADMIN']), ctrl.getMyJobs);
 
 /**
  * @swagger
@@ -446,7 +446,7 @@ router.get('/my/jobs', role('VENDOR'), ctrl.getMyJobs);
  *       403:
  *         description: Unauthorized (الحجز غير معيّن لونشك)
  */
-router.patch('/my/jobs/:jobId/status', role('VENDOR'), ctrl.updateMyJobStatus);
+router.patch('/my/jobs/:jobId/status', role(['VENDOR', 'ADMIN']), ctrl.updateMyJobStatus);
 
 /**
  * @swagger
