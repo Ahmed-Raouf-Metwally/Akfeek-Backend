@@ -238,7 +238,7 @@ class TowingService {
                 latitude: pickupLocation.latitude,
                 longitude: pickupLocation.longitude,
                 locationAddress: broadcastPickupLabel,
-                radiusKm: 10,
+                radiusKm: 99999,
                 broadcastUntil: expiresAt,
                 description: `Towing Request: ${vehicleCondition}` + (notes ? ` - ${notes}` : ''),
                 urgency,

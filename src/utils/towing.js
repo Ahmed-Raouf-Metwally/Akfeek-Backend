@@ -168,9 +168,6 @@ async function findNearbyTechnicians(latitude, longitude) {
 async function findNearbyWinches(latitude, longitude) {
     const prisma = require('./database/prisma');
 
-    // Search radius (kept as a default; we removed the admin knob)
-    const radiusKm = 10;
-
     const winches = await prisma.winch.findMany({
         where: {
             isActive: true,
@@ -198,7 +195,6 @@ async function findNearbyWinches(latitude, longitude) {
     const nearby = [];
     for (const w of winches) {
         const distance = calculateDistance(latitude, longitude, w.latitude, w.longitude);
-        if (distance > radiusKm) continue;
         let etaMinutes = 0;
         try {
             const eta = await calculateETA(w.latitude, w.longitude, latitude, longitude);
