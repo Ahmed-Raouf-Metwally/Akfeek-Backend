@@ -76,8 +76,27 @@ app.use(express.static(publicDir));
 // SWAGGER DOCUMENTATION
 // ================================================================================================
 
-// Swagger UI
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+// Serve swagger-ui static assets (css, js, etc.) — mounted ONCE, shared by all docs pages.
+app.use('/api-docs', swaggerUi.serve);
+
+// Swagger JSON endpoint — served BEFORE setup so the URL is always stable across restarts.
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(swaggerSpec);
+});
+
+// Mobile JSON endpoint
+app.get('/api-docs/mobile.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(buildMobileSwaggerSpec());
+});
+
+// Main Swagger UI — always points to the explicit stable URL /api-docs.json.
+// Using `url` (not embedded spec) avoids the in-memory random-URL bug where the
+// browser caches swagger-ui-init.js pointing to an old URL after a server restart.
+app.get('/api-docs/', swaggerUi.setup(null, {
   customCss: `
     .swagger-ui .topbar { display: none }
     .swagger-ui .info { margin: 20px 0 }
@@ -86,35 +105,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'AutoService API Docs - أكفيك',
   customfavIcon: '/favicon.ico',
   swaggerOptions: {
-    persistAuthorization: true,
-    displayRequestDuration: true,
-    docExpansion: 'none',
-    filter: true,
-    showExtensions: true,
-    showCommonExtensions: true
-  }
-}));
-
-// Swagger JSON endpoint
-app.get('/api-docs.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
-});
-
-// ---------------------------------------------------------------------------
-// Swagger — Mobile subset (no admin / dashboard / activity)
-// Uses swaggerUrl + serveFiles so swagger-ui-init does not overwrite the main /api-docs spec.
-// ---------------------------------------------------------------------------
-const mobileSwaggerUiOpts = {
-  swaggerUrl: '/api-docs/mobile.json',
-  customCss: `
-    .swagger-ui .topbar { display: none }
-    .swagger-ui .info { margin: 20px 0 }
-    .swagger-ui .info .title { font-size: 28px; color: #0d9488 }
-  `,
-  customSiteTitle: 'Akfeek Mobile API — أكفيك',
-  customfavIcon: '/favicon.ico',
-  swaggerOptions: {
+    url: '/api-docs.json',
     persistAuthorization: true,
     displayRequestDuration: true,
     docExpansion: 'none',
@@ -122,17 +113,51 @@ const mobileSwaggerUiOpts = {
     showExtensions: true,
     showCommonExtensions: true,
   },
-};
+}));
 
-app.use(
-  '/api-docs/mobile',
-  ...swaggerUi.serveFiles(null, mobileSwaggerUiOpts),
-  swaggerUi.setup(null, mobileSwaggerUiOpts)
-);
-
-app.get('/api-docs/mobile.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(buildMobileSwaggerSpec());
+// Mobile Swagger UI — custom HTML page that reuses static assets from /api-docs/.
+// Avoids the serveFiles/setup conflict that was serving the JSON spec for every
+// sub-path request (swagger-ui.css, swagger-ui-bundle.js, etc.) instead of actual files.
+app.get('/api-docs/mobile', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(`<!DOCTYPE html>
+<html lang="ar" dir="ltr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Akfeek Mobile API — أكفيك</title>
+    <link rel="stylesheet" type="text/css" href="/api-docs/swagger-ui.css">
+    <style>
+      body { margin: 0 }
+      .swagger-ui .topbar { display: none }
+      .swagger-ui .info { margin: 20px 0 }
+      .swagger-ui .info .title { font-size: 28px; color: #0d9488 }
+    </style>
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="/api-docs/swagger-ui-bundle.js"></script>
+    <script src="/api-docs/swagger-ui-standalone-preset.js"></script>
+    <script>
+      window.onload = function () {
+        SwaggerUIBundle({
+          url: '/api-docs/mobile.json',
+          dom_id: '#swagger-ui',
+          presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+          plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+          layout: 'StandaloneLayout',
+          persistAuthorization: true,
+          displayRequestDuration: true,
+          docExpansion: 'none',
+          filter: true,
+          showExtensions: true,
+          showCommonExtensions: true,
+        });
+      };
+    </script>
+  </body>
+</html>`);
 });
 
 // ================================================================================================
