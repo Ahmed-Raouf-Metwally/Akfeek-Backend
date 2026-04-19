@@ -297,21 +297,19 @@ class TrackingService {
     }
 
     /**
-     * Validate GPS coordinates (Saudi Arabia bounds)
+     * Validate GPS coordinates (global bounds)
      * @param {number} lat - Latitude
      * @param {number} lng - Longitude
      * @returns {boolean} Is valid
      */
     isValidCoordinate(lat, lng) {
-        // Saudi Arabia approximate bounds
-        const MIN_LAT = 16.0;
-        const MAX_LAT = 33.0;
-        const MIN_LNG = 34.0;
-        const MAX_LNG = 56.0;
-
+        if (lat == null || lng == null) return false;
+        const numLat = Number(lat);
+        const numLng = Number(lng);
         return (
-            lat >= MIN_LAT && lat <= MAX_LAT &&
-            lng >= MIN_LNG && lng <= MAX_LNG
+            !isNaN(numLat) && !isNaN(numLng) &&
+            numLat >= -90 && numLat <= 90 &&
+            numLng >= -180 && numLng <= 180
         );
     }
 }
