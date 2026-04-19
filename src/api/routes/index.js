@@ -163,11 +163,6 @@ router.use('/admin/akfeek-journey', require('./admin/akfeekJourney.admin.routes'
 router.use('/dashboard', require('./dashboard.routes'));
 router.use('/admin/finance', require('./admin/finance.routes'));
 
-// Auto Parts Marketplace routes
-router.use('/vendors', vendorRoutes);
-router.use('/auto-part-categories', autoPartCategoryRoutes);
-router.use('/auto-parts', autoPartRoutes);
-
 // Packages routes
 const packagesRoutes = require('./packages.routes');
 router.use('/packages', packagesRoutes.defaultRouter);
