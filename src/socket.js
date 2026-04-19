@@ -12,9 +12,19 @@ const lastBookingLocation = new Map();
  * @param {http.Server} server - HTTP server instance
  */
 function init(server) {
+    const SOCKET_DEFAULT_ORIGINS = [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'https://akfeek-dashboard-frontend.vercel.app',
+    ];
+    const envOrigins = process.env.CORS_ALLOWED_ORIGINS
+        ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+        : [];
+    const socketOrigins = [...new Set([...SOCKET_DEFAULT_ORIGINS, ...envOrigins])];
+
     io = new Server(server, {
         cors: {
-            origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || '*',
+            origin: socketOrigins,
             methods: ['GET', 'POST'],
             credentials: true
         },

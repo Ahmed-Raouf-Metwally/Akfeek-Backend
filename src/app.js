@@ -15,8 +15,14 @@ const app = express();
 // ================================================================================================
 // CORS – must be first so preflight (OPTIONS) gets CORS headers before Helmet
 // ================================================================================================
-const allowedOriginsRaw = process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000';
-const allowedOrigins = allowedOriginsRaw.split(',').map((o) => o.trim()).filter(Boolean);
+const DEFAULT_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://akfeek-dashboard-frontend.vercel.app',
+];
+const allowedOriginsRaw = process.env.CORS_ALLOWED_ORIGINS || '';
+const envOrigins = allowedOriginsRaw.split(',').map((o) => o.trim()).filter(Boolean);
+const allowedOrigins = [...new Set([...DEFAULT_ORIGINS, ...envOrigins])];
 if (allowedOrigins.length === 0) allowedOrigins.push('*');
 
 app.use(cors({
