@@ -4,6 +4,7 @@ const { calculateDistance, calculateETA } = require('../utils/towing');
 const { getSystemSetting } = require('../utils/systemSettings');
 const { AppError } = require('../api/middlewares/error.middleware');
 const { getUrgencyLabels, getVehicleConditionLabels } = require('../utils/broadcastDisplayLabels');
+const socketModule = require('../socket');
 
 /**
  * Get winch for current vendor (userId = vendor.userId)
@@ -346,6 +347,16 @@ async function updateWinchJobStatus(vendorUserId, bookingId, newStatus) {
             ...(newStatus === BookingStatus.COMPLETED && { completedAt: new Date() })
         }
     });
+
+    // Socket: notify customer (and driver) of status change in real-time
+    try {
+        socketModule.emitBookingStatusChange(bookingId, {
+            bookingId,
+            status: newStatus,
+            previousStatus: booking.status,
+            source: 'winch'
+        });
+    } catch (_) { /* non-blocking */ }
 
     // DB Notification (Customer): status update from winch
     try {

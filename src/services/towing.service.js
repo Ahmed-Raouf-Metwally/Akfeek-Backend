@@ -12,7 +12,7 @@ const {
     AppError
 } = require('../api/middlewares/error.middleware');
 const osrmService = require('./osrm.service');
-const { emitNewTowingRequestToWinches } = require('../socket');
+const { emitNewTowingRequestToWinches, emitBookingReady, emitNotification } = require('../socket');
 const { getPlatformCommissionPercent } = require('../utils/pricing');
 const { getUrgencyLabels, getVehicleConditionLabels } = require('../utils/broadcastDisplayLabels');
 
@@ -753,6 +753,26 @@ class TowingService {
 
             return updatedBooking;
         });
+
+        // Socket: notify both customer and winch driver that booking is assigned
+        try {
+            emitBookingReady(result.id, {
+                customerId: result.customerId,
+                driverId: driverUserId,
+                status: 'TECHNICIAN_ASSIGNED'
+            });
+            // Notify the winch vendor via personal room too
+            if (driverUserId) {
+                emitNotification(driverUserId, {
+                    type: 'BOOKING_ACCEPTED',
+                    title: 'Your offer was accepted',
+                    titleAr: 'تم قبول عرضك',
+                    message: 'The customer accepted your towing offer.',
+                    messageAr: 'قبل العميل عرضك لخدمة السحب.',
+                    bookingId: result.id
+                });
+            }
+        } catch (_) { /* non-blocking */ }
 
         // العميل يدفع الفاتورة ثم يتفتح السوكت — انظر markInvoicePaid
         const invoice = await prisma.invoice.findUnique({

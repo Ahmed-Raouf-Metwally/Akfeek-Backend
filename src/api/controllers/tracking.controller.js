@@ -19,17 +19,11 @@ exports.updateLocation = async (req, res, next) => {
         if (locationData.bookingId) {
             const booking = await prisma.booking.findUnique({
                 where: { id: locationData.bookingId },
-                select: {
-                    technicianId: true,
-                    invoice: { select: { status: true } }
-                }
+                select: { technicianId: true }
             });
 
             if (!booking || booking.technicianId !== technicianId) {
                 throw new AppError('Not authorized for this booking', 403, 'FORBIDDEN');
-            }
-            if (booking.invoice?.status !== 'PAID') {
-                throw new AppError('Customer must pay first. Tracking opens after payment.', 400, 'PAYMENT_REQUIRED');
             }
         }
 
@@ -78,10 +72,7 @@ exports.getTrackingInfo = async (req, res, next) => {
         // Verify customer owns this booking
         const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
-            select: {
-                customerId: true,
-                invoice: { select: { status: true } }
-            }
+            select: { customerId: true }
         });
 
         if (!booking) {
@@ -90,9 +81,6 @@ exports.getTrackingInfo = async (req, res, next) => {
 
         if (booking.customerId !== customerId) {
             throw new AppError('Unauthorized', 403, 'FORBIDDEN');
-        }
-        if (booking.invoice?.status !== 'PAID') {
-            throw new AppError('Payment required before tracking', 400, 'PAYMENT_REQUIRED');
         }
 
         const trackingInfo = await trackingService.getTrackingInfo(bookingId);
