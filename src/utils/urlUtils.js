@@ -3,7 +3,8 @@
  * Returns full URL including domain (e.g., https://akfeek-backend.developteam.site/uploads/...)
  */
 
-const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || process.env.API_BASE_URL || 'http://localhost:3000';
+const DEFAULT_PUBLIC_BASE_URL = 'https://akfeek-backend.developteam.site';
+const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || process.env.API_BASE_URL || DEFAULT_PUBLIC_BASE_URL).replace(/\/+$/, '');
 
 /**
  * Get full URL for an uploaded file path

@@ -334,48 +334,47 @@ async function main() {
       },
     });
 
-    await prisma.mobileWorkshop.upsert({
-      where: { vendorId: mobileWorkshopProfile.id },
-      update: {
-        name: vendorSeed.workshopName,
-        nameAr: vendorSeed.workshopNameAr,
-        vehicleType: vendorSeed.type,
-        vehicleModel: vendorSeed.model,
-        year: vendorSeed.year,
-        plateNumber: vendorSeed.plate,
-        city: 'الرياض',
-        latitude: vendorSeed.latitude,
-        longitude: vendorSeed.longitude,
-        serviceRadius: 30,
-        basePrice: 100,
-        pricePerKm: 2,
-        minPrice: 100,
-        isAvailable: true,
-        isActive: true,
-        isVerified: true,
-        catalogItemId: createdCatalogItems.BATTERY?.id || null,
+    const mobileWorkshopData = {
+      name: vendorSeed.workshopName,
+      nameAr: vendorSeed.workshopNameAr,
+      vendorId: mobileWorkshopProfile.id,
+      vehicleType: vendorSeed.type,
+      vehicleModel: vendorSeed.model,
+      year: vendorSeed.year,
+      plateNumber: vendorSeed.plate,
+      city: 'الرياض',
+      latitude: vendorSeed.latitude,
+      longitude: vendorSeed.longitude,
+      serviceRadius: 30,
+      basePrice: 100,
+      pricePerKm: 2,
+      minPrice: 100,
+      isAvailable: true,
+      isActive: true,
+      isVerified: true,
+      catalogItemId: createdCatalogItems.BATTERY?.id || null,
+    };
+
+    // Seed must be idempotent. MobileWorkshop has unique vendorId AND unique plateNumber.
+    // If a row exists with the same plateNumber (but different vendorId), upsert-by-vendorId would fail on create.
+    const existingMobileWorkshop = await prisma.mobileWorkshop.findFirst({
+      where: {
+        OR: [
+          { vendorId: mobileWorkshopProfile.id },
+          ...(vendorSeed.plate ? [{ plateNumber: vendorSeed.plate }] : []),
+        ],
       },
-      create: {
-        name: vendorSeed.workshopName,
-        nameAr: vendorSeed.workshopNameAr,
-        vendorId: mobileWorkshopProfile.id,
-        vehicleType: vendorSeed.type,
-        vehicleModel: vendorSeed.model,
-        year: vendorSeed.year,
-        plateNumber: vendorSeed.plate,
-        city: 'الرياض',
-        latitude: vendorSeed.latitude,
-        longitude: vendorSeed.longitude,
-        serviceRadius: 30,
-        basePrice: 100,
-        pricePerKm: 2,
-        minPrice: 100,
-        isAvailable: true,
-        isActive: true,
-        isVerified: true,
-        catalogItemId: createdCatalogItems.BATTERY?.id || null,
-      },
+      select: { id: true },
     });
+
+    if (existingMobileWorkshop?.id) {
+      await prisma.mobileWorkshop.update({
+        where: { id: existingMobileWorkshop.id },
+        data: mobileWorkshopData,
+      });
+    } else {
+      await prisma.mobileWorkshop.create({ data: mobileWorkshopData });
+    }
   }
 
   // System settings (Towing pricing & timing defaults for admin dashboard)
