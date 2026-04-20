@@ -3,6 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
 const notificationController = require('../controllers/notification.controller');
+const deviceTokenController = require('../controllers/deviceToken.controller');
 
 router.use(authMiddleware);
 
@@ -58,6 +59,63 @@ router.use(authMiddleware);
  *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.get('/', notificationController.getMyNotifications);
+
+/**
+ * @swagger
+ * /api/notifications/device-token:
+ *   post:
+ *     summary: Upsert my device token (FCM) — تسجيل/تحديث توكن الجهاز للبوش
+ *     description: |
+ *       يسجل أو يحدّث `FCM token` للمستخدم الحالي (لإرسال Push Notifications).
+ *       استخدمه بعد تسجيل الدخول أو عند تغيّر التوكن.
+ *     tags: [Notifications]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token]
+ *             properties:
+ *               token: { type: string, description: FCM token }
+ *               platform: { type: string, enum: [ANDROID, IOS, WEB, OTHER], default: OTHER }
+ *               deviceId: { type: string, nullable: true }
+ *     responses:
+ *       201:
+ *         description: Saved
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.post('/device-token', deviceTokenController.upsertMyDeviceToken);
+
+/**
+ * @swagger
+ * /api/notifications/device-token:
+ *   delete:
+ *     summary: Deactivate my device token — تعطيل توكن الجهاز
+ *     description: |
+ *       يعطّل توكن جهاز محدد (مثلاً عند logout) حتى لا يستقبل Push.
+ *     tags: [Notifications]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token]
+ *             properties:
+ *               token: { type: string }
+ *     responses:
+ *       200:
+ *         description: Deactivated
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.delete('/device-token', deviceTokenController.deactivateMyDeviceToken);
 
 /**
  * @swagger

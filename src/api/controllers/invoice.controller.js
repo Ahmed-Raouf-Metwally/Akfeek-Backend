@@ -2,7 +2,7 @@ const prisma = require('../../utils/database/prisma');
 const vendorWorkshopOfferService = require('../../services/vendorWorkshopOffer.service');
 const { AppError } = require('../middlewares/error.middleware');
 const { getPlatformCommissionPercent } = require('../../utils/pricing');
-const { emitInvoicePaid } = require('../../socket');
+const { emitInvoicePaid, emitNotification } = require('../../socket');
 
 /**
  * Get all invoices (Admin). Paginated list with customer/booking summary.
@@ -642,6 +642,12 @@ async function markInvoicePaid(req, res, next) {
     const defaultCommissionPercent = await getPlatformCommissionPercent();
 
     const result = await runPaymentTransaction(invoice, remaining, method, performedById, defaultCommissionPercent);
+    try {
+      const items = result?.notifications || [];
+      for (const n of items) {
+        if (n?.userId) emitNotification(n.userId, n);
+      }
+    } catch (_) { /* non-blocking */ }
 
     // بعد الدفع: إشعار الطرفين لفتح التتبع والشات (ورشة متنقلة / ونش / إلخ)
     try {
@@ -671,6 +677,7 @@ async function markInvoicePaid(req, res, next) {
 /** Shared payment transaction (used by Admin mark-paid and Customer pay) */
 async function runPaymentTransaction(invoice, amount, method, performedById, defaultCommissionPercent) {
   return prisma.$transaction(async (tx) => {
+      const createdNotifications = [];
       // 1) إنشاء سجل الدفع دائماً
       const paymentNumber = `PAY-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
       const payment = await tx.payment.create({
@@ -722,7 +729,7 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
 
         // إشعار محفظة: خصم (Customer)
         try {
-          await tx.notification.create({
+          const n = await tx.notification.create({
             data: {
               userId: invoice.customerId,
               type: 'WALLET',
@@ -734,6 +741,7 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
               metadata: { invoiceId: invoice.id, paymentId: payment.id, method: 'WALLET', amount, txnType: 'WITHDRAWAL' },
             },
           });
+          createdNotifications.push(n);
         } catch (_) { /* non-blocking */ }
       }
 
@@ -802,7 +810,7 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
 
         // إشعار نقاط: إضافة (Customer)
         try {
-          await tx.notification.create({
+          const n = await tx.notification.create({
             data: {
               userId: invoice.customerId,
               type: 'POINTS',
@@ -814,6 +822,7 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
               metadata: { invoiceId: invoice.id, paymentId: payment.id, points: pointsToAward, balanceBefore: pointsBefore, balanceAfter: pointsAfter },
             },
           });
+          createdNotifications.push(n);
         } catch (_) { /* non-blocking */ }
       }
 
@@ -939,7 +948,7 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
 
           // إشعار محفظة: إضافة إيراد (Vendor)
           try {
-            await tx.notification.create({
+            const n = await tx.notification.create({
               data: {
                 userId: vendorUserId,
                 type: 'WALLET',
@@ -951,6 +960,7 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
                 metadata: { invoiceId: invoice.id, paymentId: payment.id, vendorEarnings, platformCommission, commissionPercentUsed: commissionPercent },
               },
             });
+            createdNotifications.push(n);
           } catch (_) { /* non-blocking */ }
         }
       }
@@ -960,7 +970,7 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
         const invNo = invoice.invoiceNumber || updatedInvoice.invoiceNumber || invoice.id;
         const bkgNo = booking?.bookingNumber || invoice.bookingId;
 
-        await tx.notification.create({
+        const nCustomer = await tx.notification.create({
           data: {
             userId: invoice.customerId,
             type: 'PAYMENT_RECEIVED',
@@ -972,9 +982,10 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
             metadata: { invoiceId: invoice.id, invoiceNumber: invNo, bookingId: invoice.bookingId, bookingNumber: bkgNo, method, amount },
           },
         });
+        createdNotifications.push(nCustomer);
 
         if (vendorUserId) {
-          await tx.notification.create({
+          const nVendor = await tx.notification.create({
             data: {
               userId: vendorUserId,
               type: 'PAYMENT_RECEIVED',
@@ -986,10 +997,11 @@ async function runPaymentTransaction(invoice, amount, method, performedById, def
               metadata: { invoiceId: invoice.id, invoiceNumber: invNo, bookingId: invoice.bookingId, bookingNumber: bkgNo, method, amount },
             },
           });
+          createdNotifications.push(nVendor);
         }
       } catch (_) { /* non-blocking */ }
 
-      return { payment, invoice: updatedInvoice };
+      return { payment, invoice: updatedInvoice, notifications: createdNotifications };
   });
 }
 
@@ -1025,6 +1037,12 @@ async function customerPayInvoice(req, res, next) {
 
     const defaultCommissionPercent = await getPlatformCommissionPercent();
     const result = await runPaymentTransaction(invoice, remaining, method, req.user.id, defaultCommissionPercent);
+    try {
+      const items = result?.notifications || [];
+      for (const n of items) {
+        if (n?.userId) emitNotification(n.userId, n);
+      }
+    } catch (_) { /* non-blocking */ }
 
     try {
       const booking = await prisma.booking.findUnique({

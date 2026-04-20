@@ -1,5 +1,6 @@
 const prisma = require('../../utils/database/prisma');
 const { AppError } = require('../middlewares/error.middleware');
+const { emitNotification } = require('../../socket');
 const workshopService = require('../../services/workshop.service');
 const workshopInspectionService = require('../../services/workshopInspection.service');
 const { getPlatformCommissionPercent } = require('../../utils/pricing');
@@ -990,7 +991,7 @@ async function createBooking(req, res, next) {
 
     // إشعار للعميل: تم إنشاء الحجز
     try {
-      await prisma.notification.create({
+      const notification = await prisma.notification.create({
         data: {
           userId: customerId,
           type: 'BOOKING_CREATED',
@@ -1006,6 +1007,7 @@ async function createBooking(req, res, next) {
           },
         },
       });
+      emitNotification(customerId, notification);
     } catch (_) { /* notification is non-blocking */ }
 
     // إنشاء فاتورة تلقائياً لتمكين الدفع: العناية الشاملة، ورش الغسيل، والورش المعتمدة
@@ -1287,7 +1289,7 @@ async function updateBookingStatus(req, res, next) {
         status === 'COMPLETED' ? 'مكتمل' :
         status === 'CANCELLED' ? 'ملغي' :
         status;
-      await prisma.notification.create({
+      const notification = await prisma.notification.create({
         data: {
           userId: booking.customerId,
           type: 'STATUS_UPDATE',
@@ -1299,6 +1301,7 @@ async function updateBookingStatus(req, res, next) {
           metadata: { fromStatus: oldStatus, toStatus: status, reason: reason || null },
         },
       });
+      emitNotification(booking.customerId, notification);
     } catch (_) { /* non-blocking */ }
 
     res.json({ success: true, message: 'تم تحديث الحالة', data: updated });
@@ -1358,7 +1361,7 @@ async function confirmBookingAsVendor(req, res, next) {
 
     // إشعار للعميل: الحجز تم تأكيده
     try {
-      await prisma.notification.create({
+      const notification = await prisma.notification.create({
         data: {
           userId: booking.customerId,
           type: 'BOOKING_CONFIRMED',
@@ -1370,6 +1373,7 @@ async function confirmBookingAsVendor(req, res, next) {
           metadata: { fromStatus: oldStatus, toStatus: 'CONFIRMED' },
         },
       });
+      emitNotification(booking.customerId, notification);
     } catch (_) { /* non-blocking */ }
 
     res.json({
@@ -1433,7 +1437,7 @@ async function startBookingAsVendor(req, res, next) {
 
     // إشعار للعميل: بدء تنفيذ الحجز
     try {
-      await prisma.notification.create({
+      const notification = await prisma.notification.create({
         data: {
           userId: booking.customerId,
           type: 'STATUS_UPDATE',
@@ -1445,6 +1449,7 @@ async function startBookingAsVendor(req, res, next) {
           metadata: { fromStatus: oldStatus, toStatus: 'IN_PROGRESS' },
         },
       });
+      emitNotification(booking.customerId, notification);
     } catch (_) { /* non-blocking */ }
 
     res.json({
@@ -1509,7 +1514,7 @@ async function completeBookingAsVendor(req, res, next) {
 
     // إشعار للعميل: اكتمال الحجز
     try {
-      await prisma.notification.create({
+      const notification = await prisma.notification.create({
         data: {
           userId: booking.customerId,
           type: 'STATUS_UPDATE',
@@ -1521,6 +1526,7 @@ async function completeBookingAsVendor(req, res, next) {
           metadata: { fromStatus: oldStatus, toStatus: 'COMPLETED' },
         },
       });
+      emitNotification(booking.customerId, notification);
     } catch (_) { /* non-blocking */ }
 
     res.json({
@@ -1607,7 +1613,7 @@ async function updateMobileWorkshopBookingStatusAsVendor(req, res, next) {
     } catch (_) { /* non-blocking */ }
 
     try {
-      await prisma.notification.create({
+      const notification = await prisma.notification.create({
         data: {
           userId: booking.customerId,
           type: 'STATUS_UPDATE',
@@ -1619,6 +1625,7 @@ async function updateMobileWorkshopBookingStatusAsVendor(req, res, next) {
           metadata: { fromStatus: booking.status, toStatus: nextStatus, reason: reason || null },
         },
       });
+      emitNotification(booking.customerId, notification);
     } catch (_) { /* non-blocking */ }
 
     res.json({

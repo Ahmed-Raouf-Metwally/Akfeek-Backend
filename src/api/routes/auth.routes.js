@@ -63,6 +63,19 @@ const {
  *                 default: AR
  *                 example: AR
  *                 description: Preferred language - اللغة المفضلة
+ *               fcm_token:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Optional device token for push notifications (FCM)
+ *               platform:
+ *                 type: string
+ *                 nullable: true
+ *                 enum: [ANDROID, IOS, WEB, OTHER]
+ *                 description: Optional device platform
+ *               deviceId:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Optional device identifier
  *     responses:
  *       201:
  *         description: User registered successfully - تم التسجيل بنجاح
@@ -137,6 +150,17 @@ router.post('/register', authController.register);
  *                 type: string
  *                 format: password
  *                 example: StrongPass123!
+ *               fcm_token:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Optional device token for push notifications (FCM)
+ *               platform:
+ *                 type: string
+ *                 nullable: true
+ *                 enum: [ANDROID, IOS, WEB, OTHER]
+ *               deviceId:
+ *                 type: string
+ *                 nullable: true
  *     responses:
  *       200:
  *         description: Login successful - تم تسجيل الدخول بنجاح

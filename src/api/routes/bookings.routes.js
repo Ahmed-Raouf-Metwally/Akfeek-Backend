@@ -15,6 +15,10 @@ router.use(authMiddleware);
  *   description: |
  *     حجز الخدمات — الورش المعتمدة، العناية الشاملة، وورش الغسيل عبر POST /api/bookings (بدون workshopId = حجز خدمة من الفيندور مباشرة).
  *     الوينشات والورش المتنقلة لها اند بوينتات منفصلة (Towing, Mobile Workshop).
+ *
+ *     **Notifications (إشعارات العميل):**
+ *     بعض عمليات الحجز تُنشئ إشعارًا تلقائيًا للعميل في قاعدة البيانات ويظهر عبر `GET /api/notifications`
+ *     وكذلك يُرسل Realtime عبر Socket event: `notification:new` (بعد انضمام العميل لغرفته `user:{userId}`).
  */
 
 /**
@@ -263,6 +267,9 @@ router.get('/:id', bookingController.getBookingById);
  *
  *       **رحلة أكفيك:** بعد إنشاء حجز ورشة معتمدة، اربطه بالرحلة عبر `PATCH /api/akfeek-journey/{journeyId}/step/WORKSHOP_BOOKING/link` مع `{ "bookingId" }` ثم ادفع فاتورة الورشة.
  *
+ *       **Notifications (إشعارات العميل):** عند نجاح إنشاء الحجز يتم إنشاء إشعار للعميل ويظهر عبر `GET /api/notifications`
+ *       وكذلك يُرسل Realtime عبر Socket event: `notification:new` (إذا كان العميل منضمًا لغرفته `user:{userId}`).
+ *
  *       Create a new booking. (1) Certified Workshop — workshopId + deliveryMethod + workshopServiceIds or serviceIds; (2) Comprehensive Care; (3) Car Wash — serviceIds only (like 2).
  *     tags: [Bookings, Akfeek Journey, 1. الورش المعتمدة (Certified Workshops), 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
  *     security:
@@ -426,6 +433,9 @@ router.post('/', bookingController.createBooking);
  *     description: |
  *       Update booking status. Admin only.
  *       تحديث حالة الحجز - للمسؤول فقط.
+ *
+ *       **Notifications (إشعارات العميل):** عند تغيير الحالة يتم إنشاء إشعار للعميل يظهر عبر `GET /api/notifications`
+ *       ويُرسل Realtime عبر Socket event: `notification:new`.
  *     tags: [Bookings]
  *     security:
  *       - bearerAuth: []
@@ -474,6 +484,8 @@ router.patch('/:id/status', requireAdminOrPermission('bookings'), bookingControl
  *       فيندور الورشة المعتمدة يؤكد الحجز (PENDING → CONFIRMED).
  *       Certified workshop vendor confirms a pending booking for their workshop.
  *       **رحلة أكفيك:** قد يُنشأ/يُتاح دفع فاتورة الورشة بعد التأكيد — ثم `PATCH /api/invoices/my/{id}/pay` لإكمال خطوة WORKSHOP_BOOKING.
+ *
+ *       **Notifications (إشعارات العميل):** يتم إنشاء إشعار للعميل بتأكيد الحجز (DB + realtime `notification:new`).
  *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops), Akfeek Journey]
  *     security:
  *       - bearerAuth: []
@@ -508,6 +520,52 @@ router.patch('/:id/confirm', requireRole('VENDOR'), bookingController.confirmBoo
  * Vendor (Mobile Workshop): update booking execution status
  * PATCH /api/bookings/:id/mobile-workshop-status
  */
+/**
+ * @swagger
+ * /api/bookings/{id}/mobile-workshop-status:
+ *   patch:
+ *     summary: Update mobile workshop booking status (Vendor) — تحديث حالة حجز الورشة المتنقلة
+ *     description: |
+ *       فيندور الورشة المتنقلة يحدّث حالة التنفيذ للحجز (مثال: `TECHNICIAN_EN_ROUTE`, `ARRIVED`, `IN_PROGRESS`, `COMPLETED`).
+ *
+ *       **Notifications (إشعارات العميل):** عند تغيير الحالة يتم إنشاء إشعار للعميل يظهر عبر `GET /api/notifications`
+ *       ويُرسل Realtime عبر Socket event: `notification:new`.
+ *     tags: [Bookings, Mobile Workshop]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *         description: Booking ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 example: TECHNICIAN_EN_ROUTE
+ *                 description: Next booking status (must be a valid transition)
+ *               reason:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Optional reason
+ *     responses:
+ *       200:
+ *         description: Updated
+ *       400:
+ *         description: Invalid transition / validation error
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
 router.patch('/:id/mobile-workshop-status', requireRole('VENDOR'), bookingController.updateMobileWorkshopBookingStatusAsVendor);
 
 /**
@@ -518,6 +576,8 @@ router.patch('/:id/mobile-workshop-status', requireRole('VENDOR'), bookingContro
  *     description: |
  *       فيندور الورشة يغيّر حالة الحجز من مؤكد إلى قيد التنفيذ (CONFIRMED → IN_PROGRESS).
  *       Vendor starts work on a confirmed booking.
+ *
+ *       **Notifications (إشعارات العميل):** يتم إشعار العميل ببدء التنفيذ (DB + realtime `notification:new`).
  *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops)]
  *     security:
  *       - bearerAuth: []
@@ -556,6 +616,8 @@ router.patch('/:id/start', requireRole('VENDOR'), bookingController.startBooking
  *     description: |
  *       الفيندور صاحب الخدمة/الورشة يحدد الحجز كمكتمل بعد إتمام الخدمة (ورشة معتمدة، عناية شاملة، ورش غسيل).
  *       Vendor marks booking as COMPLETED when service is done at venue.
+ *
+ *       **Notifications (إشعارات العميل):** يتم إشعار العميل بإتمام الحجز (DB + realtime `notification:new`).
  *     tags: [Bookings, 1. الورش المعتمدة (Certified Workshops), 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care)]
  *     security:
  *       - bearerAuth: []

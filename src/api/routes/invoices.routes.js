@@ -113,6 +113,9 @@ router.get('/my/:id', invoiceController.getMyInvoice);
  *     description: |
  *       العميل يدفع فاتورته (method: CARD أو WALLET).
  *       **الاستخدام:** العناية الشاملة، ورش الغسيل، **سحب الونش** (بعد قبول العرض)، **فاتورة الورشة المعتمدة** ضمن **رحلة أكفيك** (بعد PATCH .../WORKSHOP_BOOKING/link حتى تُكمَل خطوة الورشة).
+ *
+ *       **Notifications (إشعارات العميل):** عند نجاح الدفع يتم إنشاء إشعار للعميل (PAYMENT_RECEIVED)
+ *       ويظهر عبر `GET /api/notifications`، ويُرسل Realtime عبر Socket event: `notification:new`.
  *     tags: [Invoices, Akfeek Journey, 2. ورش الغسيل (Car Wash), 3. العناية الشاملة (Comprehensive Care), 4. Towing]
  *     security:
  *       - bearerAuth: []
@@ -184,6 +187,9 @@ router.get('/:id', requireAdminOrPermission('invoices'), invoiceController.getIn
  *     description: |
  *       تحديد الفاتورة كمدفوعة. يسجل الدفع، يودع حصة الفيندور في محفظته ويخصم عمولة المنصة (نسبة مسجلة وقت الحجز — لا تتأثر الحجوزات القديمة بتغيير النسبة)، ويمنح النقاط للعميل.
  *       لحجز السحب/الوينش والورش المتنقلة: بعد الدفع يُرسل حدث booking:ready للعميل والفيندور (التقني) لفتح السوكت للتتبع والمحادثة.
+ *
+ *       **Notifications (إشعارات العميل):** عند تسجيل الدفع يتم إنشاء إشعار للعميل (PAYMENT_RECEIVED) + إشعارات محفظة/نقاط حسب الحالة
+ *       وتظهر عبر `GET /api/notifications`، ويُرسل Realtime عبر Socket event: `notification:new`.
  *     tags: [Invoices, 4. Towing]
  *     security:
  *       - bearerAuth: []

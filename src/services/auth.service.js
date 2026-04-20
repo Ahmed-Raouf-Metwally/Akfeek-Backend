@@ -16,7 +16,19 @@ class AuthService {
    * @returns {Object} Created user and JWT token
    */
   async register(userData) {
-    const { email, phone, password, role, firstName, lastName, preferredLanguage = 'AR' } = userData;
+    const {
+      email,
+      phone,
+      password,
+      role,
+      firstName,
+      lastName,
+      preferredLanguage = 'AR',
+      fcm_token,
+      fcmToken,
+      platform,
+      deviceId,
+    } = userData || {};
 
     // Validate required fields
     if (!email || !password || !role || !firstName || !lastName) {
@@ -95,6 +107,32 @@ class AuthService {
     const token = this.generateToken(user);
 
     logger.info(`New user registered: ${user.id} (${user.role})`);
+
+    // Save FCM token (optional)
+    try {
+      const t = (fcm_token || fcmToken || '').trim();
+      if (t) {
+        await prisma.userDeviceToken.upsert({
+          where: { token: t },
+          update: {
+            userId: user.id,
+            isActive: true,
+            platform: platform && String(platform).trim() ? String(platform).trim().toUpperCase() : undefined,
+            deviceId: deviceId && String(deviceId).trim() ? String(deviceId).trim() : undefined,
+            lastSeenAt: new Date(),
+            lastError: null,
+          },
+          create: {
+            userId: user.id,
+            token: t,
+            platform: platform && String(platform).trim() ? String(platform).trim().toUpperCase() : 'OTHER',
+            deviceId: deviceId && String(deviceId).trim() ? String(deviceId).trim() : null,
+            isActive: true,
+            lastSeenAt: new Date(),
+          },
+        }).catch(() => null);
+      }
+    } catch (_) { /* non-blocking */ }
 
     return { user, token };
   }
@@ -178,7 +216,7 @@ class AuthService {
    * @param {string} password - User password
    * @returns {Object} User data and JWT token
    */
-  async login(identifier, password) {
+  async login(identifier, password, device = null) {
     if (!identifier || !password) {
       throw new AppError(
         'Email/Phone and password are required',
@@ -272,6 +310,21 @@ class AuthService {
     }
 
     logger.info(`User logged in: ${user.id} (${user.role})`);
+
+    // Save/update FCM token on login (optional)
+    try {
+      const t = String(device?.fcmToken || '').trim();
+      if (t) {
+        const rawPlatform = device?.platform != null ? String(device.platform).trim() : '';
+        const plat = rawPlatform ? rawPlatform.toUpperCase() : 'OTHER';
+        const devId = device?.deviceId != null && String(device.deviceId).trim() ? String(device.deviceId).trim() : null;
+        await prisma.userDeviceToken.upsert({
+          where: { token: t },
+          update: { userId: user.id, isActive: true, platform: plat, deviceId: devId, lastSeenAt: new Date(), lastError: null },
+          create: { userId: user.id, token: t, platform: plat, deviceId: devId, isActive: true, lastSeenAt: new Date() },
+        }).catch(() => null);
+      }
+    } catch (_) { /* non-blocking */ }
 
     return { user: userWithoutPassword, token };
   }

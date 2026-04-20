@@ -82,9 +82,10 @@ model User {
   // Notifications & Ratings
   notifications   Notification[]
   activityLogs    ActivityLog[]
-  ratingsGiven    Rating[]       @relation("RaterRatings")
-  ratingsReceived Rating[]       @relation("RateeRatings")
-  vendorReviews   VendorReview[] @relation("VendorReviews")
+  ratingsGiven    Rating[]          @relation("RaterRatings")
+  ratingsReceived Rating[]          @relation("RateeRatings")
+  vendorReviews   VendorReview[]    @relation("VendorReviews")
+  deviceTokens    UserDeviceToken[]
 
   // Location Tracking
   technicianLocations TechnicianLocation[] @relation("TechnicianLocations")
@@ -133,6 +134,38 @@ model User {
   @@index([email])
   @@index([phone])
   @@index([role, status])
+}
+
+// ================================================================================================
+// PUSH NOTIFICATIONS (FCM device tokens)
+// ================================================================================================
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+  WEB
+  OTHER
+}
+
+model UserDeviceToken {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token    String         @unique
+  platform DevicePlatform @default(OTHER)
+  deviceId String?
+
+  isActive   Boolean   @default(true)
+  lastSeenAt DateTime  @default(now())
+  lastSentAt DateTime?
+  lastError  String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isActive])
+  @@index([lastSeenAt])
 }
 
 model Profile {
@@ -1614,20 +1647,20 @@ model Booking {
   updatedAt DateTime @updatedAt
 
   // Relations
-  services            BookingService[]
-  bookingAutoParts    BookingAutoPart[] // Spare parts (e.g. Mobile Car Service)
-  statusHistory       BookingStatusHistory[]
-  jobBroadcast        JobBroadcast?
-  inspectionReport    InspectionReport?
-  supplyRequests      SupplyRequest[]
-  invoice             Invoice?
-  rating              Rating?
-  workshopReview      WorkshopReview?
-  notifications       Notification[]
-  technicianLocations TechnicianLocation[]   @relation("BookingTracking")
-  chatRoom            ChatRoom?
+  services                   BookingService[]
+  bookingAutoParts           BookingAutoPart[] // Spare parts (e.g. Mobile Car Service)
+  statusHistory              BookingStatusHistory[]
+  jobBroadcast               JobBroadcast?
+  inspectionReport           InspectionReport?
+  supplyRequests             SupplyRequest[]
+  invoice                    Invoice?
+  rating                     Rating?
+  workshopReview             WorkshopReview?
+  notifications              Notification[]
+  technicianLocations        TechnicianLocation[]   @relation("BookingTracking")
+  chatRoom                   ChatRoom?
   /// Booking used to bill a package purchase (one-to-one from UserPackage)
-  packagePurchaseUserPackage UserPackage? @relation("UserPackagePurchaseBooking")
+  packagePurchaseUserPackage UserPackage?           @relation("UserPackagePurchaseBooking")
 
   // خدمة أكفيك — ربط حجوزات السحب/الورشة بالرحلة
   akfeekJourneyAsInsuranceTow  AkfeekJourney? @relation("AkfeekJourneyInsuranceTow")
@@ -2000,9 +2033,9 @@ model Invoice {
   payments  Payment[]
 
   /// Set when invoice is for a prepaid workshop bundle purchase
-  workshopOfferPurchase UserWorkshopOfferPurchase?
+  workshopOfferPurchase      UserWorkshopOfferPurchase?
   /// Set when invoice is for a packages purchase
-  packagePurchaseUserPackage UserPackage? @relation("UserPackagePurchaseInvoice")
+  packagePurchaseUserPackage UserPackage?               @relation("UserPackagePurchaseInvoice")
 
   @@index([customerId])
   @@index([status])
@@ -2991,11 +3024,11 @@ model UserPackage {
   expiresAt   DateTime
 
   /// Purchase lifecycle: package becomes ACTIVE only after paying its invoice
-  status UserPackageStatus @default(PENDING_PAYMENT)
-  isActive Boolean @default(false)
+  status   UserPackageStatus @default(PENDING_PAYMENT)
+  isActive Boolean           @default(false)
 
   /// Booking + invoice created for paying this package
-  purchaseBookingId String? @unique
+  purchaseBookingId String?  @unique
   purchaseBooking   Booking? @relation("UserPackagePurchaseBooking", fields: [purchaseBookingId], references: [id], onDelete: SetNull)
   invoiceId         String?  @unique
   invoice           Invoice? @relation("UserPackagePurchaseInvoice", fields: [invoiceId], references: [id], onDelete: SetNull)

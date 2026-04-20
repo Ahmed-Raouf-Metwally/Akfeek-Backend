@@ -2,6 +2,7 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const logger = require('./utils/logger/logger');
 const prisma = require('./utils/database/prisma');
+const pushService = require('./services/pushNotification.service');
 
 let io;
 // In-memory last known driver location per booking (fallback when DB persistence fails)
@@ -334,6 +335,21 @@ function emitNotification(userId, notification) {
     }
     io.to(`user:${userId}`).emit('notification:new', notification);
     logger.debug(`Emitted notification to user: ${userId}`);
+
+    // Push (FCM) — non-blocking
+    try {
+        pushService.sendToUser(userId, {
+            title: notification?.title,
+            titleAr: notification?.titleAr,
+            message: notification?.message,
+            messageAr: notification?.messageAr,
+            data: {
+                notificationId: notification?.id,
+                bookingId: notification?.bookingId,
+                type: notification?.type,
+            }
+        }).catch(() => null);
+    } catch (_) { /* ignore */ }
 }
 
 /**

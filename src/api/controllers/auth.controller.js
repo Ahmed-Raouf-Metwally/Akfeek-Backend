@@ -32,8 +32,12 @@ class AuthController {
    */
   async login(req, res, next) {
     try {
-      const { identifier, password } = req.body;
-      const result = await authService.login(identifier, password);
+      const { identifier, password, fcm_token, fcmToken, platform, deviceId } = req.body || {};
+      const result = await authService.login(identifier, password, {
+        fcmToken: fcm_token || fcmToken || null,
+        platform: platform || null,
+        deviceId: deviceId || null,
+      });
 
       res.json({
         success: true,
