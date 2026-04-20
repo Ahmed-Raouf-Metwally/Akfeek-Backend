@@ -221,10 +221,9 @@ async function uploadMyImage(req, res, next) {
     const wid = vendor.mobileWorkshop.id;
     const type = (req.body?.type || 'logo').toLowerCase();
     const imageUrl = `/uploads/mobile-workshops/${wid}/${req.file.filename}`;
-    const fullImageUrl = getFullUrl(imageUrl);
-    const updateData = type === 'vehicle' ? { vehicleImageUrl: fullImageUrl } : { imageUrl: fullImageUrl };
+    const updateData = type === 'vehicle' ? { vehicleImageUrl: imageUrl } : { imageUrl };
     await prisma.mobileWorkshop.update({ where: { id: wid }, data: updateData });
-    res.json({ success: true, imageUrl: fullImageUrl, field: type === 'vehicle' ? 'vehicleImageUrl' : 'imageUrl' });
+    res.json({ success: true, imageUrl: getFullUrl(imageUrl), field: type === 'vehicle' ? 'vehicleImageUrl' : 'imageUrl' });
   } catch (err) { next(err); }
 }
 

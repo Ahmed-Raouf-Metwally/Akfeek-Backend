@@ -316,13 +316,12 @@ router.post(
       if (!workshop) return res.status(404).json({ success: false, error: 'Mobile workshop not found' });
       const type = (req.body?.type || 'logo').toLowerCase();
       const imageUrl = `/uploads/mobile-workshops/${req.params.id}/${req.file.filename}`;
-      const fullImageUrl = getFullUrl(imageUrl);
-      const updateData = type === 'vehicle' ? { vehicleImageUrl: fullImageUrl } : { imageUrl: fullImageUrl };
+      const updateData = type === 'vehicle' ? { vehicleImageUrl: imageUrl } : { imageUrl };
       await prisma.mobileWorkshop.update({
         where: { id: req.params.id },
         data: updateData,
       });
-      res.json({ success: true, imageUrl: fullImageUrl, field: type === 'vehicle' ? 'vehicleImageUrl' : 'imageUrl' });
+      res.json({ success: true, imageUrl: getFullUrl(imageUrl), field: type === 'vehicle' ? 'vehicleImageUrl' : 'imageUrl' });
     } catch (err) {
       next(err);
     }

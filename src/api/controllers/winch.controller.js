@@ -277,9 +277,8 @@ async function uploadMyWinchImage(req, res, next) {
     if (!req.file) return res.status(400).json({ success: false, error: 'No image uploaded' });
     const winchId = vendor.winch.id;
     const imageUrl = `/uploads/winches/${winchId}/${req.file.filename}`;
-    const fullImageUrl = getFullUrl(imageUrl);
-    await prisma.winch.update({ where: { id: winchId }, data: { imageUrl: fullImageUrl } });
-    res.json({ success: true, imageUrl: fullImageUrl });
+    await prisma.winch.update({ where: { id: winchId }, data: { imageUrl } });
+    res.json({ success: true, imageUrl: getFullUrl(imageUrl) });
   } catch (err) { next(err); }
 }
 

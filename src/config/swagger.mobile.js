@@ -9,6 +9,7 @@ const MOBILE_PATH_PREFIXES = [
   '/api/auth',
   '/api/role-labels',
   '/api/banners',
+  '/api/service-offers',
   '/api/about-us',
   '/api/akfeek-journey',
   '/api/brands',

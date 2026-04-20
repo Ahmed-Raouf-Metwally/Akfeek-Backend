@@ -487,6 +487,10 @@ Authorization: Bearer <your_jwt_token>
             description: 'Top/Bottom banners for the mobile app. Public: GET /api/banners. Admin: /api/admin/banners.'
         },
         {
+            name: 'Service Offers',
+            description: 'عروض الخصم للخدمات — Public: GET /api/service-offers. Admin management: /api/admin/service-offers.'
+        },
+        {
             name: 'About Us',
             description: 'من نحن — محتوى صفحة التعريف للموبايل. عام: `GET /api/about-us`. التحرير (أدمن): `/api/admin/about-us`.'
         },

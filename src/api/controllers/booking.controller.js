@@ -1729,6 +1729,207 @@ async function rejectInspectionSupplement(req, res, next) {
   }
 }
 
+/**
+ * Customer: apply a VendorServiceOffer to an existing booking.
+ * POST /api/bookings/:id/apply-offer
+ * Body: { offerId }
+ *
+ * Notes:
+ * - Only applies to unpaid invoices (if invoice exists).
+ * - Discount is stored in booking.discount + invoice.discount and reflected in totals.
+ * - We also store a reference under booking.metadata.serviceOffer for UI/debugging.
+ */
+async function applyServiceOfferToBooking(req, res, next) {
+  try {
+    if (req.user.role !== 'CUSTOMER') {
+      throw new AppError('Customers only', 403, 'FORBIDDEN');
+    }
+
+    const { id: bookingId } = req.params;
+    const { offerId } = req.body || {};
+    if (!offerId) throw new AppError('offerId is required', 400, 'VALIDATION_ERROR');
+
+    const now = new Date();
+
+    const result = await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        select: {
+          id: true,
+          customerId: true,
+          status: true,
+          subtotal: true,
+          laborFee: true,
+          deliveryFee: true,
+          partsTotal: true,
+          tax: true,
+          discount: true,
+          totalPrice: true,
+          metadata: true,
+          invoice: {
+            select: {
+              id: true,
+              status: true,
+              paidAmount: true,
+              subtotal: true,
+              tax: true,
+              discount: true,
+              totalAmount: true,
+            },
+          },
+          services: {
+            select: {
+              id: true,
+              totalPrice: true,
+              serviceId: true,
+              workshopServiceId: true,
+              mobileWorkshopServiceId: true,
+              service: { select: { vendorId: true } },
+              workshopService: { select: { workshop: { select: { vendorId: true } } } },
+              mobileWorkshopService: { select: { mobileWorkshop: { select: { vendorId: true } } } },
+              workshopOfferPurchaseId: true,
+            },
+          },
+        },
+      });
+
+      if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+      if (booking.customerId !== req.user.id) throw new AppError('Not authorized', 403, 'FORBIDDEN');
+
+      // Don't allow changing totals after payment starts
+      if (booking.invoice) {
+        const paid = Number(booking.invoice.paidAmount || 0);
+        if (paid > 0 || ['PAID', 'PARTIALLY_PAID'].includes(booking.invoice.status)) {
+          throw new AppError('Cannot apply offer to a paid invoice', 400, 'INVOICE_ALREADY_PAID');
+        }
+        if (['CANCELLED', 'OVERDUE'].includes(booking.invoice.status)) {
+          throw new AppError('Cannot apply offer for this invoice status', 400, 'INVALID_INVOICE_STATUS');
+        }
+      }
+
+      const offer = await tx.vendorServiceOffer.findUnique({
+        where: { id: String(offerId) },
+        select: {
+          id: true,
+          vendorId: true,
+          targetType: true,
+          targetId: true,
+          discountPercent: true,
+          validFrom: true,
+          validUntil: true,
+          isActive: true,
+          title: true,
+          titleAr: true,
+        },
+      });
+      if (!offer) throw new AppError('Offer not found', 404, 'NOT_FOUND');
+      if (!offer.isActive) throw new AppError('Offer is not active', 400, 'OFFER_INACTIVE');
+      if (offer.validFrom && now < new Date(offer.validFrom)) throw new AppError('Offer not started yet', 400, 'OFFER_NOT_STARTED');
+      if (offer.validUntil && now > new Date(offer.validUntil)) throw new AppError('Offer expired', 400, 'OFFER_EXPIRED');
+
+      const percent = Number(offer.discountPercent || 0);
+      if (!Number.isFinite(percent) || percent < 1 || percent > 100) {
+        throw new AppError('Invalid offer discountPercent', 400, 'VALIDATION_ERROR');
+      }
+
+      // Determine eligible booking lines for the offer target
+      const eligibleLines = booking.services.filter((line) => {
+        if (offer.targetType === 'SERVICE') return line.serviceId === offer.targetId;
+        if (offer.targetType === 'CERTIFIED_WORKSHOP_SERVICE') return line.workshopServiceId === offer.targetId;
+        if (offer.targetType === 'MOBILE_WORKSHOP_SERVICE') return line.mobileWorkshopServiceId === offer.targetId;
+        return false;
+      });
+
+      if (eligibleLines.length === 0) {
+        throw new AppError('Offer is not applicable to this booking', 400, 'OFFER_NOT_APPLICABLE');
+      }
+
+      // Ensure the offer vendor matches the vendor owning the targeted line(s)
+      const eligibleVendorIds = new Set(
+        eligibleLines
+          .map((l) => {
+            if (offer.targetType === 'SERVICE') return l.service?.vendorId || null;
+            if (offer.targetType === 'CERTIFIED_WORKSHOP_SERVICE') return l.workshopService?.workshop?.vendorId || null;
+            if (offer.targetType === 'MOBILE_WORKSHOP_SERVICE') return l.mobileWorkshopService?.mobileWorkshop?.vendorId || null;
+            return null;
+          })
+          .filter(Boolean)
+      );
+      if (eligibleVendorIds.size !== 1 || !eligibleVendorIds.has(offer.vendorId)) {
+        throw new AppError('Offer vendor mismatch', 400, 'OFFER_VENDOR_MISMATCH');
+      }
+
+      // Do not apply discount to consumed bundle line(s) (already discounted to 0)
+      const discountBase = eligibleLines.reduce((sum, l) => {
+        if (l.workshopOfferPurchaseId) return sum;
+        return sum + Number(l.totalPrice || 0);
+      }, 0);
+
+      const discountAmount = Math.round((discountBase * percent) * 100) / 100;
+      if (discountAmount <= 0) {
+        throw new AppError('Offer results in zero discount', 400, 'OFFER_ZERO_DISCOUNT');
+      }
+
+      const baseTotal =
+        Number(booking.subtotal || 0) +
+        Number(booking.laborFee || 0) +
+        Number(booking.deliveryFee || 0) +
+        Number(booking.partsTotal || 0) +
+        Number(booking.tax || 0);
+      const newTotal = Math.max(0, Math.round((baseTotal - discountAmount) * 100) / 100);
+
+      const prevMetadata = booking.metadata && typeof booking.metadata === 'object' ? booking.metadata : {};
+      const newMetadata = {
+        ...prevMetadata,
+        serviceOffer: {
+          id: offer.id,
+          vendorId: offer.vendorId,
+          targetType: offer.targetType,
+          targetId: offer.targetId,
+          discountPercent: percent,
+          discountAmount,
+          title: offer.title || null,
+          titleAr: offer.titleAr || null,
+          appliedAt: now.toISOString(),
+        },
+      };
+
+      const updatedBooking = await tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          discount: discountAmount,
+          totalPrice: newTotal,
+          metadata: newMetadata,
+        },
+        select: { id: true, discount: true, totalPrice: true, metadata: true },
+      });
+
+      let updatedInvoice = null;
+      if (booking.invoice?.id) {
+        updatedInvoice = await tx.invoice.update({
+          where: { id: booking.invoice.id },
+          data: {
+            discount: discountAmount,
+            totalAmount: newTotal,
+          },
+          select: { id: true, discount: true, totalAmount: true, status: true, paidAmount: true },
+        });
+      }
+
+      return { updatedBooking, updatedInvoice, discountAmount, newTotal };
+    });
+
+    res.json({
+      success: true,
+      message: 'Offer applied',
+      messageAr: 'تم تطبيق العرض',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getAllBookings,
   getBookingById,
@@ -1742,4 +1943,5 @@ module.exports = {
   getBookingInspectionReport,
   approveInspectionSupplement,
   rejectInspectionSupplement,
+  applyServiceOfferToBooking,
 };

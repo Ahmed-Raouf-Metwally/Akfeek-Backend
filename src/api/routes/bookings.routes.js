@@ -195,6 +195,51 @@ router.patch('/:id/inspection-supplement/approve', bookingController.approveInsp
 /** Customer: reject supplemental estimate. */
 router.patch('/:id/inspection-supplement/reject', bookingController.rejectInspectionSupplement);
 
+/**
+ * @swagger
+ * /api/bookings/{id}/apply-offer:
+ *   post:
+ *     summary: Apply a service offer to booking (Customer) — تطبيق عرض خصم على الحجز
+ *     description: |
+ *       يطبّق عرض خصم (VendorServiceOffer) على حجز موجود للعميل.\n
+ *       - يتطلب تسجيل الدخول كعميل (Bearer JWT)\n
+ *       - لا يمكن تطبيق العرض إذا بدأت عملية الدفع (paidAmount > 0) أو الفاتورة مدفوعة\n
+ *       - الخصم يُحسب فقط على البنود المطابقة للـ target (service/workshopService/mobileWorkshopService)\n
+ *       - يتم تحديث `booking.discount` و `booking.totalPrice` وكذلك `invoice.discount` و `invoice.totalAmount` (إن وُجدت فاتورة)\n
+ *     tags: [Bookings]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *         description: Booking ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [offerId]
+ *             properties:
+ *               offerId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Offer id from GET /api/service-offers
+ *     responses:
+ *       200:
+ *         description: Offer applied
+ *       400:
+ *         description: Not applicable / paid invoice / validation error
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: Not authorized to modify this booking
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.post('/:id/apply-offer', bookingController.applyServiceOfferToBooking);
+
 router.get('/:id', bookingController.getBookingById);
 
 /**
@@ -458,6 +503,12 @@ router.patch('/:id/status', requireAdminOrPermission('bookings'), bookingControl
  *         description: Booking not found
  */
 router.patch('/:id/confirm', requireRole('VENDOR'), bookingController.confirmBookingAsVendor);
+
+/**
+ * Vendor (Mobile Workshop): update booking execution status
+ * PATCH /api/bookings/:id/mobile-workshop-status
+ */
+router.patch('/:id/mobile-workshop-status', requireRole('VENDOR'), bookingController.updateMobileWorkshopBookingStatusAsVendor);
 
 /**
  * @swagger

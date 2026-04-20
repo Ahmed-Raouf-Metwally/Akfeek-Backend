@@ -299,7 +299,7 @@ model UserVehicle {
   mobileWorkshopRequests MobileWorkshopRequest[]
   akfeekJourneys         AkfeekJourney[]
   maintenanceRecords     VehicleMaintenanceRecord[]
-  documents             UserVehicleDocument[]
+  documents              UserVehicleDocument[]
 
   @@index([userId])
   @@index([vehicleModelId])
@@ -535,6 +535,7 @@ model VendorProfile {
   reviews         VendorReview[]
   documents       VendorDocument[]
   coupons         Coupon[]
+  serviceOffers   VendorServiceOffer[]
   vendorEmployees VendorEmployee[] // موظفو هذا الفيندور
 
   @@index([userId])
@@ -569,6 +570,39 @@ model VendorEmployee {
 enum CouponDiscountType {
   PERCENT
   FIXED
+}
+
+enum ServiceOfferTargetType {
+  SERVICE
+  CERTIFIED_WORKSHOP_SERVICE
+  MOBILE_WORKSHOP_SERVICE
+}
+
+model VendorServiceOffer {
+  id String @id @default(uuid())
+
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  targetType ServiceOfferTargetType
+  targetId   String
+
+  /// 1–100 percent
+  discountPercent Int
+
+  title   String?
+  titleAr String?
+
+  validFrom  DateTime @default(now())
+  validUntil DateTime
+  isActive   Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vendorId, isActive])
+  @@index([targetType, targetId])
+  @@index([validUntil])
 }
 
 model Coupon {
@@ -890,10 +924,10 @@ model CertifiedWorkshop {
   vendor   VendorProfile? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
 
   // Relations
-  bookings              Booking[]
-  reviews               WorkshopReview[]
-  workshopServices      CertifiedWorkshopService[]
-  vendorWorkshopOffers  VendorWorkshopOffer[]
+  bookings               Booking[]
+  reviews                WorkshopReview[]
+  workshopServices       CertifiedWorkshopService[]
+  vendorWorkshopOffers   VendorWorkshopOffer[]
   workshopOfferPurchases UserWorkshopOfferPurchase[]
 
   @@index([isActive, isVerified])
@@ -916,7 +950,7 @@ model CertifiedWorkshopService {
   estimatedDuration Int? // بالدقائق
   isActive          Boolean @default(true)
 
-  bookingServices   BookingService[]
+  bookingServices      BookingService[]
   vendorWorkshopOffers VendorWorkshopOffer[]
 
   createdAt DateTime @default(now())
@@ -955,9 +989,9 @@ model VendorWorkshopOffer {
 
   offerType VendorWorkshopOfferType
 
-  title       String
-  titleAr     String?
-  description String? @db.Text
+  title         String
+  titleAr       String?
+  description   String? @db.Text
   descriptionAr String? @db.Text
 
   validFrom  DateTime @default(now())
@@ -968,7 +1002,7 @@ model VendorWorkshopOffer {
   /// Empty or null = all vehicle models; else array of VehicleModel ids (JSON string[])
   vehicleModelIds Json?
 
-  discountScope WorkshopOfferDiscountScope?
+  discountScope   WorkshopOfferDiscountScope?
   /// 1–100 when offerType = PERCENT_DISCOUNT
   discountPercent Int?
 
@@ -993,25 +1027,25 @@ model VendorWorkshopOffer {
 }
 
 model UserWorkshopOfferPurchase {
-  id       String @id @default(uuid())
-  userId   String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  offerId  String
-  offer    VendorWorkshopOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  id         String              @id @default(uuid())
+  userId     String
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offerId    String
+  offer      VendorWorkshopOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
   workshopId String
-  workshop   CertifiedWorkshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  workshop   CertifiedWorkshop   @relation(fields: [workshopId], references: [id], onDelete: Cascade)
 
   totalSlots Int
-  usedSlots  Int @default(0)
+  usedSlots  Int      @default(0)
   expiresAt  DateTime
 
   status UserWorkshopOfferPurchaseStatus @default(PENDING_PAYMENT)
 
   /// Booking created to bill the bundle (one-time payment)
-  purchaseBookingId String? @unique
+  purchaseBookingId String?  @unique
   purchaseBooking   Booking? @relation("WorkshopOfferPurchaseBooking", fields: [purchaseBookingId], references: [id], onDelete: SetNull)
 
-  invoiceId String? @unique
+  invoiceId String?  @unique
   invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
   consumedInBookingServices BookingService[]
@@ -1281,7 +1315,7 @@ model MobileWorkshopCatalog {
 }
 
 model MobileWorkshopCategory {
-  id        String @id @default(uuid())
+  id        String                @id @default(uuid())
   catalogId String
   catalog   MobileWorkshopCatalog @relation(fields: [catalogId], references: [id], onDelete: Cascade)
 
@@ -1303,7 +1337,7 @@ model MobileWorkshopCategory {
 }
 
 model MobileWorkshopCatalogService {
-  id         String @id @default(uuid())
+  id         String                 @id @default(uuid())
   categoryId String
   category   MobileWorkshopCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
@@ -1311,9 +1345,9 @@ model MobileWorkshopCatalogService {
   nameAr   String?
   imageUrl String?
 
-  priceMin Float?
-  priceMax Float?
-  currency String @default("SAR")
+  priceMin      Float?
+  priceMax      Float?
+  currency      String  @default("SAR")
   pricingNoteAr String?
 
   sortOrder Int     @default(0)
@@ -1592,6 +1626,8 @@ model Booking {
   notifications       Notification[]
   technicianLocations TechnicianLocation[]   @relation("BookingTracking")
   chatRoom            ChatRoom?
+  /// Booking used to bill a package purchase (one-to-one from UserPackage)
+  packagePurchaseUserPackage UserPackage? @relation("UserPackagePurchaseBooking")
 
   // خدمة أكفيك — ربط حجوزات السحب/الورشة بالرحلة
   akfeekJourneyAsInsuranceTow  AkfeekJourney? @relation("AkfeekJourneyInsuranceTow")
@@ -1965,6 +2001,8 @@ model Invoice {
 
   /// Set when invoice is for a prepaid workshop bundle purchase
   workshopOfferPurchase UserWorkshopOfferPurchase?
+  /// Set when invoice is for a packages purchase
+  packagePurchaseUserPackage UserPackage? @relation("UserPackagePurchaseInvoice")
 
   @@index([customerId])
   @@index([status])
@@ -2867,21 +2905,21 @@ model AboutUsPage {
 }
 
 model AboutUsCoreValue {
-  id              String      @id @default(uuid())
-  pageId          String
-  page            AboutUsPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  sortOrder       Int         @default(0)
-  titleAr         String
-  titleEn         String?
-  descriptionAr   String      @db.Text
-  descriptionEn   String?     @db.Text
+  id            String      @id @default(uuid())
+  pageId        String
+  page          AboutUsPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  sortOrder     Int         @default(0)
+  titleAr       String
+  titleEn       String?
+  descriptionAr String      @db.Text
+  descriptionEn String?     @db.Text
   /// Preset for app icons: check_badge | sparkles | shield | star
-  iconKey         String      @default("sparkles")
+  iconKey       String      @default("sparkles")
   /// Optional uploaded icon (relative /uploads/... or absolute)
-  iconUrl         String?
-  isActive        Boolean     @default(true)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  iconUrl       String?
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@index([pageId, sortOrder])
   @@map("about_us_core_values")
@@ -2896,25 +2934,32 @@ enum PackageDealType {
   PERCENT_SUBSCRIPTION
 }
 
+enum UserPackageStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
 model Package {
-  id            String   @id @default(uuid())
-  name          String
-  nameAr        String?
-  description   String?  @db.Text
-  descriptionAr String?  @db.Text
-  price         Decimal  @db.Decimal(10, 2)
-  usageCount    Int? // null = unlimited
-  validityDays  Int // days until expiry
-  isActive      Boolean  @default(true)
-  sortOrder     Int      @default(0)
-  imageUrl      String?
-  dealType      PackageDealType @default(STANDARD)
+  id              String          @id @default(uuid())
+  name            String
+  nameAr          String?
+  description     String?         @db.Text
+  descriptionAr   String?         @db.Text
+  price           Decimal         @db.Decimal(10, 2)
+  usageCount      Int? // null = unlimited
+  validityDays    Int // days until expiry
+  isActive        Boolean         @default(true)
+  sortOrder       Int             @default(0)
+  imageUrl        String?
+  dealType        PackageDealType @default(STANDARD)
   /// Required when dealType = PERCENT_SUBSCRIPTION (1–100)
   discountPercent Int?
   /// Optional reference total before discount (for “save X%” UI)
-  listPriceTotal  Decimal? @db.Decimal(10, 2)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  listPriceTotal  Decimal?        @db.Decimal(10, 2)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   services     PackageService[]
   userPackages UserPackage[]
@@ -2944,14 +2989,23 @@ model UserPackage {
   package     Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
   purchasedAt DateTime @default(now())
   expiresAt   DateTime
-  isActive    Boolean  @default(true)
+
+  /// Purchase lifecycle: package becomes ACTIVE only after paying its invoice
+  status UserPackageStatus @default(PENDING_PAYMENT)
+  isActive Boolean @default(false)
+
+  /// Booking + invoice created for paying this package
+  purchaseBookingId String? @unique
+  purchaseBooking   Booking? @relation("UserPackagePurchaseBooking", fields: [purchaseBookingId], references: [id], onDelete: SetNull)
+  invoiceId         String?  @unique
+  invoice           Invoice? @relation("UserPackagePurchaseInvoice", fields: [invoiceId], references: [id], onDelete: SetNull)
 
   usages UserPackageServiceUsage[]
 
-  @@unique([userId, packageId])
   @@index([userId])
   @@index([expiresAt])
   @@index([isActive])
+  @@index([status])
 }
 
 model UserPackageServiceUsage {
@@ -2967,14 +3021,14 @@ model UserPackageServiceUsage {
 }
 
 model UserVehicleDocument {
-  id        String  @id @default(uuid())
+  id        String      @id @default(uuid())
   vehicleId String
   vehicle   UserVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
-  type        String  // drivingLicense | registrationForm | insurance | inspectionReport
-  status      String  // expiring | expired | renewalRequired | renewed
-  expiryDate  DateTime?
-  fileUrl     String?
+  type       String // drivingLicense | registrationForm | insurance | inspectionReport
+  status     String // expiring | expired | renewalRequired | renewed
+  expiryDate DateTime?
+  fileUrl    String?
 
   @@unique([vehicleId, type])
   @@index([vehicleId])

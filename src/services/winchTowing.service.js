@@ -280,9 +280,25 @@ async function getAssignedJobsForWinch(vendorUserId) {
                 ]
             }
         },
-        include: {
+        select: {
+            id: true,
+            bookingNumber: true,
+            status: true,
+            totalPrice: true,
+            subtotal: true,
+            pickupLat: true,
+            pickupLng: true,
+            pickupAddress: true,
+            destinationLat: true,
+            destinationLng: true,
+            destinationAddress: true,
+            createdAt: true,
+            updatedAt: true,
             customer: {
-                include: {
+                select: {
+                    id: true,
+                    email: true,
+                    phone: true,
                     profile: {
                         select: {
                             firstName: true,
@@ -290,13 +306,27 @@ async function getAssignedJobsForWinch(vendorUserId) {
                             avatar: true
                         }
                     }
-                }
+                },
             },
             vehicle: true
         },
         orderBy: { updatedAt: 'desc' }
     });
-    return { jobs };
+    return {
+        jobs: jobs.map((b) => ({
+            ...b,
+            pickupLocation: {
+                latitude: b.pickupLat ?? null,
+                longitude: b.pickupLng ?? null,
+                address: b.pickupAddress ?? null,
+            },
+            destinationLocation: {
+                latitude: b.destinationLat ?? null,
+                longitude: b.destinationLng ?? null,
+                address: b.destinationAddress ?? null,
+            },
+        }))
+    };
 }
 
 /**

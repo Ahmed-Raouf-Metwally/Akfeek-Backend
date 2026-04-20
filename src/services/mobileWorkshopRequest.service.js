@@ -42,6 +42,17 @@ async function createRequest(customerId, data) {
   if (!vehicleId) {
     throw new AppError('vehicleId is required for mobile workshop request', 400, 'VALIDATION_ERROR');
   }
+  // Location is required for vendors to know where to go.
+  // Accept either:
+  // - addressId (saved address), or
+  // - latitude+longitude, or
+  // - addressText (free-form)
+  const hasCoords = latitude != null && longitude != null;
+  const hasAddressText = typeof addressText === 'string' && addressText.trim().length > 0;
+  const hasAddressId = Boolean(addressId);
+  if (!hasAddressId && !hasCoords && !hasAddressText) {
+    throw new AppError('Location is required (addressId or latitude/longitude or addressText)', 400, 'VALIDATION_ERROR');
+  }
   const workshopType = await prisma.mobileWorkshopType.findUnique({
     where: { id: workshopTypeId },
     include: { typeServices: { where: { isActive: true } } },
@@ -65,10 +76,23 @@ async function createRequest(customerId, data) {
     const vehicle = await prisma.userVehicle.findFirst({ where: { id: vehicleId, userId: customerId } });
     if (!vehicle) throw new AppError('Vehicle not found', 404, 'NOT_FOUND');
   }
+  let resolvedAddress = null;
   if (addressId) {
     const addr = await prisma.address.findFirst({ where: { id: addressId, userId: customerId } });
     if (!addr) throw new AppError('Address not found', 404, 'NOT_FOUND');
+    resolvedAddress = addr;
   }
+
+  const resolvedLat = (latitude != null ? Number(latitude) : (resolvedAddress?.latitude != null ? Number(resolvedAddress.latitude) : null));
+  const resolvedLng = (longitude != null ? Number(longitude) : (resolvedAddress?.longitude != null ? Number(resolvedAddress.longitude) : null));
+  const resolvedAddressText = hasAddressText
+    ? addressText.trim()
+    : (resolvedAddress
+      ? [resolvedAddress.street, resolvedAddress.city].filter(Boolean).join(' - ') || resolvedAddress.label || null
+      : null);
+  const resolvedCity = (typeof city === 'string' && city.trim().length)
+    ? city.trim()
+    : (resolvedAddress?.city || null);
 
   const expiresAt = new Date(Date.now() + REQUEST_EXPIRY_MINUTES * 60 * 1000);
   const requestNumber = await generateRequestNumber();
@@ -79,10 +103,10 @@ async function createRequest(customerId, data) {
       customerId,
       vehicleId: vehicleId || null,
       addressId: addressId || null,
-      latitude: latitude != null ? Number(latitude) : null,
-      longitude: longitude != null ? Number(longitude) : null,
-      addressText: addressText || null,
-      city: city || null,
+      latitude: resolvedLat,
+      longitude: resolvedLng,
+      addressText: resolvedAddressText,
+      city: resolvedCity,
       workshopTypeId,
       workshopTypeServiceId: finalWorkshopTypeServiceId,
       serviceType: effectiveServiceType,
@@ -605,6 +629,22 @@ async function selectOffer(requestId, offerId, customerId, body = {}) {
   const vendorCommission = (workshop.vendor.commissionPercent != null) ? Number(workshop.vendor.commissionPercent) : commissionPercent;
   const bookingNumber = await generateBookingNumber();
 
+  // Resolve pickup location from request (or from saved address if request didn't include text/coords).
+  let pickupLat = request.latitude ?? null;
+  let pickupLng = request.longitude ?? null;
+  let pickupAddress = request.addressText ?? null;
+  if (request.addressId && (!pickupAddress || pickupLat == null || pickupLng == null)) {
+    const addr = await prisma.address.findFirst({
+      where: { id: request.addressId, userId: request.customerId },
+      select: { label: true, street: true, city: true, latitude: true, longitude: true },
+    });
+    if (addr) {
+      pickupLat = pickupLat ?? (addr.latitude != null ? Number(addr.latitude) : null);
+      pickupLng = pickupLng ?? (addr.longitude != null ? Number(addr.longitude) : null);
+      pickupAddress = pickupAddress || [addr.street, addr.city].filter(Boolean).join(' - ') || addr.label || null;
+    }
+  }
+
   const result = await prisma.$transaction(async (tx) => {
     await tx.mobileWorkshopOffer.updateMany({
       where: { requestId },
@@ -629,9 +669,9 @@ async function selectOffer(requestId, offerId, customerId, body = {}) {
         customerId: request.customerId,
         vehicleId: request.vehicleId,
         addressId: request.addressId || undefined,
-        pickupLat: request.latitude ?? undefined,
-        pickupLng: request.longitude ?? undefined,
-        pickupAddress: request.addressText ?? undefined,
+        pickupLat: pickupLat ?? undefined,
+        pickupLng: pickupLng ?? undefined,
+        pickupAddress: pickupAddress ?? undefined,
         mobileWorkshopId: workshop.id,
         mobileWorkshopRequestId: request.id,
         mobileWorkshopOfferId: offer.id,

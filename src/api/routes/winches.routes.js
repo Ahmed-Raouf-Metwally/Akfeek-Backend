@@ -561,12 +561,11 @@ router.post(
       const winch = await prisma.winch.findUnique({ where: { id: req.params.id } });
       if (!winch) return res.status(404).json({ success: false, error: 'Winch not found' });
       const imageUrl = `/uploads/winches/${req.params.id}/${req.file.filename}`;
-      const fullImageUrl = getFullUrl(imageUrl);
       await prisma.winch.update({
         where: { id: req.params.id },
-        data: { imageUrl: fullImageUrl },
+        data: { imageUrl },
       });
-      res.json({ success: true, imageUrl: fullImageUrl });
+      res.json({ success: true, imageUrl: getFullUrl(imageUrl) });
     } catch (err) {
       next(err);
     }

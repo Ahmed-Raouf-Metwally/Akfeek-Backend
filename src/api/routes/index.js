@@ -60,6 +60,9 @@ router.use('/workshops', workshopRoutes);
 
 // Public banners for mobile app
 router.use('/banners', bannersRoutes);
+
+// Public service offers — active offers visible to customers (no auth required)
+router.use('/service-offers', require('./serviceOffers.routes'));
 // About Us (من نحن) — public CMS payload for mobile
 router.use('/about-us', aboutUsRoutes);
 
@@ -162,6 +165,7 @@ router.use('/admin/about-us', require('./admin/aboutUs.routes'));
 router.use('/admin/akfeek-journey', require('./admin/akfeekJourney.admin.routes'));
 router.use('/dashboard', require('./dashboard.routes'));
 router.use('/admin/finance', require('./admin/finance.routes'));
+router.use('/admin/service-offers', require('./admin/serviceOffers.routes'));
 
 // Packages routes
 const packagesRoutes = require('./packages.routes');

@@ -48,6 +48,13 @@ async function getAllInvoices(req, res, next) {
               id: true,
               bookingNumber: true,
               status: true,
+              pickupAddress: true,
+              pickupLat: true,
+              pickupLng: true,
+              destinationAddress: true,
+              scheduledDate: true,
+              scheduledTime: true,
+              notes: true,
             },
           },
           lineItems: { select: { totalPrice: true } },
@@ -158,6 +165,32 @@ async function getMyInvoicesAsVendor(req, res, next) {
               id: true,
               bookingNumber: true,
               status: true,
+              pickupAddress: true,
+              pickupLat: true,
+              pickupLng: true,
+              destinationAddress: true,
+              destinationLat: true,
+              destinationLng: true,
+              scheduledDate: true,
+              scheduledTime: true,
+              notes: true,
+              address: {
+                select: {
+                  label: true,
+                  street: true,
+                  city: true,
+                  latitude: true,
+                  longitude: true,
+                },
+              },
+              mobileWorkshopRequest: {
+                select: {
+                  addressText: true,
+                  city: true,
+                  latitude: true,
+                  longitude: true,
+                },
+              },
             },
           },
           lineItems: { select: { totalPrice: true } },
@@ -170,8 +203,28 @@ async function getMyInvoicesAsVendor(req, res, next) {
     const toNum = (v) => (v == null ? v : Number(v));
     const data = items.map((inv) => {
       const lineItemsTotal = (inv.lineItems || []).reduce((s, li) => s + toNum(li.totalPrice), 0);
+
+      const b = inv.booking;
+      // Backfill pickup info for older mobile-workshop bookings that stored only addressId/requestId.
+      const addr = b?.address;
+      const req = b?.mobileWorkshopRequest;
+      const backfillPickupAddress =
+        b?.pickupAddress ??
+        req?.addressText ??
+        (addr ? ([addr.street, addr.city].filter(Boolean).join(' - ') || addr.label || null) : null);
+      const backfillPickupLat =
+        b?.pickupLat ?? (req?.latitude != null ? Number(req.latitude) : (addr?.latitude != null ? Number(addr.latitude) : null));
+      const backfillPickupLng =
+        b?.pickupLng ?? (req?.longitude != null ? Number(req.longitude) : (addr?.longitude != null ? Number(addr.longitude) : null));
+
       return {
         ...inv,
+        booking: b ? {
+          ...b,
+          pickupAddress: backfillPickupAddress,
+          pickupLat: backfillPickupLat,
+          pickupLng: backfillPickupLng,
+        } : b,
         totalAmount: toNum(inv.totalAmount),
         paidAmount: toNum(inv.paidAmount),
         lineItems: (inv.lineItems || []).map((li) => ({ totalPrice: toNum(li.totalPrice) })),
@@ -179,6 +232,8 @@ async function getMyInvoicesAsVendor(req, res, next) {
       };
     });
 
+    // This endpoint is used for vendor dashboards (jobs/bookings). Avoid stale cached shapes.
+    res.set('Cache-Control', 'no-store');
     res.json({
       success: true,
       data,
@@ -996,3 +1051,4 @@ async function customerPayInvoice(req, res, next) {
 }
 
 module.exports = { getAllInvoices, getMyInvoicesAsVendor, getInvoiceById, getInvoiceByIdForVendor, getMyInvoice, markInvoicePaid, customerPayInvoice };
+

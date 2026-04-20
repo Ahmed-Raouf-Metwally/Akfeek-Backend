@@ -407,12 +407,11 @@ router.post(
       const { type = 'logo' } = req.body; // type: 'logo' | 'banner'
       const prisma = require('../../utils/database/prisma');
       const imageUrl = `/uploads/vendors/${req.params.id}/${req.file.filename}`;
-      const fullImageUrl = getFullUrl(imageUrl);
       const vendor = await prisma.vendorProfile.update({
         where: { id: req.params.id },
-        data: type === 'banner' ? { banner: fullImageUrl } : { logo: fullImageUrl },
+        data: type === 'banner' ? { banner: imageUrl } : { logo: imageUrl },
       });
-      res.json({ success: true, imageUrl: fullImageUrl, data: vendor });
+      res.json({ success: true, imageUrl: getFullUrl(imageUrl), data: vendor });
     } catch (err) {
       next(err);
     }
