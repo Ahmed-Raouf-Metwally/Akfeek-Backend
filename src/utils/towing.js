@@ -172,8 +172,6 @@ async function findNearbyWinches(latitude, longitude) {
         where: {
             isActive: true,
             isAvailable: true,
-            latitude: { not: null },
-            longitude: { not: null },
             vendorId: { not: null },
             vendor: {
                 status: 'ACTIVE',
@@ -192,26 +190,40 @@ async function findNearbyWinches(latitude, longitude) {
         }
     });
 
-    const nearby = [];
+    const result = [];
     for (const w of winches) {
-        const distance = calculateDistance(latitude, longitude, w.latitude, w.longitude);
-        let etaMinutes = 0;
-        try {
-            const eta = await calculateETA(w.latitude, w.longitude, latitude, longitude);
-            etaMinutes = eta.etaMinutes;
-        } catch (_) {
-            etaMinutes = Math.round((distance / 50) * 60); // fallback ~50 km/h
+        let distance = null;
+        let etaMinutes = null;
+        let estimatedArrival = null;
+
+        if (w.latitude != null && w.longitude != null) {
+            distance = calculateDistance(latitude, longitude, w.latitude, w.longitude);
+            try {
+                const eta = await calculateETA(w.latitude, w.longitude, latitude, longitude);
+                etaMinutes = eta.etaMinutes;
+            } catch (_) {
+                etaMinutes = Math.round((distance / 50) * 60);
+            }
+            estimatedArrival = new Date(Date.now() + etaMinutes * 60000);
         }
-        nearby.push({
+
+        result.push({
             winchId: w.id,
             winch: w,
             distance,
             etaMinutes,
-            estimatedArrival: new Date(Date.now() + etaMinutes * 60000)
+            estimatedArrival
         });
     }
-    nearby.sort((a, b) => a.distance - b.distance);
-    return nearby;
+
+    result.sort((a, b) => {
+        if (a.distance == null && b.distance == null) return 0;
+        if (a.distance == null) return 1;
+        if (b.distance == null) return -1;
+        return a.distance - b.distance;
+    });
+
+    return result;
 }
 
 module.exports = {

@@ -177,7 +177,7 @@ class TowingService {
 
         if (nearbyWinches.length === 0) {
             throw new AppError(
-                'No winches available in your area',
+                'No winches available at the moment',
                 404,
                 'NO_WINCHES'
             );
@@ -218,8 +218,8 @@ class TowingService {
                     type: 'BROADCAST_NEW',
                     title: 'Towing request created',
                     titleAr: 'تم إنشاء طلب سحب',
-                    message: `Your towing request ${booking.bookingNumber} is being broadcast to nearby winches.`,
-                    messageAr: `تم إنشاء طلب السحب رقم ${booking.bookingNumber} وجاري إرساله للونشات القريبة.`,
+                    message: `Your towing request ${booking.bookingNumber} is being broadcast to all available winches.`,
+                    messageAr: `تم إنشاء طلب السحب رقم ${booking.bookingNumber} وجاري إرساله لجميع الوينشات المتاحة.`,
                     bookingId: booking.id,
                     metadata: { bookingNumber: booking.bookingNumber, status: booking.status, urgency, vehicleCondition, estimatedBudget }
                 }
@@ -265,8 +265,8 @@ class TowingService {
                         type: 'BROADCAST_NEW',
                         title: 'New towing request',
                         titleAr: 'طلب سحب جديد',
-                        message: `New towing request ${booking.bookingNumber} in your area.`,
-                        messageAr: `طلب سحب جديد رقم ${booking.bookingNumber} قريب منك.`,
+                        message: `New towing request ${booking.bookingNumber} available.`,
+                        messageAr: `طلب سحب جديد رقم ${booking.bookingNumber} متاح الآن.`,
                         bookingId: booking.id,
                         metadata: { broadcastId: broadcast.id, bookingId: booking.id }
                     }
@@ -364,6 +364,37 @@ class TowingService {
                 destinationAddress: true,
                 createdAt: true,
                 completedAt: true,
+                technician: {
+                    select: {
+                        id: true,
+                        phone: true,
+                        profile: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                avatar: true
+                            }
+                        },
+                        vendorProfile: {
+                            select: {
+                                businessName: true,
+                                businessNameAr: true,
+                                logo: true,
+                                contactPhone: true,
+                                winch: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        nameAr: true,
+                                        imageUrl: true,
+                                        averageRating: true,
+                                        totalTrips: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
                 jobBroadcast: {
                     select: {
                         id: true,
@@ -376,28 +407,64 @@ class TowingService {
         });
 
         return {
-            items: items.map((b) => ({
-                bookingId: b.id,
-                broadcastId: b.jobBroadcast?.id ?? null,
-                bookingNumber: b.bookingNumber,
-                status: b.status,
-                broadcastStatus: b.jobBroadcast?.status ?? null,
-                isCompleted: b.status === 'COMPLETED',
-                totalPrice: b.totalPrice != null ? Number(b.totalPrice) : null,
-                pickupLocation: {
-                    latitude: b.pickupLat,
-                    longitude: b.pickupLng,
-                    address: b.pickupAddress
-                },
-                destinationLocation: {
-                    latitude: b.destinationLat,
-                    longitude: b.destinationLng,
-                    address: b.destinationAddress
-                },
-                createdAt: b.createdAt,
-                completedAt: b.completedAt,
-                broadcastUntil: b.jobBroadcast?.broadcastUntil ?? null
-            }))
+            items: items.map((b) => {
+                const tech = b.technician;
+                const vendor = tech?.vendorProfile;
+                const winch = vendor?.winch;
+
+                let assignedDriver = null;
+                if (tech) {
+                    // اسم العارض: لو فيندور وينش → اسم النشاط، لو فني → الاسم الشخصي
+                    const displayName = vendor
+                        ? (vendor.businessNameAr || vendor.businessName)
+                        : `${tech.profile?.firstName ?? ''} ${tech.profile?.lastName ?? ''}`.trim() || null;
+
+                    // الصورة: أولوية → لوجو الفيندور → صورة الوينش → أفاتار الفني
+                    const avatar = vendor?.logo ?? winch?.imageUrl ?? tech.profile?.avatar ?? null;
+
+                    const phone = vendor?.contactPhone || tech.phone || null;
+
+                    assignedDriver = {
+                        id: tech.id,
+                        name: displayName,
+                        avatar,
+                        phone,
+                        ...(winch && {
+                            winch: {
+                                id: winch.id,
+                                name: winch.nameAr || winch.name,
+                                image: winch.imageUrl,
+                                averageRating: winch.averageRating ? Number(winch.averageRating) : null,
+                                totalTrips: winch.totalTrips ?? 0
+                            }
+                        })
+                    };
+                }
+
+                return {
+                    bookingId: b.id,
+                    broadcastId: b.jobBroadcast?.id ?? null,
+                    bookingNumber: b.bookingNumber,
+                    status: b.status,
+                    broadcastStatus: b.jobBroadcast?.status ?? null,
+                    isCompleted: b.status === 'COMPLETED',
+                    totalPrice: b.totalPrice != null ? Number(b.totalPrice) : null,
+                    assignedDriver,
+                    pickupLocation: {
+                        latitude: b.pickupLat,
+                        longitude: b.pickupLng,
+                        address: b.pickupAddress
+                    },
+                    destinationLocation: {
+                        latitude: b.destinationLat,
+                        longitude: b.destinationLng,
+                        address: b.destinationAddress
+                    },
+                    createdAt: b.createdAt,
+                    completedAt: b.completedAt,
+                    broadcastUntil: b.jobBroadcast?.broadcastUntil ?? null
+                };
+            })
         };
     }
 
