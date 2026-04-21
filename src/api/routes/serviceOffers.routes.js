@@ -76,6 +76,21 @@ const ctrl = require('../controllers/serviceOffers.controller');
  *                           businessName: { type: string }
  *                           businessNameAr: { type: string, nullable: true }
  *                           vendorType: { type: string }
+ *                       targetDetails:
+ *                         type: object
+ *                         nullable: true
+ *                         description: |
+ *                           تفاصيل الخدمة المرتبطة بالعرض مع الأسعار قبل وبعد الخصم.
+ *                           Service/workshop details with pricing before and after discount.
+ *                         properties:
+ *                           type:
+ *                             type: string
+ *                             enum: [SERVICE, CERTIFIED_WORKSHOP_SERVICE, MOBILE_WORKSHOP_SERVICE]
+ *                           id: { type: string, format: uuid }
+ *                           name: { type: string }
+ *                           nameAr: { type: string, nullable: true }
+ *                           description: { type: string, nullable: true }
+ *                           currency: { type: string, example: SAR }
  *       400:
  *         description: Invalid query params
  */
