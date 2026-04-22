@@ -479,6 +479,17 @@ async function createBooking(req, res, next) {
     const isAdmin = req.user.role === 'ADMIN';
     const customerId = isAdmin && bodyCustomerId ? bodyCustomerId : req.user.id;
 
+    // addressId is optional; if provided but invalid (or not owned by the customer),
+    // ignore it to avoid failing the whole booking creation.
+    let resolvedAddressId = null;
+    if (addressId) {
+      const addr = await prisma.address.findFirst({
+        where: { id: String(addressId), userId: String(customerId) },
+        select: { id: true },
+      });
+      resolvedAddressId = addr?.id || null;
+    }
+
     if (!scheduledDate) {
       throw new AppError('scheduledDate is required', 400, 'VALIDATION_ERROR');
     }
@@ -898,7 +909,7 @@ async function createBooking(req, res, next) {
       bookingNumber,
       customer: { connect: { id: customerId } },
       ...(vehicleId ? { vehicle: { connect: { id: vehicleId } } } : {}),
-      ...(addressId ? { address: { connect: { id: addressId } } } : {}),
+      ...(resolvedAddressId ? { address: { connect: { id: resolvedAddressId } } } : {}),
       scheduledDate: new Date(scheduledDate),
       scheduledTime: scheduledTime || null,
       workType,
