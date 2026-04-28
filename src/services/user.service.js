@@ -213,7 +213,11 @@ class UserService {
     const s = typeof search === 'string' ? search.trim() : '';
     const where = {};
     if (role) where.role = role;
-    if (status) where.status = status;
+    if (status) {
+      where.status = status;
+    } else {
+      where.status = { not: 'DELETED' };
+    }
     if (s) {
       where.OR = [
         { email: { contains: s } },
@@ -271,7 +275,7 @@ class UserService {
    * @param {string} status - New status
    */
   async updateUserStatus(userId, status) {
-    const validStatuses = ['ACTIVE', 'PENDING_VERIFICATION', 'SUSPENDED', 'BANNED'];
+    const validStatuses = ['ACTIVE', 'INACTIVE', 'PENDING_VERIFICATION', 'SUSPENDED', 'DELETED'];
     
     if (!validStatuses.includes(status)) {
       throw new AppError('Invalid status', 400, 'VALIDATION_ERROR');
@@ -297,25 +301,103 @@ class UserService {
    * @param {string} userId - User ID
    */
   async deleteUser(userId) {
-    // Check if user exists
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { id: true, role: true },
     });
 
     if (!user) {
       throw new AppError('User not found', 404, 'NOT_FOUND');
     }
 
-    // Soft delete: update status to DELETED
+    // Customer delete => soft delete + anonymization.
+    if (user.role === 'CUSTOMER') {
+      await this.softDeleteAndAnonymizeUser(userId);
+      return;
+    }
+
+    // For non-customer roles, keep current safe behavior.
     await prisma.user.update({
       where: { id: userId },
-      data: { 
-        status: 'SUSPENDED',
-        // Could add deletedAt timestamp if schema has it
-      }
+      data: { status: 'SUSPENDED' },
+    });
+    logger.info(`Non-customer user suspended (not hard-deleted): ${userId}`);
+  }
+
+  /**
+   * Soft delete customer account while keeping all user/profile data intact.
+   * @param {string} userId
+   */
+  async softDeleteAndAnonymizeUser(userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
     });
 
-    logger.info(`User deleted: ${userId}`);
+    if (!user) {
+      throw new AppError('User not found', 404, 'NOT_FOUND');
+    }
+
+    // This deletion policy is for customer accounts only.
+    if (user.role !== 'CUSTOMER') {
+      throw new AppError('Account anonymization deletion is allowed for customers only', 403, 'FORBIDDEN');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Invalidate push notification tokens/sessions-like footprint.
+      await tx.userDeviceToken.deleteMany({ where: { userId } });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          status: 'DELETED',
+          deletedAt: new Date(),
+          anonymizedAt: null,
+        },
+      });
+    });
+
+    logger.info(`User soft-deleted: ${userId}`);
+  }
+
+  /**
+   * Restore deleted customer account.
+   * @param {string} userId
+   * @returns {Object} restored user
+   */
+  async restoreDeletedUser(userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, status: true },
+    });
+    if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
+    if (user.role !== 'CUSTOMER') {
+      throw new AppError('Restore is allowed for customers only', 403, 'FORBIDDEN');
+    }
+    if (user.status !== 'DELETED') {
+      throw new AppError('Account is not deleted', 400, 'VALIDATION_ERROR');
+    }
+
+    const restored = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: 'ACTIVE',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        role: true,
+        status: true,
+        preferredLanguage: true,
+        emailVerified: true,
+        phoneVerified: true,
+        profile: { select: { firstName: true, lastName: true, avatar: true } },
+      },
+    });
+    logger.info(`User restored from deleted status: ${userId}`);
+    return restored;
   }
 }
 

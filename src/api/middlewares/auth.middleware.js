@@ -81,6 +81,14 @@ const authMiddleware = async (req, res, next) => {
       );
     }
 
+    if (user.status === 'DELETED') {
+      throw new AppError(
+        'Account deleted',
+        403,
+        'ACCOUNT_DELETED'
+      );
+    }
+
     // Check if user is active or pending verification
     if (user.status !== 'ACTIVE' && user.status !== 'PENDING_VERIFICATION') {
       throw new AppError(

@@ -172,6 +172,27 @@ router.put('/supplier-profile', userController.updateSupplierProfile);
  */
 router.put('/language', userController.updateLanguage);
 
+/**
+ * @swagger
+ * /api/users/me/account:
+ *   delete:
+ *     summary: Delete current account
+ *     description: |
+ *       Delete the currently authenticated customer account from app perspective.
+ *       The account is soft-deleted and anonymized, while financial/operational records are retained.
+ *
+ *       حذف حساب العميل الحالي من منظور التطبيق، مع إخفاء الهوية والإبقاء على السجلات المالية والتشغيلية.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.delete('/me/account', userController.deleteMyAccount);
+
 // Admin-only routes
 /**
  * @swagger

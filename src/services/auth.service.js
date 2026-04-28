@@ -4,12 +4,93 @@ const prisma = require('../utils/database/prisma');
 const { AppError } = require('../api/middlewares/error.middleware');
 const logger = require('../utils/logger/logger');
 const { getRoleLabels } = require('../constants/roles');
+const userService = require('./user.service');
 
 /**
  * Authentication Service
  * Handles all authentication business logic
  */
 class AuthService {
+  generateRestoreToken(user) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new AppError('Server configuration error: JWT_SECRET missing', 500, 'SERVER_ERROR');
+    }
+    return jwt.sign(
+      { userId: user.id, purpose: 'ACCOUNT_RESTORE' },
+      secret,
+      { expiresIn: process.env.RESTORE_TOKEN_EXPIRY || '15m' }
+    );
+  }
+
+  verifyRestoreToken(token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded?.purpose !== 'ACCOUNT_RESTORE' || !decoded?.userId) {
+        throw new AppError('Invalid restore token', 401, 'INVALID_TOKEN');
+      }
+      return decoded;
+    } catch (_) {
+      throw new AppError('Invalid or expired restore token', 401, 'INVALID_TOKEN');
+    }
+  }
+
+  generatePasswordResetToken(user, otpCode) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new AppError('Server configuration error: JWT_SECRET missing', 500, 'SERVER_ERROR');
+    }
+    return jwt.sign(
+      { userId: user.id, purpose: 'PASSWORD_RESET', otp: String(otpCode) },
+      secret,
+      { expiresIn: process.env.PASSWORD_RESET_TOKEN_EXPIRY || '15m' }
+    );
+  }
+
+  verifyPasswordResetToken(token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded?.purpose !== 'PASSWORD_RESET' || !decoded?.userId || !decoded?.otp) {
+        throw new AppError('Invalid reset token', 401, 'INVALID_TOKEN');
+      }
+      return decoded;
+    } catch (_) {
+      throw new AppError('Invalid or expired reset token', 401, 'INVALID_TOKEN');
+    }
+  }
+
+  async sendRestoreOtpForUser(user, channel) {
+    const channels = [];
+    if (user.phone) channels.push('phone');
+    if (user.email) channels.push('email');
+    if (channels.length === 0) {
+      throw new AppError('No verification channel available for restore', 400, 'VALIDATION_ERROR');
+    }
+
+    const chosenChannel = channels.includes(channel) ? channel : channels[0];
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    if (chosenChannel === 'phone') {
+      logger.info(`Restore OTP for ${user.phone}: ${otpCode}`);
+    } else {
+      logger.info(`Restore OTP for ${user.email}: ${otpCode}`);
+    }
+
+    return {
+      channel: chosenChannel,
+      channels,
+      ...(process.env.NODE_ENV === 'development' ? { otp: otpCode } : {}),
+    };
+  }
+
+  maskTarget(value, type) {
+    const v = String(value || '');
+    if (!v) return null;
+    if (type === 'phone') return v.length <= 4 ? `***${v}` : `${v.slice(0, 3)}***${v.slice(-2)}`;
+    const [name, domain] = v.split('@');
+    if (!domain) return '***';
+    const maskedName = name.length <= 2 ? `${name[0] || '*'}***` : `${name.slice(0, 2)}***`;
+    return `${maskedName}@${domain}`;
+  }
   /**
    * Register a new user
    * @param {Object} userData - User registration data
@@ -272,6 +353,23 @@ class AuthService {
       );
     }
 
+    if (user.status === 'DELETED') {
+      const restoreToken = this.generateRestoreToken(user);
+      const otpResult = await this.sendRestoreOtpForUser(user, user.phone ? 'phone' : 'email');
+      return {
+        restoreRequired: true,
+        code: 'ACCOUNT_DELETED_RESTORE_REQUIRED',
+        restoreToken,
+        channels: otpResult.channels,
+        channel: otpResult.channel,
+        maskedTargets: {
+          phone: user.phone ? this.maskTarget(user.phone, 'phone') : null,
+          email: user.email ? this.maskTarget(user.email, 'email') : null,
+        },
+        ...(otpResult.otp ? { otp: otpResult.otp } : {}),
+      };
+    }
+
     // Check if user is active
     if (user.status !== 'ACTIVE' && user.status !== 'PENDING_VERIFICATION') {
       throw new AppError(
@@ -327,6 +425,171 @@ class AuthService {
     } catch (_) { /* non-blocking */ }
 
     return { user: userWithoutPassword, token };
+  }
+
+  async requestDeletedAccountRestore(restoreToken, channel) {
+    if (!restoreToken) {
+      throw new AppError('restoreToken is required', 400, 'VALIDATION_ERROR');
+    }
+    const decoded = this.verifyRestoreToken(restoreToken);
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, email: true, phone: true, status: true },
+    });
+    if (!user || user.status !== 'DELETED') {
+      throw new AppError('Deleted account not found', 404, 'NOT_FOUND');
+    }
+
+    const otpResult = await this.sendRestoreOtpForUser(user, channel);
+    return {
+      code: 'ACCOUNT_DELETED_RESTORE_REQUIRED',
+      restoreToken,
+      channels: otpResult.channels,
+      channel: otpResult.channel,
+      maskedTargets: {
+        phone: user.phone ? this.maskTarget(user.phone, 'phone') : null,
+        email: user.email ? this.maskTarget(user.email, 'email') : null,
+      },
+      ...(otpResult.otp ? { otp: otpResult.otp } : {}),
+    };
+  }
+
+  async confirmDeletedAccountRestore(restoreToken, channel, code) {
+    if (!restoreToken || !channel || !code) {
+      throw new AppError('restoreToken, channel and code are required', 400, 'VALIDATION_ERROR');
+    }
+    if (!['phone', 'email'].includes(String(channel))) {
+      throw new AppError('Invalid restore channel', 400, 'VALIDATION_ERROR');
+    }
+    // Temporary OTP validation (same level as existing OTP flow)
+    if (String(code).length !== 6) {
+      throw new AppError('Invalid OTP code', 400, 'VALIDATION_ERROR');
+    }
+
+    const decoded = this.verifyRestoreToken(restoreToken);
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        role: true,
+        status: true,
+        preferredLanguage: true,
+        emailVerified: true,
+        phoneVerified: true,
+        profile: { select: { firstName: true, lastName: true, avatar: true } },
+      },
+    });
+    if (!user || user.status !== 'DELETED') {
+      throw new AppError('Deleted account not found', 404, 'NOT_FOUND');
+    }
+    if (channel === 'phone' && !user.phone) {
+      throw new AppError('Phone channel not available', 400, 'VALIDATION_ERROR');
+    }
+    if (channel === 'email' && !user.email) {
+      throw new AppError('Email channel not available', 400, 'VALIDATION_ERROR');
+    }
+
+    const restoredUser = await userService.restoreDeletedUser(user.id);
+    const token = this.generateToken(restoredUser);
+
+    if (restoredUser.role === 'EMPLOYEE') {
+      const perms = await prisma.employeePermission.findMany({
+        where: { userId: restoredUser.id },
+        select: { permissionKey: true },
+      });
+      restoredUser.permissions = (perms || []).map((p) => p.permissionKey);
+    }
+
+    try {
+      Object.assign(restoredUser, getRoleLabels(restoredUser.role));
+    } catch (e) {
+      logger.warn('getRoleLabels on restore confirm', e.message);
+    }
+
+    return { user: restoredUser, token };
+  }
+
+  async forgotPassword(identifier, channel) {
+    if (!identifier) {
+      throw new AppError('identifier is required', 400, 'VALIDATION_ERROR');
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: identifier }, { phone: identifier }],
+      },
+      select: { id: true, email: true, phone: true, status: true },
+    });
+
+    // Keep response safe and generic even if account does not exist
+    if (!user) {
+      return { accepted: true };
+    }
+    if (user.status === 'DELETED') {
+      throw new AppError('Account deleted. Restore account first', 403, 'ACCOUNT_DELETED');
+    }
+
+    const channels = [];
+    if (user.phone) channels.push('phone');
+    if (user.email) channels.push('email');
+    if (!channels.length) {
+      throw new AppError('No recovery channel available', 400, 'VALIDATION_ERROR');
+    }
+
+    const selectedChannel = channels.includes(channel) ? channel : channels[0];
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetToken = this.generatePasswordResetToken(user, otpCode);
+
+    if (selectedChannel === 'phone') {
+      logger.info(`Password reset OTP for ${user.phone}: ${otpCode}`);
+    } else {
+      logger.info(`Password reset OTP for ${user.email}: ${otpCode}`);
+    }
+
+    return {
+      accepted: true,
+      resetToken,
+      channel: selectedChannel,
+      channels,
+      maskedTargets: {
+        phone: user.phone ? this.maskTarget(user.phone, 'phone') : null,
+        email: user.email ? this.maskTarget(user.email, 'email') : null,
+      },
+      ...(process.env.NODE_ENV === 'development' ? { otp: otpCode } : {}),
+    };
+  }
+
+  async resetPassword(resetToken, code, newPassword) {
+    if (!resetToken || !code || !newPassword) {
+      throw new AppError('resetToken, code and newPassword are required', 400, 'VALIDATION_ERROR');
+    }
+    if (String(newPassword).length < 8) {
+      throw new AppError('Password must be at least 8 characters', 400, 'VALIDATION_ERROR');
+    }
+
+    const decoded = this.verifyPasswordResetToken(resetToken);
+    if (String(decoded.otp) !== String(code)) {
+      throw new AppError('Invalid OTP code', 400, 'VALIDATION_ERROR');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, status: true },
+    });
+    if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
+    if (user.status === 'DELETED') {
+      throw new AppError('Account deleted. Restore account first', 403, 'ACCOUNT_DELETED');
+    }
+
+    const passwordHash = await bcrypt.hash(String(newPassword), 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    return { success: true };
   }
 
   /**

@@ -248,6 +248,24 @@ class UserController {
       next(error);
     }
   }
+
+  /**
+   * Delete current authenticated user account
+   * DELETE /api/users/me/account
+   */
+  async deleteMyAccount(req, res, next) {
+    try {
+      await userService.softDeleteAndAnonymizeUser(req.user.id);
+
+      res.json({
+        success: true,
+        message: 'Account deleted successfully',
+        messageAr: 'تم حذف الحساب بنجاح'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new UserController();

@@ -502,7 +502,13 @@ async function createBooking(req, res, next) {
     // and decide whether vehicleId is actually required based on service.requiresVehicle.
     let inferredWorkshopId = null;
     let workshopId = bodyWorkshopId || null;
-    let deliveryMethod = bodyDeliveryMethod || null;
+    const normalizedDeliveryMethod = typeof bodyDeliveryMethod === 'string'
+      ? bodyDeliveryMethod.trim().toUpperCase()
+      : null;
+    const ALLOWED_DELIVERY_METHODS = new Set(['FLATBED', 'SELF_DELIVERY']);
+    let deliveryMethod = ALLOWED_DELIVERY_METHODS.has(normalizedDeliveryMethod)
+      ? normalizedDeliveryMethod
+      : null;
 
     // If workshopServiceIds are provided without workshopId, infer workshopId (all must belong to same workshop)
     if (useWorkshopServices && !workshopId) {

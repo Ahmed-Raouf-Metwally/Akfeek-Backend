@@ -1,4 +1,5 @@
 const authService = require('../../services/auth.service');
+const userService = require('../../services/user.service');
 const prisma = require('../../utils/database/prisma');
 
 /**
@@ -39,11 +40,97 @@ class AuthController {
         deviceId: deviceId || null,
       });
 
+      if (result?.restoreRequired) {
+        return res.status(200).json({
+          success: false,
+          code: result.code,
+          message: 'Account deleted. Restore verification required',
+          messageAr: 'الحساب محذوف. يلزم التحقق لاسترجاع الحساب',
+          data: result,
+        });
+      }
+
       res.json({
         success: true,
         message: 'Login successful',
         messageAr: 'تم تسجيل الدخول بنجاح',
         data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Request deleted-account restore OTP (resend / change channel)
+   * POST /api/auth/account-restore/request
+   */
+  async requestAccountRestore(req, res, next) {
+    try {
+      const { restoreToken, channel } = req.body || {};
+      const data = await authService.requestDeletedAccountRestore(restoreToken, channel);
+      res.json({
+        success: true,
+        message: 'Restore OTP sent',
+        messageAr: 'تم إرسال رمز استرجاع الحساب',
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Confirm deleted-account restore with OTP
+   * POST /api/auth/account-restore/confirm
+   */
+  async confirmAccountRestore(req, res, next) {
+    try {
+      const { restoreToken, channel, code } = req.body || {};
+      const data = await authService.confirmDeletedAccountRestore(restoreToken, channel, code);
+      res.json({
+        success: true,
+        message: 'Account restored successfully',
+        messageAr: 'تم استرجاع الحساب بنجاح',
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Forgot password: send OTP + resetToken
+   * POST /api/auth/forgot-password
+   */
+  async forgotPassword(req, res, next) {
+    try {
+      const { identifier, channel } = req.body || {};
+      const data = await authService.forgotPassword(identifier, channel);
+      res.json({
+        success: true,
+        message: 'If the account exists, reset instructions have been sent',
+        messageAr: 'إذا كان الحساب موجودًا، تم إرسال تعليمات إعادة التعيين',
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reset password with OTP + resetToken
+   * POST /api/auth/reset-password
+   */
+  async resetPassword(req, res, next) {
+    try {
+      const { resetToken, code, newPassword } = req.body || {};
+      const data = await authService.resetPassword(resetToken, code, newPassword);
+      res.json({
+        success: true,
+        message: 'Password reset successful',
+        messageAr: 'تم إعادة تعيين كلمة المرور بنجاح',
+        data,
       });
     } catch (error) {
       next(error);
@@ -117,6 +204,23 @@ class AuthController {
       res.json({
         success: true,
         data: user
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete current authenticated account
+   * DELETE /api/auth/account
+   */
+  async deleteMyAccount(req, res, next) {
+    try {
+      await userService.deleteUser(req.user.id);
+      res.json({
+        success: true,
+        message: 'Account deleted successfully',
+        messageAr: 'تم حذف الحساب بنجاح',
       });
     } catch (error) {
       next(error);

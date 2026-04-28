@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const authMiddleware = require('../middlewares/auth.middleware');
 const {
     optionalAuth
 } = require('../middlewares/auth.middleware');
@@ -190,6 +191,122 @@ router.post('/login', authController.login);
 
 /**
  * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Forgot password
+ *     description: |
+ *       Request password reset OTP using email or phone.
+ *       Returns resetToken and masked channel targets.
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [identifier]
+ *             properties:
+ *               identifier:
+ *                 type: string
+ *                 description: User email or phone
+ *               channel:
+ *                 type: string
+ *                 enum: [phone, email]
+ *     responses:
+ *       200:
+ *         description: Request accepted
+ */
+router.post('/forgot-password', authController.forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password with OTP
+ *     description: |
+ *       Verify OTP with resetToken and set a new password.
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [resetToken, code, newPassword]
+ *             properties:
+ *               resetToken: { type: string }
+ *               code: { type: string, example: "123456" }
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ */
+router.post('/reset-password', authController.resetPassword);
+
+/**
+ * @swagger
+ * /api/auth/account-restore/request:
+ *   post:
+ *     summary: Request deleted-account restore OTP
+ *     description: |
+ *       Request or resend OTP for restoring a DELETED customer account.
+ *       Requires restoreToken returned by /api/auth/login when code is ACCOUNT_DELETED_RESTORE_REQUIRED.
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [restoreToken]
+ *             properties:
+ *               restoreToken: { type: string }
+ *               channel:
+ *                 type: string
+ *                 enum: [phone, email]
+ *     responses:
+ *       200:
+ *         description: Restore OTP sent
+ */
+router.post('/account-restore/request', authController.requestAccountRestore);
+
+/**
+ * @swagger
+ * /api/auth/account-restore/confirm:
+ *   post:
+ *     summary: Confirm deleted-account restore
+ *     description: |
+ *       Confirm OTP and reactivate deleted account. Returns user + JWT.
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [restoreToken, channel, code]
+ *             properties:
+ *               restoreToken: { type: string }
+ *               channel:
+ *                 type: string
+ *                 enum: [phone, email]
+ *               code:
+ *                 type: string
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: Account restored and logged in
+ */
+router.post('/account-restore/confirm', authController.confirmAccountRestore);
+
+/**
+ * @swagger
  * /api/auth/send-otp:
  *   post:
  *     summary: Send OTP to phone
@@ -286,5 +403,24 @@ router.post('/verify-otp', authController.verifyOTP);
  *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.get('/me', optionalAuth, authController.getCurrentUser);
+
+/**
+ * @swagger
+ * /api/auth/account:
+ *   delete:
+ *     summary: Delete current account
+ *     description: |
+ *       Delete the currently authenticated account.
+ *       For customer accounts, this follows current delete policy in user service.
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.delete('/account', authMiddleware, authController.deleteMyAccount);
 
 module.exports = router;
