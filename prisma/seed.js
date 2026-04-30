@@ -30,6 +30,7 @@ async function main() {
   console.log('🌱 Starting seed...');
 
   const passwordHash = await bcrypt.hash('password123', 10);
+  const testerPasswordHash = await bcrypt.hash('11223344', 10);
 
   // 1. Create 10 users
   const users = [];
@@ -69,6 +70,104 @@ async function main() {
     users.push(user);
     console.log(`✅ Created user: ${data.email}`);
   }
+
+  // 1b. Create Google Play test customer (review-safe)
+  const testerEmail = 'test@akfeek.co';
+  const testerPhone = await resolveSeedPhone(testerEmail, '+966511122233');
+  const testerUser = await prisma.user.upsert({
+    where: { email: testerEmail },
+    update: {
+      passwordHash: testerPasswordHash,
+      role: 'CUSTOMER',
+      status: 'ACTIVE',
+      emailVerified: true,
+      phoneVerified: true,
+      phone: testerPhone,
+      preferredLanguage: 'EN',
+      deletedAt: null,
+    },
+    create: {
+      email: testerEmail,
+      passwordHash: testerPasswordHash,
+      role: 'CUSTOMER',
+      status: 'ACTIVE',
+      emailVerified: true,
+      phoneVerified: true,
+      phone: testerPhone,
+      preferredLanguage: 'EN',
+      profile: {
+        create: {
+          firstName: 'Google',
+          lastName: 'Tester',
+          bio: 'Play Store review account',
+          bioAr: 'حساب اختبار لمراجعة متجر Google Play',
+        },
+      },
+    },
+  });
+
+  // Ensure profile exists + updated (upsert path doesn't update nested create)
+  await prisma.profile.upsert({
+    where: { userId: testerUser.id },
+    update: {
+      firstName: 'Google',
+      lastName: 'Tester',
+      bio: 'Play Store review account',
+      bioAr: 'حساب اختبار لمراجعة متجر Google Play',
+    },
+    create: {
+      userId: testerUser.id,
+      firstName: 'Google',
+      lastName: 'Tester',
+      bio: 'Play Store review account',
+      bioAr: 'حساب اختبار لمراجعة متجر Google Play',
+    },
+  });
+
+  // Wallet (optional but makes the account look "complete")
+  await prisma.wallet.upsert({
+    where: { userId: testerUser.id },
+    update: {},
+    create: {
+      userId: testerUser.id,
+      currency: 'SAR',
+      availableBalance: 250,
+      pendingBalance: 0,
+      pointsBalance: 120,
+    },
+  });
+
+  // Address (used by bookings & marketplace)
+  const testerAddress = await prisma.address.upsert({
+    where: { id: 'seed-tester-address-1' },
+    update: {
+      userId: testerUser.id,
+      label: 'Home',
+      labelAr: 'المنزل',
+      street: 'King Fahd Rd',
+      streetAr: 'طريق الملك فهد',
+      city: 'Riyadh',
+      cityAr: 'الرياض',
+      country: 'SA',
+      latitude: 24.7136,
+      longitude: 46.6753,
+      isDefault: true,
+    },
+    create: {
+      id: 'seed-tester-address-1',
+      userId: testerUser.id,
+      label: 'Home',
+      labelAr: 'المنزل',
+      street: 'King Fahd Rd',
+      streetAr: 'طريق الملك فهد',
+      city: 'Riyadh',
+      cityAr: 'الرياض',
+      country: 'SA',
+      latitude: 24.7136,
+      longitude: 46.6753,
+      isDefault: true,
+    },
+  });
 
   // 2. Create vehicle brands with logos
   const brands = [
@@ -182,6 +281,39 @@ async function main() {
     });
   }
   console.log('✅ Created user vehicles');
+
+  // 4b. Tester vehicle (complete + default)
+  const testerModel = createdModels[0]; // Toyota Camry 2024 (seeded above)
+  const testerVehicle = await prisma.userVehicle.upsert({
+    where: { id: 'seed-tester-vehicle-1' },
+    update: {
+      userId: testerUser.id,
+      vehicleModelId: testerModel.id,
+      ownerName: 'Google Tester',
+      plateDigits: '1122',
+      plateLettersEn: 'GT',
+      plateRegion: 'K',
+      color: 'White',
+      currentMileage: 45000,
+      fuelType: 'Petrol',
+      engineCapacity: '2.5L',
+      isDefault: true,
+    },
+    create: {
+      id: 'seed-tester-vehicle-1',
+      userId: testerUser.id,
+      vehicleModelId: testerModel.id,
+      ownerName: 'Google Tester',
+      plateDigits: '1122',
+      plateLettersEn: 'GT',
+      plateRegion: 'K',
+      color: 'White',
+      currentMileage: 45000,
+      fuelType: 'Petrol',
+      engineCapacity: '2.5L',
+      isDefault: true,
+    },
+  });
 
   // 5. Create Vendor Profiles (10 vendors with different types, incl. 5 certified workshops)
   const vendorUsers = [];
@@ -1721,6 +1853,117 @@ async function main() {
     });
   }
   console.log('✅ Created bookings');
+
+  // 18b. Create tester bookings + invoices (idempotent)
+  const svc0 = services[0] || await prisma.service.findFirst();
+  if (svc0) {
+    const now = Date.now();
+    const testerBookingsSeed = [
+      { key: 'A', status: 'CONFIRMED', date: '2026-04-10', time: '12:00', total: 180, paid: true },
+      { key: 'B', status: 'PENDING',   date: '2026-04-20', time: '17:30', total: 120, paid: false },
+      { key: 'C', status: 'COMPLETED', date: '2026-03-25', time: '09:15', total: 260, paid: true },
+    ];
+
+    for (let i = 0; i < testerBookingsSeed.length; i += 1) {
+      const b = testerBookingsSeed[i];
+      const bookingNumber = `SEED-TEST-BKG-${b.key}`;
+      const invoiceNumber = `SEED-TEST-INV-${b.key}`;
+
+      const booking = await prisma.booking.upsert({
+        where: { bookingNumber },
+        update: {
+          customerId: testerUser.id,
+          vehicleId: testerVehicle.id,
+          addressId: testerAddress.id,
+          status: b.status,
+          scheduledDate: new Date(b.date),
+          scheduledTime: b.time,
+          subtotal: b.total,
+          laborFee: 0,
+          deliveryFee: 0,
+          partsTotal: 0,
+          discount: 0,
+          tax: 0,
+          totalPrice: b.total,
+          notes: 'Seeded test booking for Google Play review',
+        },
+        create: {
+          bookingNumber,
+          customerId: testerUser.id,
+          vehicleId: testerVehicle.id,
+          addressId: testerAddress.id,
+          status: b.status,
+          scheduledDate: new Date(b.date),
+          scheduledTime: b.time,
+          subtotal: b.total,
+          laborFee: 0,
+          deliveryFee: 0,
+          partsTotal: 0,
+          discount: 0,
+          tax: 0,
+          totalPrice: b.total,
+          notes: 'Seeded test booking for Google Play review',
+          services: {
+            create: {
+              serviceId: svc0.id,
+              quantity: 1,
+              unitPrice: b.total,
+              totalPrice: b.total,
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      // Invoice is one-to-one with bookingId and unique invoiceNumber
+      const invoiceStatus = b.paid ? 'PAID' : 'PENDING';
+      const paidAmount = b.paid ? b.total : 0;
+      const paidAt = b.paid ? new Date(now - (i + 1) * 2 * 24 * 60 * 60 * 1000) : null;
+
+      await prisma.invoice.upsert({
+        where: { invoiceNumber },
+        update: {
+          bookingId: booking.id,
+          customerId: testerUser.id,
+          subtotal: b.total,
+          tax: 0,
+          discount: 0,
+          totalAmount: b.total,
+          paidAmount,
+          status: invoiceStatus,
+          paidAt,
+        },
+        create: {
+          invoiceNumber,
+          bookingId: booking.id,
+          customerId: testerUser.id,
+          subtotal: b.total,
+          tax: 0,
+          discount: 0,
+          totalAmount: b.total,
+          paidAmount,
+          status: invoiceStatus,
+          paidAt,
+          lineItems: {
+            create: [
+              {
+                description: `Service: ${svc0.name}`,
+                descriptionAr: `خدمة: ${svc0.nameAr || svc0.name}`,
+                itemType: 'SERVICE',
+                quantity: 1,
+                unitPrice: b.total,
+                totalPrice: b.total,
+              },
+            ],
+          },
+        },
+      });
+    }
+
+    console.log('✅ Seeded Google Play tester user + bookings + invoices');
+  } else {
+    console.log('⚠️ Skipped tester bookings: no services found in DB');
+  }
 
   // 19. Create Feedback (Complaints and Suggestions)
   const feedbacks = [

@@ -33,21 +33,23 @@ class AuthController {
    */
   async login(req, res, next) {
     try {
-      const { identifier, password, fcm_token, fcmToken, platform, deviceId } = req.body || {};
-      const result = await authService.login(identifier, password, {
+      const { identifier, email, phone, password, fcm_token, fcmToken, platform, deviceId } = req.body || {};
+      const resolvedIdentifier = identifier || email || phone;
+      const result = await authService.login(resolvedIdentifier, password, {
         fcmToken: fcm_token || fcmToken || null,
         platform: platform || null,
         deviceId: deviceId || null,
       });
 
       if (result?.restoreRequired) {
-        return res.status(200).json({
-          success: false,
-          code: result.code,
-          message: 'Account deleted. Restore verification required',
-          messageAr: 'الحساب محذوف. يلزم التحقق لاسترجاع الحساب',
-          data: result,
-        });
+        const { AppError } = require('../middlewares/error.middleware');
+        throw new AppError(
+          'Account deleted. Restore verification required',
+          403,
+          result.code || 'ACCOUNT_DELETED_RESTORE_REQUIRED',
+          result,
+          'الحساب محذوف. يلزم التحقق لاسترجاع الحساب'
+        );
       }
 
       res.json({

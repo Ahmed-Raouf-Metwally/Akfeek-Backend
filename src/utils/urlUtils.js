@@ -3,7 +3,7 @@
  * Returns full URL including domain (e.g., https://akfeek-backend.developteam.site/uploads/...)
  */
 
-const DEFAULT_PUBLIC_BASE_URL = 'https://akfeek-backend.developteam.site';
+const DEFAULT_PUBLIC_BASE_URL = 'https://api.akfeek.co';
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || process.env.API_BASE_URL || DEFAULT_PUBLIC_BASE_URL).replace(/\/+$/, '');
 
 /**

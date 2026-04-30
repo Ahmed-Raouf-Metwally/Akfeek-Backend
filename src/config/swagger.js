@@ -51,7 +51,7 @@ Authorization: Bearer <your_jwt_token>
             description: 'Development Server'
         },
         {
-            url: 'https://akfeek-backend.developteam.site',
+            url: 'https://api.akfeek.co',
             description: 'Production Server'
         }
         ],

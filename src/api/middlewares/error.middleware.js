@@ -88,6 +88,7 @@ module.exports = (err, req, res, next) => {
     success: false,
     error: err.message || message,
     code: errorCode,
+    ...(err.messageAr ? { errorAr: err.messageAr } : {}),
     ...(process.env.NODE_ENV === 'development' && {
       stack: err.stack,
       details: err.details
@@ -107,11 +108,12 @@ module.exports = (err, req, res, next) => {
  * Custom error class for application errors
  */
 class AppError extends Error {
-  constructor(message, statusCode, code, details = null) {
+  constructor(message, statusCode, code, details = null, messageAr = null) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
     this.details = details;
+    this.messageAr = messageAr;
     this.isOperational = true;
 
     Error.captureStackTrace(this, this.constructor);
